@@ -292,3 +292,60 @@ TAGS & SHARED
 .setup-code{display:block;background:var(--sand);padding:5px 10px;border-radius:5px;font-size:12px;font-family:monospace;margin-top:6px;color:var(--ink-m)}
 .setup-env{background:#1A2820;color:#E8F0ED;padding:10px 14px;border-radius:6px;font-size:11px;font-family:monospace;line-height:1.8;margin-top:8px}
 .empty-row{padding:40px;text-align:center;color:var(--ink-l);font-size:13px}
+
+/* ══════════════════════════════════════
+SALES PAGE
+══════════════════════════════════════ */
+.sales-top{background:var(--cream);border-bottom:1px solid var(--sand-d);padding:12px 24px;display:flex;align-items:center;flex-shrink:0}
+.sales-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300}
+.sales-body{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+.sales-kpis{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:12px}
+.skpi{background:var(--cream);border:1px solid var(--sand-d);border-radius:10px;padding:16px 18px}
+.skpi-main{background:var(--accent);color:#fff}
+.skpi-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-l);margin-bottom:8px}
+.skpi-main .skpi-label{color:rgba(255,255,255,0.65)}
+.skpi-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:400}
+.skpi-main .skpi-val{color:#fff}
+.skpi-sub{font-size:11px;color:var(--ink-l);margin-top:4px}
+.skpi-main .skpi-sub{color:rgba(255,255,255,0.6)}
+.skpi-type-row{display:flex;align-items:center;gap:6px;font-size:11px;margin-top:5px}
+.skpi-type-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.skpi-type-label{color:var(--ink-l);flex:1}
+.skpi-type-val{font-weight:500}
+.sales-tabs{display:flex;gap:0;background:var(--cream);border:1px solid var(--sand-d);border-radius:8px;overflow:hidden;align-self:flex-start}
+.stab{padding:9px 18px;font-size:12px;color:var(--ink-l);cursor:pointer;border:none;background:none;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;border-right:1px solid var(--sand-d)}
+.stab:last-child{border-right:none}
+.stab i{font-size:14px}
+.stab.active{background:var(--accent);color:#fff}
+.sales-card{background:var(--cream);border:1px solid var(--sand-d);border-radius:10px;overflow:hidden}
+.sales-card-head{padding:14px 18px;border-bottom:1px solid var(--sand-d);display:flex;align-items:center;justify-content:space-between}
+.sales-card-title{font-size:13px;font-weight:500}
+.legend-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+/* 日別棒グラフ */
+.day-chart{display:flex;align-items:flex-end;gap:4px;padding:20px 18px 0;height:200px;overflow-x:auto}
+.day-col{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:28px;flex:1}
+.day-bar-wrap{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:140px;gap:0;width:100%}
+.day-bar-service{width:100%;background:#2C4A3E;border-radius:3px 3px 0 0;min-height:2px;transition:height .3s}
+.day-bar-shop{width:100%;background:#7B5EA7;border-radius:0;min-height:0;transition:height .3s}
+.day-label{font-size:10px;color:var(--ink-l);margin-top:4px}
+.day-weekday{font-size:9px;color:var(--ink-l)}
+.day-count{font-size:9px;color:var(--accent);font-weight:600}
+.day-label.weekend{color:var(--red)}
+/* 日別テーブル */
+.sales-day-table{border-top:1px solid var(--sand-d);margin-top:16px}
+.sdt-head,.sdt-row{display:grid;grid-template-columns:1.5fr 0.6fr 1fr 1fr 1.2fr;padding:9px 18px;font-size:11px;gap:8px;border-bottom:1px solid var(--sand)}
+.sdt-head{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-l);background:var(--sand)}
+.sdt-row:last-child{border:none}
+.sdt-row:hover{background:var(--sand)}
+.sdt-row span:nth-child(n+3){text-align:right}
+.sdt-head span:nth-child(n+3){text-align:right}
+/* スタッフ別 */
+.staff-sales-row{padding:16px 18px;border-bottom:1px solid var(--sand);display:flex;flex-direction:column;gap:6px}
+.staff-sales-row:last-child{border:none}
+.ssr-name{font-size:13px;font-weight:500}
+.ssr-bar-wrap{height:6px;background:var(--sand-d);border-radius:3px;overflow:hidden}
+.ssr-bar{height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
+.ssr-detail{display:flex;gap:14px;font-size:11px;color:var(--ink-l);margin-top:2px}
+.ssr-total{font-weight:600;color:var(--ink);margin-left:auto}
+.ssr-pct{color:var(--accent);font-weight:500}
+.ssr-shop{color:#7B5EA7}
