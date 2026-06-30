@@ -47,6 +47,11 @@ export default function TopBar() {
           <button className="btn-new" onClick={() => setModalOpen(true)}>
             <i className="ti ti-plus"></i>新規予約
           </button>
+          <form method="POST" action="/auth/logout">
+            <button type="submit" className="tbtn" title="ログアウト">
+              <i className="ti ti-logout"></i>
+            </button>
+          </form>
         </div>
       </div>
       <NewBookingModal open={modalOpen} onClose={() => setModalOpen(false)} />

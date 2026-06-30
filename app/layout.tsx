@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import TopBar from '@/components/TopBar';
 
 export const metadata: Metadata = {
-  title: 'Atelier — 予約管理',
+  title: 'agio — 予約管理',
   description: '美容室向けの予約・顧客・カルテ・業務委託管理ダッシュボード',
 };
 
@@ -22,10 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
         />
       </head>
-      <body>
-        <TopBar />
-        <main className="app-main">{children}</main>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
