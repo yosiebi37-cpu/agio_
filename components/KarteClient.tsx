@@ -139,7 +139,6 @@ export default function KarteClient({ customer: c, treatments, chemicals }: Prop
               <div className="kcard">
                 <div className="kcard-head"><div className="kcard-title">ビフォーアフター写真</div><button className="btn-sm"><i className="ti ti-upload"></i>アップロード</button></div>
                 <div style={{ padding: '12px 16px' }}>
-                  <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 8 }}>サンプル表示</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div>
                       <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 5 }}>ビフォー</div>

@@ -109,7 +109,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
         <div className="modal-body">
           <div className="f-row">
             <label className="f-label">お客様名</label>
-            <input className="f-input" type="text" placeholder="山田 花子" value={name} onChange={(e) => setName(e.target.value)} />
+            <input className="f-input" type="text" placeholder="お名前" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="f-row2">
             <div>
