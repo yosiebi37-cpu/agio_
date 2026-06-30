@@ -1,24 +1,75 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import { TYPE_LABEL, TYPE_TAG_CLASS } from '@/lib/constants';
-import { yenK, formatDateLong } from '@/lib/format';
+import { yenK, formatDateLong, toISODate } from '@/lib/format';
 import type { Customer, TreatmentRecord, ChemicalRecord } from '@/lib/types';
+
+const BUCKET = 'karte-photos';
 
 type CustomerWithStaff = Customer & { staff?: { name: string } | null };
 type TreatmentWithStaff = TreatmentRecord & { staff?: { name: string } | null };
+type KartePhoto = { id: string; storage_path: string; kind: string | null; taken_on: string | null };
 
 interface Props {
   customer: CustomerWithStaff;
   treatments: TreatmentWithStaff[];
   chemicals: ChemicalRecord[];
+  photos: KartePhoto[];
+  customerId: string;
 }
 
 type Tab = 'hist' | 'drug' | 'photo' | 'next';
 
-export default function KarteClient({ customer: c, treatments, chemicals }: Props) {
+export default function KarteClient({ customer: c, treatments, chemicals, photos: initialPhotos, customerId }: Props) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>('hist');
+  const [photos, setPhotos] = useState<KartePhoto[]>(initialPhotos);
+  const [uploading, setUploading] = useState(false);
+  const [uploadKind, setUploadKind] = useState<'before' | 'after'>('before');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const getPublicUrl = (path: string) => {
+    const sb = getBrowserSupabase();
+    const { data } = sb.storage.from(BUCKET).getPublicUrl(path);
+    return data.publicUrl;
+  };
+
+  const handleUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    setUploadError(null);
+    const sb = getBrowserSupabase();
+    for (const file of Array.from(files)) {
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const path = `${customerId}/${Date.now()}_${uploadKind}.${ext}`;
+      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, file, { upsert: false });
+      if (upErr) { setUploadError(upErr.message); setUploading(false); return; }
+      const { data: row, error: dbErr } = await sb.from('karte_photos').insert({
+        customer_id: customerId,
+        kind: uploadKind,
+        storage_path: path,
+        taken_on: toISODate(new Date()),
+      }).select().single();
+      if (dbErr) { setUploadError(dbErr.message); setUploading(false); return; }
+      setPhotos((prev) => [row as KartePhoto, ...prev]);
+    }
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleDelete = async (photo: KartePhoto) => {
+    if (!window.confirm('この写真を削除しますか？')) return;
+    const sb = getBrowserSupabase();
+    await sb.storage.from(BUCKET).remove([photo.storage_path]);
+    await sb.from('karte_photos').delete().eq('id', photo.id);
+    setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+  };
 
   return (
     <div className="page-wrap">
@@ -137,20 +188,83 @@ export default function KarteClient({ customer: c, treatments, chemicals }: Prop
 
             {tab === 'photo' && (
               <div className="kcard">
-                <div className="kcard-head"><div className="kcard-title">ビフォーアフター写真</div><button className="btn-sm"><i className="ti ti-upload"></i>アップロード</button></div>
-                <div style={{ padding: '12px 16px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 5 }}>ビフォー</div>
-                      <div style={{ height: 140, background: 'linear-gradient(135deg,var(--sand),var(--sand-d))', borderRadius: 7, border: '1px solid var(--sand-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>📷</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 5 }}>アフター</div>
-                      <div style={{ height: 140, background: 'linear-gradient(135deg,#E8F0ED,#C9D9D4)', borderRadius: 7, border: '1px solid var(--sand-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>✨</div>
-                    </div>
+                <div className="kcard-head">
+                  <div className="kcard-title">ビフォーアフター写真</div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <select
+                      className="f-select"
+                      style={{ padding: '4px 8px', fontSize: 11, width: 'auto' }}
+                      value={uploadKind}
+                      onChange={(e) => setUploadKind(e.target.value as 'before' | 'after')}
+                    >
+                      <option value="before">ビフォー</option>
+                      <option value="after">アフター</option>
+                    </select>
+                    <button className="btn-sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                      <i className="ti ti-upload"></i>{uploading ? 'アップロード中…' : 'アップロード'}
+                    </button>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      style={{ display: 'none' }}
+                      onChange={(e) => handleUpload(e.target.files)}
+                    />
                   </div>
                 </div>
-                <div className="upload-zone"><i className="ti ti-cloud-upload"></i><p>ドラッグ＆ドロップ または クリックでアップロード</p><p style={{ marginTop: 3, fontSize: 10 }}>Supabase Storage（karte-photos バケット）に保存予定</p></div>
+
+                {uploadError && (
+                  <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--red)' }}>{uploadError}</div>
+                )}
+
+                {/* 写真グリッド */}
+                {photos.length > 0 ? (
+                  <div className="photo-grid">
+                    {photos.map((p) => (
+                      <div className="photo-item" key={p.id}>
+                        <div className="photo-kind-badge">{p.kind === 'before' ? 'ビフォー' : p.kind === 'after' ? 'アフター' : ''}</div>
+                        <img
+                          src={getPublicUrl(p.storage_path)}
+                          alt={p.kind ?? ''}
+                          className="photo-img"
+                          onClick={() => setLightbox(getPublicUrl(p.storage_path))}
+                        />
+                        <div className="photo-meta">
+                          {p.taken_on ?? ''}
+                          <button className="photo-del-btn" onClick={() => handleDelete(p)} title="削除">
+                            <i className="ti ti-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    className="upload-zone"
+                    onClick={() => fileRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.preventDefault(); handleUpload(e.dataTransfer.files); }}
+                  >
+                    <i className="ti ti-cloud-upload"></i>
+                    <p>ドラッグ＆ドロップ または クリックでアップロード</p>
+                    <p style={{ marginTop: 3, fontSize: 10 }}>JPG / PNG / HEIC 対応</p>
+                  </div>
+                )}
+
+                {/* ドラッグ＆ドロップゾーン（写真がある場合も表示） */}
+                {photos.length > 0 && (
+                  <div
+                    className="upload-zone"
+                    style={{ margin: '0 16px 16px', padding: 16 }}
+                    onClick={() => fileRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.preventDefault(); handleUpload(e.dataTransfer.files); }}
+                  >
+                    <i className="ti ti-cloud-upload"></i>
+                    <p style={{ fontSize: 11 }}>追加でアップロード</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -171,6 +285,20 @@ export default function KarteClient({ customer: c, treatments, chemicals }: Prop
           </div>
         </div>
       </div>
+
+      {/* ライトボックス */}
+      {lightbox && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setLightbox(null)}
+        >
+          <img src={lightbox} alt="" style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }} />
+          <button
+            onClick={() => setLightbox(null)}
+            style={{ position: 'absolute', top: 20, right: 24, background: 'none', border: 'none', color: '#fff', fontSize: 28, cursor: 'pointer' }}
+          ><i className="ti ti-x"></i></button>
+        </div>
+      )}
     </div>
   );
 }

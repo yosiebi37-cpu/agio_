@@ -178,3 +178,24 @@ end $$;
 -- 既存DBへの追加カラム（初回実行済みの場合はこちらを SQL Editor で実行）
 -- ---------------------------------------------------------------------------
 alter table bookings add column if not exists shop_amount int not null default 0;
+
+-- ---------------------------------------------------------------------------
+-- Supabase Storage バケット設定
+--   ダッシュボード → Storage → New bucket で以下を作成してください：
+--   バケット名: karte-photos
+--   Public bucket: ✅ ON（画像を直接表示するため）
+--
+--   または SQL Editor で以下を実行：
+-- ---------------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('karte-photos', 'karte-photos', true)
+on conflict (id) do nothing;
+
+create policy "anon read karte-photos" on storage.objects
+  for select to anon, authenticated using (bucket_id = 'karte-photos');
+
+create policy "anon upload karte-photos" on storage.objects
+  for insert to anon, authenticated with check (bucket_id = 'karte-photos');
+
+create policy "anon delete karte-photos" on storage.objects
+  for delete to anon, authenticated using (bucket_id = 'karte-photos');
