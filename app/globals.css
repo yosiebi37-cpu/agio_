@@ -109,8 +109,14 @@ BOOKING DETAIL DRAWER
 .daction{flex:1;padding:9px 0;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:500;border:none;display:flex;align-items:center;justify-content:center;gap:5px}
 .daction i{font-size:14px}
 .daction-karte{background:#E8F0ED;color:#2C4A3E}
+.daction-save{background:#2C4A3E;color:#fff}
 .daction-done{background:var(--accent);color:#fff}
 .daction-cancel{background:#F5F5F5;color:var(--red)}
+.drawer-amount-input{width:100%;padding:7px 10px;border:1px solid var(--sand-d);border-radius:6px;font-size:15px;font-family:'Cormorant Garamond',serif;color:var(--ink);background:var(--cream);outline:none;margin-top:4px}
+.drawer-amount-input:focus{border-color:var(--accent)}
+.drawer-rate-badge{display:inline-block;font-size:9px;font-weight:600;color:#7B5EA7;background:#F0EBF8;border-radius:3px;padding:1px 5px;margin-left:6px;font-family:'DM Sans',sans-serif}
+.drawer-total-preview{display:flex;justify-content:space-between;align-items:center;padding:10px 0 6px;border-bottom:1px solid var(--sand-d);margin:0 0 4px}
+.bb-shop{font-size:9px;opacity:0.85;margin-top:1px}
 
 /* ══════════════════════════════════════
 CUSTOMERS PAGE
@@ -276,8 +282,13 @@ TAGS & SHARED
 .btn-save:disabled{opacity:0.5;cursor:default}
 
 /* Setup / empty states */
-.setup-note{max-width:640px;margin:48px auto;background:var(--cream);border:1px solid var(--sand-d);border-radius:12px;padding:28px 32px}
-.setup-note h2{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:22px;margin-bottom:10px}
-.setup-note p{font-size:13px;color:var(--ink-m);line-height:1.8;margin-bottom:8px}
+.setup-note{max-width:560px;margin:48px auto;background:var(--cream);border:1px solid var(--sand-d);border-radius:12px;padding:32px 36px}
+.setup-note h2{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:22px;margin-bottom:20px}
+.setup-note p{font-size:13px;color:var(--ink-m);line-height:1.7;margin:4px 0 0}
 .setup-note code{background:var(--sand);padding:2px 6px;border-radius:4px;font-size:12px}
+.setup-step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--sand-d);align-items:flex-start}
+.setup-step-num{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.setup-step strong{font-size:13px;font-weight:600;color:var(--ink)}
+.setup-code{display:block;background:var(--sand);padding:5px 10px;border-radius:5px;font-size:12px;font-family:monospace;margin-top:6px;color:var(--ink-m)}
+.setup-env{background:#1A2820;color:#E8F0ED;padding:10px 14px;border-radius:6px;font-size:11px;font-family:monospace;line-height:1.8;margin-top:8px}
 .empty-row{padding:40px;text-align:center;color:var(--ink-l);font-size:13px}

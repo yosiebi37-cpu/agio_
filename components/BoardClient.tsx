@@ -38,6 +38,11 @@ export default function BoardClient({ staff, bookings, date }: Props) {
   const [nowMin, setNowMin] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // 売上編集用
+  const [editAmount, setEditAmount] = useState('');
+  const [editShopAmount, setEditShopAmount] = useState('');
+  const [savingAmount, setSavingAmount] = useState(false);
+
   useEffect(() => {
     const todayISO = toISODate(new Date());
     if (todayISO === date) {
@@ -51,6 +56,13 @@ export default function BoardClient({ staff, bookings, date }: Props) {
     }
     setNowMin(null);
   }, [date]);
+
+  // 予約を選択したとき売上フィールドを初期化
+  const openDrawer = (b: BookingWithStaff) => {
+    setSelected(b);
+    setEditAmount(String(b.amount ?? 0));
+    setEditShopAmount(String(b.shop_amount ?? 0));
+  };
 
   const visibleStaff = staff.filter((s) => !hidden.has(s.id));
 
@@ -69,7 +81,7 @@ export default function BoardClient({ staff, bookings, date }: Props) {
     return {
       total: visible.length,
       visited: visible.filter((b) => b.status === 'visited').length,
-      sales: visible.reduce((s, b) => s + (b.amount ?? 0), 0),
+      sales: visible.reduce((s, b) => s + (b.amount ?? 0) + (b.shop_amount ?? 0), 0),
     };
   }, [bookings, hidden]);
 
@@ -86,6 +98,19 @@ export default function BoardClient({ staff, bookings, date }: Props) {
     const d = new Date(date + 'T00:00:00');
     d.setDate(d.getDate() + delta);
     router.push(`/board?date=${toISODate(d)}`);
+  };
+
+  const saveAmount = async () => {
+    if (!selected) return;
+    setSavingAmount(true);
+    const sb = getBrowserSupabase();
+    await sb.from('bookings').update({
+      amount: parseInt(editAmount, 10) || 0,
+      shop_amount: parseInt(editShopAmount, 10) || 0,
+    }).eq('id', selected.id);
+    setSavingAmount(false);
+    setSelected(null);
+    router.refresh();
   };
 
   const markVisited = async (b: BookingWithStaff) => {
@@ -191,11 +216,14 @@ export default function BoardClient({ staff, bookings, date }: Props) {
                           key={b.id}
                           className="booking-block"
                           style={{ top, height, background: bg, color: fg }}
-                          onClick={() => setSelected(b)}
+                          onClick={() => openDrawer(b)}
                         >
                           <div className="bb-time">{hhmm(b.start_time)} — {hhmm(b.end_time)}</div>
                           <div className="bb-name">{b.customer_name}</div>
                           <div className="bb-menu">{b.menu}</div>
+                          {(b.shop_amount ?? 0) > 0 && (
+                            <div className="bb-shop">店販 ¥{(b.shop_amount ?? 0).toLocaleString('ja-JP')}</div>
+                          )}
                           <div className="bb-status" style={{ background: STATUS_DOT[b.status] }}></div>
                         </div>
                       );
@@ -247,10 +275,46 @@ export default function BoardClient({ staff, bookings, date }: Props) {
                   </div>
                 </div>
               </div>
+
+              {/* 売上入力エリア */}
               <div className="drawer-row">
                 <div className="drawer-icon" style={{ background: '#E8F0ED', color: '#2C4A3E' }}><i className="ti ti-currency-yen"></i></div>
-                <div><div className="drawer-label">金額</div><div className="drawer-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20 }}>{'¥' + (selected.amount ?? 0).toLocaleString('ja-JP')}</div></div>
+                <div style={{ flex: 1 }}>
+                  <div className="drawer-label">施術売上</div>
+                  <input
+                    className="drawer-amount-input"
+                    type="number"
+                    min="0"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                  />
+                </div>
               </div>
+              <div className="drawer-row">
+                <div className="drawer-icon" style={{ background: '#F0EBF8', color: '#7B5EA7' }}><i className="ti ti-shopping-bag"></i></div>
+                <div style={{ flex: 1 }}>
+                  <div className="drawer-label">
+                    店販売上
+                    <span className="drawer-rate-badge">60% バック</span>
+                  </div>
+                  <input
+                    className="drawer-amount-input"
+                    type="number"
+                    min="0"
+                    value={editShopAmount}
+                    onChange={(e) => setEditShopAmount(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* 合計プレビュー */}
+              <div className="drawer-total-preview">
+                <span style={{ fontSize: 11, color: 'var(--ink-l)' }}>合計売上</span>
+                <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, color: 'var(--ink)' }}>
+                  ¥{((parseInt(editAmount, 10) || 0) + (parseInt(editShopAmount, 10) || 0)).toLocaleString('ja-JP')}
+                </span>
+              </div>
+
               <div className="drawer-row" style={{ border: 'none' }}>
                 <div className="drawer-icon" style={{ background: 'var(--sand)', color: 'var(--ink-m)' }}><i className="ti ti-note"></i></div>
                 <div><div className="drawer-label">メモ</div><div className="drawer-val">{selected.note || '—'}</div></div>
@@ -265,6 +329,9 @@ export default function BoardClient({ staff, bookings, date }: Props) {
                 onClick={() => selected.customer_id && router.push(`/karte/${selected.customer_id}`)}
               >
                 <i className="ti ti-id-badge"></i>カルテを開く
+              </button>
+              <button className="daction daction-save" disabled={savingAmount} onClick={saveAmount}>
+                <i className="ti ti-device-floppy"></i>{savingAmount ? '保存中…' : '売上を保存'}
               </button>
               <button className="daction daction-done" disabled={busy} onClick={() => markVisited(selected)}><i className="ti ti-check"></i>来店済みに</button>
               <button className="daction daction-cancel" disabled={busy} onClick={() => cancelBooking(selected)}><i className="ti ti-x"></i>キャンセル</button>

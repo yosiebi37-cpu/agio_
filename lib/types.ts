@@ -100,6 +100,7 @@ export interface BookingWithStaff extends Booking {
   staff?: Pick<Staff, 'name' | 'color' | 'employment_type'> | null;
 }
 
+
 export interface CustomerWithStaff extends Customer {
   staff?: Pick<Staff, 'name'> | null;
 }
