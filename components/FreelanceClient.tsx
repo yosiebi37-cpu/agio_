@@ -14,6 +14,7 @@ export interface FreelanceRow {
   count: number;
   exSales: number;
   nwSales: number;
+  avgSpend: number; // 客単価
 }
 
 interface Props {
@@ -125,22 +126,49 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
 
         <div className="fl-cards">
           {rows.map((r) => {
+            const totalSales = r.exSales + r.nwSales;
             const exR = Math.round((r.exSales * rex) / 100);
             const nwR = Math.round((r.nwSales * rnw) / 100);
+            const totalReward = exR + nwR;
             return (
               <div className="fl-card" key={r.id}>
                 <div className="flc-top">
                   <div className="flc-avatar" style={{ background: r.bg, color: r.fg }}>{r.initials}</div>
-                  <div><div className="flc-name">{r.name}</div><div className="flc-role">業務委託 ・ {r.count}件</div></div>
+                  <div>
+                    <div className="flc-name">{r.name}</div>
+                    <div className="flc-role">業務委託 ・ {r.count}件</div>
+                  </div>
                 </div>
                 <div className="flc-breakdown">
-                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: '#2C4A3E' }}></div>既存客売上</span><span className="flc-val">{yen(r.exSales)}</span></div>
-                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: '#C9A84C' }}></div>新規客売上</span><span className="flc-val">{yen(r.nwSales)}</span></div>
-                  <div className="flc-row"><span className="flc-key">合計売上</span><span className="flc-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 15 }}>{yen(r.exSales + r.nwSales)}</span></div>
-                  <div className="flc-row"><span className="flc-key">既存報酬({rex}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(exR)}</span></div>
-                  <div className="flc-row" style={{ border: 'none' }}><span className="flc-key">新規報酬({rnw}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(nwR)}</span></div>
+                  <div className="flc-row">
+                    <span className="flc-key">個人売上</span>
+                    <span className="flc-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 15 }}>{yen(totalSales)}</span>
+                  </div>
+                  <div className="flc-row">
+                    <span className="flc-key"><div className="flc-dot" style={{ background: '#2C4A3E' }}></div>既存客売上</span>
+                    <span className="flc-val">{yen(r.exSales)}</span>
+                  </div>
+                  <div className="flc-row">
+                    <span className="flc-key"><div className="flc-dot" style={{ background: '#C9A84C' }}></div>新規客売上</span>
+                    <span className="flc-val">{yen(r.nwSales)}</span>
+                  </div>
+                  <div className="flc-row">
+                    <span className="flc-key">客単価</span>
+                    <span className="flc-val">{r.count > 0 ? yen(Math.round(totalSales / r.count)) : '—'}</span>
+                  </div>
+                  <div className="flc-row">
+                    <span className="flc-key">既存客報酬 <span style={{ fontSize: 10, color: 'var(--ink-l)' }}>{rex}%</span></span>
+                    <span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(exR)}</span>
+                  </div>
+                  <div className="flc-row" style={{ border: 'none' }}>
+                    <span className="flc-key">新規客報酬 <span style={{ fontSize: 10, color: 'var(--ink-l)' }}>{rnw}%</span></span>
+                    <span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(nwR)}</span>
+                  </div>
                 </div>
-                <div className="flc-reward"><span className="flc-reward-label">報酬合計</span><span className="flc-reward-val">{yen(exR + nwR)}</span></div>
+                <div className="flc-reward">
+                  <span className="flc-reward-label">報酬合計</span>
+                  <span className="flc-reward-val">{yen(totalReward)}</span>
+                </div>
               </div>
             );
           })}

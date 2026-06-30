@@ -50,15 +50,19 @@ export default async function FreelancePage({
 
   const rows: FreelanceRow[] = staff.map((s) => {
     const mine = bookings.filter((b) => b.staff_id === s.id);
+    const exSales = mine.filter((b) => b.customer_type === 'existing').reduce((sum, b) => sum + (b.amount ?? 0), 0);
+    const nwSales = mine.filter((b) => b.customer_type === 'new').reduce((sum, b) => sum + (b.amount ?? 0), 0);
+    const count = mine.length;
     return {
       id: s.id,
       name: s.name,
       initials: s.initials,
       bg: s.bg_color,
       fg: s.fg_color,
-      count: mine.length,
-      exSales: mine.filter((b) => b.customer_type === 'existing').reduce((sum, b) => sum + (b.amount ?? 0), 0),
-      nwSales: mine.filter((b) => b.customer_type === 'new').reduce((sum, b) => sum + (b.amount ?? 0), 0),
+      count,
+      exSales,
+      nwSales,
+      avgSpend: count > 0 ? Math.round((exSales + nwSales) / count) : 0,
     };
   });
 
