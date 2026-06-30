@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { TYPE_LABEL, TYPE_TAG_CLASS } from '@/lib/constants';
 import { formatDateSlash } from '@/lib/format';
 import type { Staff, CustomerWithStaff } from '@/lib/types';
+import NewCustomerModal from './NewCustomerModal';
 
 interface Props {
   customers: CustomerWithStaff[];
@@ -16,6 +17,7 @@ export default function CustomersClient({ customers, staff }: Props) {
   const [q, setQ] = useState('');
   const [type, setType] = useState('all');
   const [stylist, setStylist] = useState('all');
+  const [modalOpen, setModalOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const kw = q.trim();
@@ -35,7 +37,7 @@ export default function CustomersClient({ customers, staff }: Props) {
             <div className="page-h1">顧客管理</div>
             <div className="page-sub">{customers.length}名登録済み</div>
           </div>
-          <button className="btn-new" onClick={() => alert('顧客の新規登録フォームは今後追加予定です。')}>
+          <button className="btn-new" onClick={() => setModalOpen(true)}>
             <i className="ti ti-plus"></i>新規登録
           </button>
         </div>
@@ -92,6 +94,8 @@ export default function CustomersClient({ customers, staff }: Props) {
           </table>
         </div>
       </div>
+
+      <NewCustomerModal open={modalOpen} onClose={() => setModalOpen(false)} staff={staff} />
     </div>
   );
 }
