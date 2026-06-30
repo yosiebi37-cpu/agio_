@@ -53,6 +53,7 @@ export interface Booking {
   status: BookingStatus;
   customer_type: CustomerType;
   amount: number;
+  shop_amount: number;
   note: string | null;
   created_at: string;
 }

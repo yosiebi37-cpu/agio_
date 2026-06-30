@@ -38,22 +38,22 @@ export default async function FreelancePage({
   const staff = (staffData ?? []) as Staff[];
   const ids = staff.map((s) => s.id);
 
-  let bookings: { staff_id: string; customer_type: string; amount: number; customer_id: string | null }[] = [];
+  let bookings: { staff_id: string; customer_type: string; amount: number; shop_amount: number; customer_id: string | null }[] = [];
   if (ids.length) {
     const { data } = await sb
       .from('bookings')
-      .select('staff_id,customer_type,amount,customer_id')
+      .select('staff_id,customer_type,amount,shop_amount,customer_id')
       .eq('booking_date', date)
       .in('staff_id', ids);
     bookings = (data ?? []) as typeof bookings;
   }
 
   const rows: FreelanceRow[] = staff.map((s) => {
-    const mine = bookings.filter((b) => b.staff_id === s.id);
+    const mine     = bookings.filter((b) => b.staff_id === s.id);
     const exSales  = mine.filter((b) => b.customer_type === 'existing').reduce((sum, b) => sum + (b.amount ?? 0), 0);
-    // 新規客 = customer_id あり、フリー客 = customer_id なし（どちらも50%）
     const nwSales  = mine.filter((b) => b.customer_type === 'new' && b.customer_id != null).reduce((sum, b) => sum + (b.amount ?? 0), 0);
     const frSales  = mine.filter((b) => b.customer_type === 'new' && b.customer_id == null).reduce((sum, b) => sum + (b.amount ?? 0), 0);
+    const shopSales = mine.reduce((sum, b) => sum + (b.shop_amount ?? 0), 0);
     const count    = mine.length;
     const total    = exSales + nwSales + frSales;
     return {
@@ -66,6 +66,7 @@ export default async function FreelancePage({
       exSales,
       nwSales,
       frSales,
+      shopSales,
       avgSpend: count > 0 ? Math.round(total / count) : 0,
     };
   });

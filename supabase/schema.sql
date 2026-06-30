@@ -75,7 +75,8 @@ create table if not exists bookings (
                   check (status in ('visited', 'confirmed', 'tentative')), -- 来店済 / 確定 / 仮予約
   customer_type text not null default 'existing'
                   check (customer_type in ('existing', 'new')),
-  amount        int not null default 0,                     -- 円
+  amount        int not null default 0,                     -- 施術売上 円
+  shop_amount   int not null default 0,                     -- 店販売上 円
   note          text,
   created_at    timestamptz not null default now()
 );
@@ -172,3 +173,8 @@ begin
       'create policy "demo_anon_all" on %I for all to anon, authenticated using (true) with check (true);', t);
   end loop;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- 既存DBへの追加カラム（初回実行済みの場合はこちらを SQL Editor で実行）
+-- ---------------------------------------------------------------------------
+alter table bookings add column if not exists shop_amount int not null default 0;

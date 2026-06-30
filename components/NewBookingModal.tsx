@@ -36,6 +36,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
   const [menu, setMenu] = useState(MENUS[0]);
   const [type, setType] = useState<'existing' | 'new'>('existing');
   const [amount, setAmount] = useState('8800');
+  const [shopAmount, setShopAmount] = useState('0');
 
   useEffect(() => {
     if (!open) return;
@@ -82,6 +83,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
         status: 'confirmed',
         customer_type: type,
         amount: parseInt(amount, 10) || 0,
+        shop_amount: parseInt(shopAmount, 10) || 0,
       });
       if (error) {
         setError(error.message);
@@ -143,17 +145,28 @@ export default function NewBookingModal({ open, onClose }: Props) {
               {MENUS.map((m) => <option key={m}>{m}</option>)}
             </select>
           </div>
-          <div className="f-row2" style={{ marginBottom: 0 }}>
+          <div className="f-row2">
             <div>
               <label className="f-label">区分</label>
               <select className="f-select" value={type} onChange={(e) => setType(e.target.value as 'existing' | 'new')}>
                 <option value="existing">既存客</option>
-                <option value="new">新規客（店舗）</option>
+                <option value="new">新規・フリー客</option>
               </select>
             </div>
             <div>
-              <label className="f-label">金額 (円)</label>
+              <label className="f-label">施術金額 (円)</label>
               <input className="f-input" type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            </div>
+          </div>
+          <div className="f-row2" style={{ marginBottom: 0 }}>
+            <div>
+              <label className="f-label">店販売上 (円)</label>
+              <input className="f-input" type="number" min="0" value={shopAmount} onChange={(e) => setShopAmount(e.target.value)} placeholder="0" />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
+              <span style={{ fontSize: 11, color: 'var(--ink-l)', lineHeight: 1.4 }}>
+                店販は <strong style={{ color: 'var(--accent)' }}>60%</strong> で自動計算されます
+              </span>
             </div>
           </div>
           {error && (
