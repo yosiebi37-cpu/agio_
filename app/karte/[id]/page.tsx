@@ -30,7 +30,7 @@ export default async function KartePage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const [{ data: treatments }, { data: chemicals }, { data: photos }] = await Promise.all([
+  const [{ data: treatments }, { data: chemicals }] = await Promise.all([
     sb
       .from('treatment_records')
       .select('*, staff:staff_id(name)')
@@ -41,11 +41,6 @@ export default async function KartePage({ params }: { params: Promise<{ id: stri
       .select('*')
       .eq('customer_id', id)
       .order('record_on', { ascending: false }),
-    sb
-      .from('karte_photos')
-      .select('*')
-      .eq('customer_id', id)
-      .order('created_at', { ascending: false }),
   ]);
 
   return (
@@ -53,8 +48,6 @@ export default async function KartePage({ params }: { params: Promise<{ id: stri
       customer={customer as unknown as CustomerWithStaff}
       treatments={(treatments ?? []) as unknown as TreatmentWithStaff[]}
       chemicals={(chemicals ?? []) as unknown as ChemicalRecord[]}
-      photos={(photos ?? []) as { id: string; storage_path: string; kind: string | null; taken_on: string | null }[]}
-      customerId={id}
     />
   );
 }
