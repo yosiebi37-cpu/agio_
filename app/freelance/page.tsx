@@ -38,11 +38,11 @@ export default async function FreelancePage({
   const staff = (staffData ?? []) as Staff[];
   const ids = staff.map((s) => s.id);
 
-  let bookings: { staff_id: string; customer_type: string; amount: number }[] = [];
+  let bookings: { staff_id: string; customer_type: string; amount: number; customer_id: string | null }[] = [];
   if (ids.length) {
     const { data } = await sb
       .from('bookings')
-      .select('staff_id,customer_type,amount')
+      .select('staff_id,customer_type,amount,customer_id')
       .eq('booking_date', date)
       .in('staff_id', ids);
     bookings = (data ?? []) as typeof bookings;
@@ -50,9 +50,12 @@ export default async function FreelancePage({
 
   const rows: FreelanceRow[] = staff.map((s) => {
     const mine = bookings.filter((b) => b.staff_id === s.id);
-    const exSales = mine.filter((b) => b.customer_type === 'existing').reduce((sum, b) => sum + (b.amount ?? 0), 0);
-    const nwSales = mine.filter((b) => b.customer_type === 'new').reduce((sum, b) => sum + (b.amount ?? 0), 0);
-    const count = mine.length;
+    const exSales  = mine.filter((b) => b.customer_type === 'existing').reduce((sum, b) => sum + (b.amount ?? 0), 0);
+    // 新規客 = customer_id あり、フリー客 = customer_id なし（どちらも50%）
+    const nwSales  = mine.filter((b) => b.customer_type === 'new' && b.customer_id != null).reduce((sum, b) => sum + (b.amount ?? 0), 0);
+    const frSales  = mine.filter((b) => b.customer_type === 'new' && b.customer_id == null).reduce((sum, b) => sum + (b.amount ?? 0), 0);
+    const count    = mine.length;
+    const total    = exSales + nwSales + frSales;
     return {
       id: s.id,
       name: s.name,
@@ -62,22 +65,15 @@ export default async function FreelancePage({
       count,
       exSales,
       nwSales,
-      avgSpend: count > 0 ? Math.round((exSales + nwSales) / count) : 0,
+      frSales,
+      avgSpend: count > 0 ? Math.round(total / count) : 0,
     };
   });
-
-  const { data: settings } = await sb
-    .from('commission_settings')
-    .select('*')
-    .eq('id', 1)
-    .maybeSingle();
 
   return (
     <FreelanceClient
       rows={rows}
       date={date}
-      initialExRate={settings?.existing_rate ?? 60}
-      initialNwRate={settings?.new_rate ?? 50}
     />
   );
 }

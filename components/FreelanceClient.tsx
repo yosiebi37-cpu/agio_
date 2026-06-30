@@ -1,9 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { getBrowserSupabase } from '@/lib/supabase/client';
 import { yen, formatDateLong, toISODate } from '@/lib/format';
+
+// agio 固定報酬率
+const EX_RATE = 60; // 既存客
+const NW_RATE = 50; // 新規客・フリー客
 
 export interface FreelanceRow {
   id: string;
@@ -14,45 +17,35 @@ export interface FreelanceRow {
   count: number;
   exSales: number;
   nwSales: number;
-  avgSpend: number; // 客単価
+  frSales: number; // フリー客（未登録新規）
+  avgSpend: number;
 }
 
 interface Props {
   rows: FreelanceRow[];
   date: string;
-  initialExRate: number;
-  initialNwRate: number;
 }
 
-export default function FreelanceClient({ rows, date, initialExRate, initialNwRate }: Props) {
+export default function FreelanceClient({ rows, date }: Props) {
   const router = useRouter();
-  const [rex, setRex] = useState(initialExRate);
-  const [rnw, setRnw] = useState(initialNwRate);
 
   const calc = useMemo(() => {
-    const totalEx = rows.reduce((s, r) => s + r.exSales, 0);
-    const totalNw = rows.reduce((s, r) => s + r.nwSales, 0);
-    const rewardEx = rows.reduce((s, r) => s + Math.round((r.exSales * rex) / 100), 0);
-    const rewardNw = rows.reduce((s, r) => s + Math.round((r.nwSales * rnw) / 100), 0);
+    const totalEx  = rows.reduce((s, r) => s + r.exSales, 0);
+    const totalNw  = rows.reduce((s, r) => s + r.nwSales, 0);
+    const totalFr  = rows.reduce((s, r) => s + r.frSales, 0);
+    const rewardEx = rows.reduce((s, r) => s + Math.round((r.exSales * EX_RATE) / 100), 0);
+    const rewardNw = rows.reduce((s, r) => s + Math.round(((r.nwSales + r.frSales) * NW_RATE) / 100), 0);
     return {
       totalEx,
       totalNw,
-      totalSales: totalEx + totalNw,
+      totalFr,
+      totalSales: totalEx + totalNw + totalFr,
       rewardEx,
       rewardNw,
       totalReward: rewardEx + rewardNw,
       count: rows.reduce((s, r) => s + r.count, 0),
     };
-  }, [rows, rex, rnw]);
-
-  const persistRates = async (ex: number, nw: number) => {
-    try {
-      const sb = getBrowserSupabase();
-      await sb.from('commission_settings').upsert({ id: 1, existing_rate: ex, new_rate: nw, updated_at: new Date().toISOString() });
-    } catch {
-      /* 設定の保存に失敗しても画面の計算は継続する */
-    }
-  };
+  }, [rows]);
 
   const shiftDate = (delta: number) => {
     const d = new Date(date + 'T00:00:00');
@@ -61,11 +54,11 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
   };
 
   const exportCsv = () => {
-    const header = ['スタッフ', '件数', '既存客売上', '新規客売上', '合計売上', `既存報酬(${rex}%)`, `新規報酬(${rnw}%)`, '報酬合計'];
+    const header = ['スタッフ', '件数', '既存客売上', '新規客売上', 'フリー客売上', '合計売上', `既存報酬(${EX_RATE}%)`, `新規・フリー報酬(${NW_RATE}%)`, '報酬合計'];
     const lines = rows.map((r) => {
-      const exR = Math.round((r.exSales * rex) / 100);
-      const nwR = Math.round((r.nwSales * rnw) / 100);
-      return [r.name, r.count, r.exSales, r.nwSales, r.exSales + r.nwSales, exR, nwR, exR + nwR].join(',');
+      const exR = Math.round((r.exSales * EX_RATE) / 100);
+      const nwR = Math.round(((r.nwSales + r.frSales) * NW_RATE) / 100);
+      return [r.name, r.count, r.exSales, r.nwSales, r.frSales, r.exSales + r.nwSales + r.frSales, exR, nwR, exR + nwR].join(',');
     });
     const csv = '﻿' + [header.join(','), ...lines].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -86,49 +79,51 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
           <div style={{ fontSize: 12, color: 'var(--ink-l)', minWidth: 150, textAlign: 'center' }}>{formatDateLong(date)}</div>
           <div className="cal-arrow" onClick={() => shiftDate(1)}><i className="ti ti-chevron-right"></i></div>
         </div>
-        <div className="rate-box">
+        {/* agio 固定レートバッジ */}
+        <div className="rate-box" style={{ cursor: 'default' }}>
           <div className="rate-dot" style={{ background: '#2C4A3E' }}></div>
           <span className="rate-label">既存客</span>
-          <input
-            className="rate-input"
-            type="number"
-            value={rex}
-            min={0}
-            max={100}
-            onChange={(e) => setRex(parseInt(e.target.value, 10) || 0)}
-            onBlur={() => persistRates(rex, rnw)}
-          />
-          <span className="rate-pct">%</span>
+          <span className="rate-badge">{EX_RATE}%</span>
         </div>
-        <div className="rate-box">
+        <div className="rate-box" style={{ cursor: 'default' }}>
           <div className="rate-dot" style={{ background: '#C9A84C' }}></div>
-          <span className="rate-label">新規客（店舗）</span>
-          <input
-            className="rate-input"
-            type="number"
-            value={rnw}
-            min={0}
-            max={100}
-            onChange={(e) => setRnw(parseInt(e.target.value, 10) || 0)}
-            onBlur={() => persistRates(rex, rnw)}
-          />
-          <span className="rate-pct">%</span>
+          <span className="rate-label">新規・フリー客</span>
+          <span className="rate-badge">{NW_RATE}%</span>
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--ink-l)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <i className="ti ti-bolt" style={{ fontSize: 12, color: 'var(--accent)' }}></i>売上登録で自動計算
         </div>
       </div>
 
       <div className="fl-body">
         <div className="fl-kpis">
-          <div className="kpi"><div className="kpi-label">委託売上合計</div><div className="kpi-val">{yen(calc.totalSales)}</div><div className="kpi-sub">{rows.length}名 / {calc.count}件</div></div>
-          <div className="kpi"><div className="kpi-label">既存客売上</div><div className="kpi-val">{yen(calc.totalEx)}</div><div className="kpi-sub">@ {rex}%</div></div>
-          <div className="kpi"><div className="kpi-label">新規客売上</div><div className="kpi-val">{yen(calc.totalNw)}</div><div className="kpi-sub">@ {rnw}%</div></div>
-          <div className="kpi"><div className="kpi-label">報酬合計</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{yen(calc.totalReward)}</div><div className="kpi-sub">お支払い予定</div></div>
+          <div className="kpi">
+            <div className="kpi-label">委託売上合計</div>
+            <div className="kpi-val">{yen(calc.totalSales)}</div>
+            <div className="kpi-sub">{rows.length}名 / {calc.count}件</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">既存客売上</div>
+            <div className="kpi-val">{yen(calc.totalEx)}</div>
+            <div className="kpi-sub">報酬率 {EX_RATE}%</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">新規・フリー客売上</div>
+            <div className="kpi-val">{yen(calc.totalNw + calc.totalFr)}</div>
+            <div className="kpi-sub">報酬率 {NW_RATE}%</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">報酬合計</div>
+            <div className="kpi-val" style={{ color: 'var(--accent)' }}>{yen(calc.totalReward)}</div>
+            <div className="kpi-sub">お支払い予定</div>
+          </div>
         </div>
 
         <div className="fl-cards">
           {rows.map((r) => {
-            const totalSales = r.exSales + r.nwSales;
-            const exR = Math.round((r.exSales * rex) / 100);
-            const nwR = Math.round((r.nwSales * rnw) / 100);
+            const totalSales  = r.exSales + r.nwSales + r.frSales;
+            const exR         = Math.round((r.exSales * EX_RATE) / 100);
+            const nwR         = Math.round(((r.nwSales + r.frSales) * NW_RATE) / 100);
             const totalReward = exR + nwR;
             return (
               <div className="fl-card" key={r.id}>
@@ -139,32 +134,48 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
                     <div className="flc-role">業務委託 ・ {r.count}件</div>
                   </div>
                 </div>
+
                 <div className="flc-breakdown">
+                  {/* 売上内訳 */}
+                  <div className="flc-section-label">売上内訳</div>
                   <div className="flc-row">
-                    <span className="flc-key">個人売上</span>
+                    <span className="flc-key">個人売上合計</span>
                     <span className="flc-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 15 }}>{yen(totalSales)}</span>
                   </div>
                   <div className="flc-row">
-                    <span className="flc-key"><div className="flc-dot" style={{ background: '#2C4A3E' }}></div>既存客売上</span>
+                    <span className="flc-key"><div className="flc-dot" style={{ background: '#2C4A3E' }}></div>既存客</span>
                     <span className="flc-val">{yen(r.exSales)}</span>
                   </div>
                   <div className="flc-row">
-                    <span className="flc-key"><div className="flc-dot" style={{ background: '#C9A84C' }}></div>新規客売上</span>
+                    <span className="flc-key"><div className="flc-dot" style={{ background: '#C9A84C' }}></div>新規客</span>
                     <span className="flc-val">{yen(r.nwSales)}</span>
+                  </div>
+                  <div className="flc-row">
+                    <span className="flc-key"><div className="flc-dot" style={{ background: '#C9A84C', opacity: 0.5 }}></div>フリー客</span>
+                    <span className="flc-val">{yen(r.frSales)}</span>
                   </div>
                   <div className="flc-row">
                     <span className="flc-key">客単価</span>
                     <span className="flc-val">{r.count > 0 ? yen(Math.round(totalSales / r.count)) : '—'}</span>
                   </div>
+
+                  {/* 報酬内訳（自動計算） */}
+                  <div className="flc-section-label" style={{ marginTop: 6 }}>
+                    報酬内訳
+                    <span style={{ fontSize: 10, color: 'var(--accent)', marginLeft: 6, fontWeight: 400 }}>
+                      <i className="ti ti-bolt"></i> 自動計算
+                    </span>
+                  </div>
                   <div className="flc-row">
-                    <span className="flc-key">既存客報酬 <span style={{ fontSize: 10, color: 'var(--ink-l)' }}>{rex}%</span></span>
+                    <span className="flc-key">既存客報酬 <span className="flc-rate-tag">{EX_RATE}%</span></span>
                     <span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(exR)}</span>
                   </div>
                   <div className="flc-row" style={{ border: 'none' }}>
-                    <span className="flc-key">新規客報酬 <span style={{ fontSize: 10, color: 'var(--ink-l)' }}>{rnw}%</span></span>
+                    <span className="flc-key">新規・フリー客報酬 <span className="flc-rate-tag">{NW_RATE}%</span></span>
                     <span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(nwR)}</span>
                   </div>
                 </div>
+
                 <div className="flc-reward">
                   <span className="flc-reward-label">報酬合計</span>
                   <span className="flc-reward-val">{yen(totalReward)}</span>
@@ -178,9 +189,9 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
         <div className="fl-total-bar">
           <div className="ftb-item"><div className="ftb-label">売上合計</div><div className="ftb-val">{yen(calc.totalSales)}</div></div>
           <div className="ftb-sep"></div>
-          <div className="ftb-item"><div className="ftb-label">既存客 報酬</div><div className="ftb-val" style={{ color: 'var(--accent)' }}>{yen(calc.rewardEx)}</div></div>
+          <div className="ftb-item"><div className="ftb-label">既存客 報酬({EX_RATE}%)</div><div className="ftb-val" style={{ color: 'var(--accent)' }}>{yen(calc.rewardEx)}</div></div>
           <div className="ftb-sep"></div>
-          <div className="ftb-item"><div className="ftb-label">新規客 報酬</div><div className="ftb-val" style={{ color: 'var(--accent)' }}>{yen(calc.rewardNw)}</div></div>
+          <div className="ftb-item"><div className="ftb-label">新規・フリー 報酬({NW_RATE}%)</div><div className="ftb-val" style={{ color: 'var(--accent)' }}>{yen(calc.rewardNw)}</div></div>
           <div className="ftb-sep"></div>
           <div className="ftb-item"><div className="ftb-label">報酬総計</div><div className="ftb-val" style={{ color: 'var(--accent)' }}>{yen(calc.totalReward)}</div></div>
           <button className="btn-csv" onClick={exportCsv}><i className="ti ti-download"></i>CSVエクスポート</button>
