@@ -30,7 +30,7 @@ export default function TopBar() {
   return (
     <>
       <div className="topbar">
-        <div className="logo">Atelier</div>
+        <div className="logo">agio</div>
         <div className="top-nav">
           {NAV.map((n) => (
             <Link key={n.href} href={n.href} className={`tnav${isActive(n.href) ? ' active' : ''}`}>
