@@ -1,14 +1,13 @@
 -- ============================================================================
---  Atelier — 美容室ダッシュボード  /  Supabase スキーマ定義
+--  agio — 美容室ダッシュボード  /  Supabase スキーマ定義
 -- ----------------------------------------------------------------------------
 --  Supabase ダッシュボードの SQL Editor にこのファイルを貼り付けて実行してください。
 --  実行後に seed.sql を実行するとサンプルデータが投入されます。
 --
---  ⚠️ セキュリティに関する重要な注意（認証なし構成）
---    本構成はログイン認証を設けていません。下記の RLS ポリシーは anon キー
---    （ブラウザに公開されるキー）からの読み書きをすべて許可しています。
---    顧客の電話番号・生年月日・アレルギー歴などの個人情報を扱うため、
---    一般公開する前に必ず Supabase Auth + RLS でアクセス制限を行ってください。
+--  このスキーマは Supabase Auth によるログインを前提としています。
+--  スタッフのログインアカウントは Authentication → Users から作成してください。
+--  既存プロジェクト（すでにこのスキーマを実行済み）を認証ありに移行する場合は、
+--  代わりに auth-migration.sql を実行してください。
 -- ============================================================================
 
 create extension if not exists pgcrypto;
@@ -147,8 +146,9 @@ create table if not exists commission_settings (
 
 -- ============================================================================
 --  Row Level Security
---  ⚠️ 認証なし構成のため anon に全権限を付与しています（デモ用）。
---     本番では必ず制限してください。
+--  ログイン済み（authenticated）スタッフのみ読み書き可能。未ログイン（anon）は不可。
+--  スタッフのログインアカウントは Supabase ダッシュボード → Authentication → Users
+--  から作成してください（サインアップ画面はありません）。
 -- ============================================================================
 alter table staff               enable row level security;
 alter table customers           enable row level security;
@@ -167,8 +167,8 @@ begin
   ]
   loop
     execute format(
-      'drop policy if exists "demo_anon_all" on %I;', t);
+      'drop policy if exists "staff_authenticated_all" on %I;', t);
     execute format(
-      'create policy "demo_anon_all" on %I for all to anon, authenticated using (true) with check (true);', t);
+      'create policy "staff_authenticated_all" on %I for all to authenticated using (true) with check (true);', t);
   end loop;
 end $$;

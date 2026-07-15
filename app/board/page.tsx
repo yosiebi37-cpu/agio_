@@ -14,7 +14,7 @@ export default async function BoardPage({
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
   const { date: dateParam } = await searchParams;
-  const sb = getServerSupabase();
+  const sb = await getServerSupabase();
 
   let date: string;
   if (dateParam) {

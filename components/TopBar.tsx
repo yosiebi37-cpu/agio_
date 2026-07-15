@@ -27,6 +27,8 @@ export default function TopBar() {
     return pathname.startsWith(href);
   };
 
+  if (pathname === '/login') return null;
+
   return (
     <>
       <div className="topbar">
@@ -47,6 +49,11 @@ export default function TopBar() {
           <button className="btn-new" onClick={() => setModalOpen(true)}>
             <i className="ti ti-plus"></i>新規予約
           </button>
+          <form action="/auth/signout" method="post">
+            <button className="tbtn" type="submit" title="ログアウト">
+              <i className="ti ti-logout"></i>
+            </button>
+          </form>
         </div>
       </div>
       <NewBookingModal open={modalOpen} onClose={() => setModalOpen(false)} />
