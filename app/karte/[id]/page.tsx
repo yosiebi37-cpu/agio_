@@ -12,7 +12,7 @@ export default async function KartePage({ params }: { params: Promise<{ id: stri
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
   const { id } = await params;
-  const sb = getServerSupabase();
+  const sb = await getServerSupabase();
 
   const { data: customer } = await sb
     .from('customers')

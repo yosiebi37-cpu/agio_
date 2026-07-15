@@ -278,3 +278,12 @@ TAGS & SHARED
 .setup-note p{font-size:13px;color:var(--ink-m);line-height:1.8;margin-bottom:8px}
 .setup-note code{background:var(--sand);padding:2px 6px;border-radius:4px;font-size:12px}
 .empty-row{padding:40px;text-align:center;color:var(--ink-l);font-size:13px}
+
+/* Login */
+.login-wrap{flex:1;display:flex;align-items:center;justify-content:center;background:var(--sand)}
+.login-card{width:100%;max-width:340px;background:var(--cream);border:1px solid var(--sand-d);border-radius:12px;padding:32px 28px}
+.login-title{font-family:'Cormorant Garamond',serif;font-size:26px;letter-spacing:0.08em;text-align:center}
+.login-sub{font-size:12px;color:var(--ink-l);text-align:center;margin-top:4px;margin-bottom:24px}
+.login-form .f-row:last-of-type{margin-bottom:16px}
+.login-error{font-size:12px;color:var(--red);margin-bottom:14px}
+.login-submit{width:100%;padding:10px 0;font-size:13px}

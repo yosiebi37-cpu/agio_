@@ -1,4 +1,4 @@
-# Atelier — 美容室ダッシュボード
+# agio — 美容室ダッシュボード
 
 予約ボード・顧客管理・カルテ（施術履歴／薬剤記録／写真／次回提案）・業務委託の報酬計算を備えた、
 美容室向けの管理ダッシュボードです。**Next.js（App Router）** で構築し、**Supabase** にデータを保管、
@@ -20,7 +20,8 @@ app/                  画面（ルーティング）
 components/           UI コンポーネント
 lib/                  Supabase クライアント / 型 / 共通関数
 supabase/
-  schema.sql          テーブル定義（最初に実行）
+  schema.sql          テーブル定義（最初に実行・ログイン必須の RLS を含む）
+  auth-migration.sql  既存プロジェクトを認証ありに移行する場合に実行
   seed.sql            サンプルデータ（任意・2回目以降も再実行可）
 ```
 
@@ -30,10 +31,14 @@ supabase/
 
 1. [supabase.com](https://supabase.com) でプロジェクトを作成します。
 2. ダッシュボードの **SQL Editor** で `supabase/schema.sql` の内容を実行します。
+   - すでに `schema.sql` を実行済みのプロジェクト（旧・認証なし構成）を移行する場合は、
+     代わりに `supabase/auth-migration.sql` を実行してください。
 3. 続けて `supabase/seed.sql` を実行するとサンプルデータが投入されます（任意）。
 4. **Project Settings → API** から以下を控えます。
    - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon` `public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+5. **Authentication → Users** から、スタッフ用のログインアカウント（メールアドレス + パスワード）を
+   作成します。このアプリに一般公開のサインアップ画面はなく、アカウントは管理者がここで発行します。
 
 ### 2. 環境変数
 
@@ -77,14 +82,14 @@ npm run dev
 - 予約ボード・業務委託ページの集計は `bookings` から動的に計算します。
 - 業務委託の売上は「`employment_type = 'contract'` のスタッフの当日予約」を区分別に集計し、報酬率を掛けて算出します。
 
-## ⚠️ セキュリティに関する注意（認証なし構成）
+## 認証について
 
-本構成は **ログイン認証を設けていません**。`schema.sql` の RLS ポリシーは、ブラウザに公開される
-`anon` キーからの読み書きをすべて許可しています。顧客の電話番号・生年月日・アレルギー歴などの
-**個人情報を扱う**ため、一般公開・本番運用の前に必ず次のいずれかで保護してください。
+このアプリは **Supabase Auth によるログインが必須**です。未ログインで各画面にアクセスすると
+`/login` にリダイレクトされます（`middleware.ts` で制御）。RLS ポリシーもログイン済み
+（`authenticated`）のみ読み書き可能に設定済みで、未ログイン（`anon`）からの顧客データ
+アクセスはブロックされます。
 
-- Supabase Auth でスタッフログインを追加し、RLS をログインユーザーに限定する
-- もしくは社内ネットワーク等、アクセス経路自体を制限する
+スタッフアカウントの追加・削除は Supabase ダッシュボード **Authentication → Users** から行います。
 
 ## 今後の拡張余地
 
