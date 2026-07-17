@@ -1,7 +1,7 @@
 import { isSupabaseConfigured, getServerSupabase } from '@/lib/supabase/server';
 import SetupNotice from '@/components/SetupNotice';
 import KarteClient from '@/components/KarteClient';
-import type { Customer, TreatmentRecord, ChemicalRecord } from '@/lib/types';
+import type { Customer, TreatmentRecord, ChemicalRecord, Staff } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +30,7 @@ export default async function KartePage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const [{ data: treatments }, { data: chemicals }] = await Promise.all([
+  const [{ data: treatments }, { data: chemicals }, { data: staffData }] = await Promise.all([
     sb
       .from('treatment_records')
       .select('*, staff:staff_id(name)')
@@ -41,6 +41,7 @@ export default async function KartePage({ params }: { params: Promise<{ id: stri
       .select('*')
       .eq('customer_id', id)
       .order('record_on', { ascending: false }),
+    sb.from('staff').select('*').eq('is_active', true).order('sort_order'),
   ]);
 
   return (
@@ -48,6 +49,7 @@ export default async function KartePage({ params }: { params: Promise<{ id: stri
       customer={customer as unknown as CustomerWithStaff}
       treatments={(treatments ?? []) as unknown as TreatmentWithStaff[]}
       chemicals={(chemicals ?? []) as unknown as ChemicalRecord[]}
+      staff={(staffData ?? []) as Staff[]}
     />
   );
 }

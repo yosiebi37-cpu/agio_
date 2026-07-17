@@ -46,3 +46,10 @@ export const toISODate = (d: Date): string => {
   const dd = String(d.getDate()).padStart(2, '0');
   return `${d.getFullYear()}-${mm}-${dd}`;
 };
+
+/** "山田 花子" -> "山花"、区切りが無ければ先頭2文字 */
+export const initialsFromName = (name: string): string => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return parts[0][0] + parts[1][0];
+  return name.trim().slice(0, 2);
+};

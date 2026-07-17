@@ -267,6 +267,9 @@ TAGS & SHARED
 .f-input{width:100%;padding:8px 10px;border:1px solid var(--sand-d);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);outline:none}
 .f-input:focus{border-color:var(--accent)}
 .f-select{width:100%;padding:8px 10px;border:1px solid var(--sand-d);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);outline:none}
+.f-textarea{resize:vertical;font-family:'DM Sans',sans-serif;line-height:1.5}
+.f-check{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-m);cursor:pointer}
+.f-check input{width:15px;height:15px;accent-color:var(--accent)}
 .modal-foot{padding:12px 24px;border-top:1px solid var(--sand);display:flex;justify-content:flex-end;gap:8px}
 .btn-cancel{padding:8px 16px;border:1px solid var(--sand-d);border-radius:6px;font-size:12px;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--ink-m)}
 .btn-save{padding:8px 18px;border:none;border-radius:6px;font-size:12px;background:var(--accent);color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500}
