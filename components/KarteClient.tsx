@@ -38,6 +38,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff 
           </div>
           <div className="karte-top">
             <div className="k-avatar" style={{ background: c.avatar_bg, color: c.avatar_fg }}>{c.initials}</div>
+            {c.furigana && <div style={{ fontSize: 10, color: 'var(--ink-l)', marginBottom: 1 }}>{c.furigana}</div>}
             <div className="k-name">{c.name}</div>
             <div className="k-meta">
               {c.phone ?? '—'}<br />{c.birth_year ? `${c.birth_year}年生まれ` : ''}
@@ -53,11 +54,11 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff 
           </div>
           <div className="karte-info">
             <div className="ki-row">
-              <div className="ki-icon" style={{ background: '#E8F0ED', color: '#2C4A3E' }}><i className="ti ti-user"></i></div>
+              <div className="ki-icon" style={{ background: 'var(--accent-l)', color: 'var(--accent)' }}><i className="ti ti-user"></i></div>
               <div><div className="ki-label">担当</div><div className="ki-val">{c.staff?.name ?? '—'}</div></div>
             </div>
             <div className="ki-row">
-              <div className="ki-icon" style={{ background: '#FAF4E6', color: '#8A6A1A' }}><i className="ti ti-sparkles"></i></div>
+              <div className="ki-icon" style={{ background: 'var(--gold-l)', color: 'var(--gold-d)' }}><i className="ti ti-sparkles"></i></div>
               <div><div className="ki-label">髪質</div><div className="ki-val">{c.hair_type ?? '—'}</div></div>
             </div>
             <div className="ki-row">
@@ -75,7 +76,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff 
               </div>
             </div>
             <div className="ki-row">
-              <div className="ki-icon" style={{ background: '#E8F0ED', color: '#2C4A3E' }}><i className="ti ti-calendar"></i></div>
+              <div className="ki-icon" style={{ background: 'var(--accent-l)', color: 'var(--accent)' }}><i className="ti ti-calendar"></i></div>
               <div><div className="ki-label">最終来店</div><div className="ki-val">{c.last_visit_on ? formatDateLong(c.last_visit_on) : '—'}</div></div>
             </div>
             <div className="ki-row" style={{ border: 'none' }}>
@@ -159,7 +160,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff 
                     </div>
                     <div>
                       <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 5 }}>アフター</div>
-                      <div style={{ height: 140, background: 'linear-gradient(135deg,#E8F0ED,#C9D9D4)', borderRadius: 7, border: '1px solid var(--sand-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>✨</div>
+                      <div style={{ height: 140, background: 'linear-gradient(135deg,var(--accent-l),var(--gold-l))', borderRadius: 7, border: '1px solid var(--sand-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>✨</div>
                     </div>
                   </div>
                 </div>

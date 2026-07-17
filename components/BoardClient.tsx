@@ -226,11 +226,11 @@ export default function BoardClient({ staff, bookings, date }: Props) {
             </div>
             <div className="drawer-body">
               <div className="drawer-row">
-                <div className="drawer-icon" style={{ background: '#E8F0ED', color: '#2C4A3E' }}><i className="ti ti-clock"></i></div>
+                <div className="drawer-icon" style={{ background: 'var(--accent-l)', color: 'var(--accent)' }}><i className="ti ti-clock"></i></div>
                 <div><div className="drawer-label">時間</div><div className="drawer-val">{hhmm(selected.start_time)} — {hhmm(selected.end_time)}</div></div>
               </div>
               <div className="drawer-row">
-                <div className="drawer-icon" style={{ background: '#FAF4E6', color: '#8A6A1A' }}><i className="ti ti-scissors"></i></div>
+                <div className="drawer-icon" style={{ background: 'var(--gold-l)', color: 'var(--gold-d)' }}><i className="ti ti-scissors"></i></div>
                 <div><div className="drawer-label">メニュー</div><div className="drawer-val">{selected.menu}</div></div>
               </div>
               <div className="drawer-row">
@@ -248,7 +248,7 @@ export default function BoardClient({ staff, bookings, date }: Props) {
                 </div>
               </div>
               <div className="drawer-row">
-                <div className="drawer-icon" style={{ background: '#E8F0ED', color: '#2C4A3E' }}><i className="ti ti-currency-yen"></i></div>
+                <div className="drawer-icon" style={{ background: 'var(--accent-l)', color: 'var(--accent)' }}><i className="ti ti-currency-yen"></i></div>
                 <div><div className="drawer-label">金額</div><div className="drawer-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20 }}>{'¥' + (selected.amount ?? 0).toLocaleString('ja-JP')}</div></div>
               </div>
               <div className="drawer-row" style={{ border: 'none' }}>

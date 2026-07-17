@@ -35,6 +35,7 @@ create table if not exists staff (
 create table if not exists customers (
   id                uuid primary key default gen_random_uuid(),
   name              text not null,
+  furigana          text,                                   -- フリガナ (例: ヤマダ ハナコ)
   initials          text not null default '',               -- アバター用 (例: 山花)
   phone             text,
   birth_year        int,

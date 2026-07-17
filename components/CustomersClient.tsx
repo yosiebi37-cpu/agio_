@@ -24,7 +24,7 @@ export default function CustomersClient({ customers, staff }: Props) {
     return customers.filter((c) => {
       if (type !== 'all' && c.customer_type !== type) return false;
       if (stylist !== 'all' && (c.staff?.name ?? '') !== stylist) return false;
-      if (kw && !(c.name.includes(kw) || (c.phone ?? '').includes(kw))) return false;
+      if (kw && !(c.name.includes(kw) || (c.furigana ?? '').includes(kw) || (c.phone ?? '').includes(kw))) return false;
       return true;
     });
   }, [customers, q, type, stylist]);
@@ -75,7 +75,10 @@ export default function CustomersClient({ customers, staff }: Props) {
                       <div style={{ width: 26, height: 26, borderRadius: '50%', background: c.avatar_bg, color: c.avatar_fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, flexShrink: 0 }}>
                         {c.initials}
                       </div>
-                      {c.name}
+                      <span>
+                        {c.name}
+                        {c.furigana && <div style={{ fontSize: 10, color: 'var(--ink-l)' }}>{c.furigana}</div>}
+                      </span>
                       <i className="ti ti-chevron-right" style={{ fontSize: 12, opacity: 0.5 }}></i>
                     </div>
                   </td>

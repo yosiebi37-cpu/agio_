@@ -1,8 +1,9 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
---ink:#1A1612;--ink-m:#4A4540;--ink-l:#8A857F;
---sand:#F5F0E8;--sand-d:#EAE3D5;--cream:#FDFAF5;
---gold:#C9A84C;--accent:#2C4A3E;--accent-l:#E8F0ED;
+--ink:#2A2724;--ink-m:#5A554C;--ink-l:#928C80;
+--sand:#EEEAE3;--sand-d:#DED7C9;--cream:#FAF7F2;
+--gold:#B7A47D;--gold-l:#F5EFE3;--gold-d:#8C7350;
+--accent:#6B5A47;--accent-l:#EFE9DF;
 --red:#B94040;--green:#2C7A4E;
 --h:56px; /* topbar height */
 --col:170px; /* stylist column width */
@@ -19,12 +20,14 @@ button{font-family:inherit}
 
 /* ── TOP HEADER ── */
 .topbar{height:var(--h);background:var(--ink);display:flex;align-items:center;padding:0 16px;gap:0;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.08)}
-.logo{font-family:'Cormorant Garamond',serif;font-size:18px;color:#F5F0E8;letter-spacing:0.08em;white-space:nowrap;padding-right:20px;border-right:1px solid rgba(255,255,255,0.1)}
+.logo{display:flex;flex-direction:column;justify-content:center;white-space:nowrap;padding-right:20px;border-right:1px solid rgba(255,255,255,0.1);line-height:1.15}
+.logo-mark{font-family:'DM Sans',sans-serif;font-weight:300;font-size:19px;letter-spacing:0.12em;color:#F6F3EC}
+.logo-sub{font-family:'Cormorant Garamond',serif;font-size:9.5px;letter-spacing:0.24em;color:rgba(246,243,236,0.5);margin-top:3px}
 .top-nav{display:flex;align-items:center;gap:2px;padding:0 12px}
 .tnav{display:flex;align-items:center;gap:6px;padding:7px 14px;font-size:12px;color:rgba(255,255,255,0.5);cursor:pointer;border-radius:6px;transition:all 0.15s;white-space:nowrap}
 .tnav i{font-size:15px}
 .tnav:hover{color:rgba(255,255,255,0.85);background:rgba(255,255,255,0.06)}
-.tnav.active{color:#F5F0E8;background:rgba(201,168,76,0.15)}
+.tnav.active{color:#F6F3EC;background:rgba(183,164,125,0.18)}
 .top-right{margin-left:auto;display:flex;align-items:center;gap:8px}
 .date-badge{font-size:11px;color:rgba(255,255,255,0.45);padding:0 14px;border-right:1px solid rgba(255,255,255,0.1);white-space:nowrap}
 .tbtn{width:32px;height:32px;border:1px solid rgba(255,255,255,0.12);background:none;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(255,255,255,0.5)}
@@ -108,7 +111,7 @@ BOOKING DETAIL DRAWER
 .drawer-actions{padding:14px 20px;border-top:1px solid var(--sand);display:flex;gap:8px;flex-shrink:0}
 .daction{flex:1;padding:9px 0;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:500;border:none;display:flex;align-items:center;justify-content:center;gap:5px}
 .daction i{font-size:14px}
-.daction-karte{background:#E8F0ED;color:#2C4A3E}
+.daction-karte{background:var(--accent-l);color:var(--accent)}
 .daction-done{background:var(--accent);color:#fff}
 .daction-cancel{background:#F5F5F5;color:var(--red)}
 
@@ -247,10 +250,10 @@ FREELANCE PAGE
 TAGS & SHARED
 ══════════════════════════════════════ */
 .tag{display:inline-flex;align-items:center;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;white-space:nowrap}
-.tag-ok{background:#E8F0ED;color:#2C4A3E}
-.tag-pend{background:#FAF4E6;color:#8A6A1A}
+.tag-ok{background:var(--accent-l);color:var(--accent)}
+.tag-pend{background:var(--gold-l);color:var(--gold-d)}
 .tag-done{background:var(--sand);color:var(--ink-l)}
-.tag-new{background:#E8F0ED;color:#2C4A3E}
+.tag-new{background:var(--accent-l);color:var(--accent)}
 
 /* NEW BOOKING MODAL */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(26,22,18,0.55);z-index:100;align-items:center;justify-content:center}
