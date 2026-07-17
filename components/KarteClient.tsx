@@ -4,7 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { TYPE_LABEL, TYPE_TAG_CLASS } from '@/lib/constants';
 import { yenK, formatDateLong } from '@/lib/format';
-import type { Customer, TreatmentRecord, ChemicalRecord } from '@/lib/types';
+import EditCustomerModal from './EditCustomerModal';
+import NewTreatmentModal from './NewTreatmentModal';
+import NewChemicalModal from './NewChemicalModal';
+import type { Customer, TreatmentRecord, ChemicalRecord, Staff } from '@/lib/types';
 
 type CustomerWithStaff = Customer & { staff?: { name: string } | null };
 type TreatmentWithStaff = TreatmentRecord & { staff?: { name: string } | null };
@@ -13,20 +16,25 @@ interface Props {
   customer: CustomerWithStaff;
   treatments: TreatmentWithStaff[];
   chemicals: ChemicalRecord[];
+  staff: Staff[];
 }
 
 type Tab = 'hist' | 'drug' | 'photo' | 'next';
 
-export default function KarteClient({ customer: c, treatments, chemicals }: Props) {
+export default function KarteClient({ customer: c, treatments, chemicals, staff }: Props) {
   const [tab, setTab] = useState<Tab>('hist');
+  const [editOpen, setEditOpen] = useState(false);
+  const [treatmentOpen, setTreatmentOpen] = useState(false);
+  const [chemicalOpen, setChemicalOpen] = useState(false);
 
   return (
     <div className="page-wrap">
       <div className="karte-shell">
         {/* left profile */}
         <div className="karte-left">
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--sand)', flexShrink: 0 }}>
-            <Link href="/customers" className="karte-back"><i className="ti ti-arrow-left"></i>一覧へ戻る</Link>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--sand)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Link href="/customers" className="karte-back" style={{ marginBottom: 0 }}><i className="ti ti-arrow-left"></i>一覧へ戻る</Link>
+            <button className="btn-sm" onClick={() => setEditOpen(true)}><i className="ti ti-edit"></i>編集</button>
           </div>
           <div className="karte-top">
             <div className="k-avatar" style={{ background: c.avatar_bg, color: c.avatar_fg }}>{c.initials}</div>
@@ -89,7 +97,7 @@ export default function KarteClient({ customer: c, treatments, chemicals }: Prop
 
             {tab === 'hist' && (
               <div className="kcard">
-                <div className="kcard-head"><div className="kcard-title">施術履歴</div><button className="btn-sm"><i className="ti ti-plus"></i>新規記録</button></div>
+                <div className="kcard-head"><div className="kcard-title">施術履歴</div><button className="btn-sm" onClick={() => setTreatmentOpen(true)}><i className="ti ti-plus"></i>新規記録</button></div>
                 <div className="hist-wrap">
                   {treatments.length === 0 && <div className="empty-row">施術履歴がまだありません。</div>}
                   {treatments.map((t) => (
@@ -114,7 +122,7 @@ export default function KarteClient({ customer: c, treatments, chemicals }: Prop
 
             {tab === 'drug' && (
               <div className="kcard">
-                <div className="kcard-head"><div className="kcard-title">薬剤・カラー記録</div><button className="btn-sm"><i className="ti ti-plus"></i>追加</button></div>
+                <div className="kcard-head"><div className="kcard-title">薬剤・カラー記録</div><button className="btn-sm" onClick={() => setChemicalOpen(true)}><i className="ti ti-plus"></i>追加</button></div>
                 <div className="drug-grid">
                   {chemicals.map((d) => (
                     <div className="drug-card" key={d.id}>
@@ -128,7 +136,11 @@ export default function KarteClient({ customer: c, treatments, chemicals }: Prop
                       {d.patch_test != null && <div className="drow"><span className="dk">パッチテスト</span><span className="dv" style={{ color: d.patch_test ? 'var(--green)' : 'var(--red)' }}>{d.patch_test ? '✓ 実施済' : '未実施'}</span></div>}
                     </div>
                   ))}
-                  <div className="drug-card" style={{ borderStyle: 'dashed', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120, cursor: 'pointer', color: 'var(--ink-l)' }}>
+                  <div
+                    className="drug-card"
+                    style={{ borderStyle: 'dashed', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120, cursor: 'pointer', color: 'var(--ink-l)' }}
+                    onClick={() => setChemicalOpen(true)}
+                  >
                     <div style={{ textAlign: 'center' }}><i className="ti ti-plus" style={{ fontSize: 22, display: 'block', marginBottom: 5 }}></i><span style={{ fontSize: 11 }}>記録を追加</span></div>
                   </div>
                 </div>
@@ -157,7 +169,7 @@ export default function KarteClient({ customer: c, treatments, chemicals }: Prop
 
             {tab === 'next' && (
               <div className="kcard">
-                <div className="kcard-head"><div className="kcard-title">次回提案メモ</div><button className="btn-sm"><i className="ti ti-edit"></i>編集</button></div>
+                <div className="kcard-head"><div className="kcard-title">次回提案メモ</div><button className="btn-sm" onClick={() => setEditOpen(true)}><i className="ti ti-edit"></i>編集</button></div>
                 <div className="next-box">
                   <div className="next-label">次回おすすめ施術</div>
                   <div className="next-text">{c.next_suggestion ?? '提案メモはまだありません。'}</div>
@@ -172,6 +184,9 @@ export default function KarteClient({ customer: c, treatments, chemicals }: Prop
           </div>
         </div>
       </div>
+      <EditCustomerModal open={editOpen} onClose={() => setEditOpen(false)} customer={c} staff={staff} />
+      <NewTreatmentModal open={treatmentOpen} onClose={() => setTreatmentOpen(false)} customerId={c.id} staff={staff} />
+      <NewChemicalModal open={chemicalOpen} onClose={() => setChemicalOpen(false)} customerId={c.id} />
     </div>
   );
 }
