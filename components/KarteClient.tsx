@@ -38,7 +38,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff 
           </div>
           <div className="karte-top">
             <div className="k-avatar" style={{ background: c.avatar_bg, color: c.avatar_fg }}>{c.initials}</div>
-            {c.furigana && <div style={{ fontSize: 10, color: 'var(--ink-l)', marginBottom: 1 }}>{c.furigana}</div>}
+            {c.furigana && <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 1 }}>{c.furigana}</div>}
             <div className="k-name">{c.name}</div>
             <div className="k-meta">
               {c.phone ?? '—'}<br />{c.birth_year ? `${c.birth_year}年生まれ` : ''}
@@ -67,8 +67,8 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff 
                 <div className="ki-label">アレルギー</div>
                 {c.allergy_tag ? (
                   <div>
-                    <span className="allergy-tag"><i className="ti ti-alert-circle" style={{ fontSize: 10 }}></i>{c.allergy_tag}</span>
-                    {c.allergy_note && <div style={{ fontSize: 11, color: 'var(--ink-m)', marginTop: 4 }}>{c.allergy_note}</div>}
+                    <span className="allergy-tag"><i className="ti ti-alert-circle" style={{ fontSize: 11 }}></i>{c.allergy_tag}</span>
+                    {c.allergy_note && <div style={{ fontSize: 12, color: 'var(--ink-m)', marginTop: 4 }}>{c.allergy_note}</div>}
                   </div>
                 ) : (
                   <div className="ki-val">特になし</div>
@@ -103,7 +103,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff 
                   {treatments.length === 0 && <div className="empty-row">施術履歴がまだありません。</div>}
                   {treatments.map((t) => (
                     <div className="hist-item" key={t.id}>
-                      <div className="hist-dot" style={{ background: t.dot_bg, color: t.dot_fg }}><i className={`ti ti-${t.icon}`} style={{ fontSize: 10 }}></i></div>
+                      <div className="hist-dot" style={{ background: t.dot_bg, color: t.dot_fg }}><i className={`ti ti-${t.icon}`} style={{ fontSize: 11 }}></i></div>
                       <div className="hist-body">
                         <div className="hist-date">{formatDateLong(t.performed_on)}　{t.staff?.name ?? ''}</div>
                         <div className="hist-menu">{t.menu}</div>
@@ -142,7 +142,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff 
                     style={{ borderStyle: 'dashed', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120, cursor: 'pointer', color: 'var(--ink-l)' }}
                     onClick={() => setChemicalOpen(true)}
                   >
-                    <div style={{ textAlign: 'center' }}><i className="ti ti-plus" style={{ fontSize: 22, display: 'block', marginBottom: 5 }}></i><span style={{ fontSize: 11 }}>記録を追加</span></div>
+                    <div style={{ textAlign: 'center' }}><i className="ti ti-plus" style={{ fontSize: 23, display: 'block', marginBottom: 5 }}></i><span style={{ fontSize: 12 }}>記録を追加</span></div>
                   </div>
                 </div>
               </div>
@@ -152,19 +152,19 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff 
               <div className="kcard">
                 <div className="kcard-head"><div className="kcard-title">ビフォーアフター写真</div><button className="btn-sm"><i className="ti ti-upload"></i>アップロード</button></div>
                 <div style={{ padding: '12px 16px' }}>
-                  <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 8 }}>サンプル表示</div>
+                  <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 8 }}>サンプル表示</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div>
-                      <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 5 }}>ビフォー</div>
-                      <div style={{ height: 140, background: 'linear-gradient(135deg,var(--sand),var(--sand-d))', borderRadius: 7, border: '1px solid var(--sand-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>📷</div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 5 }}>ビフォー</div>
+                      <div style={{ height: 140, background: 'linear-gradient(135deg,var(--sand),var(--sand-d))', borderRadius: 7, border: '1px solid var(--sand-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 37 }}>📷</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 5 }}>アフター</div>
-                      <div style={{ height: 140, background: 'linear-gradient(135deg,var(--accent-l),var(--gold-l))', borderRadius: 7, border: '1px solid var(--sand-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>✨</div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 5 }}>アフター</div>
+                      <div style={{ height: 140, background: 'linear-gradient(135deg,var(--accent-l),var(--gold-l))', borderRadius: 7, border: '1px solid var(--sand-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 37 }}>✨</div>
                     </div>
                   </div>
                 </div>
-                <div className="upload-zone"><i className="ti ti-cloud-upload"></i><p>ドラッグ＆ドロップ または クリックでアップロード</p><p style={{ marginTop: 3, fontSize: 10 }}>Supabase Storage（karte-photos バケット）に保存予定</p></div>
+                <div className="upload-zone"><i className="ti ti-cloud-upload"></i><p>ドラッグ＆ドロップ または クリックでアップロード</p><p style={{ marginTop: 3, fontSize: 11 }}>Supabase Storage（karte-photos バケット）に保存予定</p></div>
               </div>
             )}
 
