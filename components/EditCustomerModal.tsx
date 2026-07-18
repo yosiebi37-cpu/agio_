@@ -153,7 +153,7 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
             <input className="f-input" type="text" placeholder="2時間" value={nextDuration} onChange={(e) => setNextDuration(e.target.value)} />
           </div>
           {error && (
-            <div style={{ marginTop: 14, fontSize: 13, color: 'var(--red)' }}>{error}</div>
+            <div style={{ marginTop: 14, fontSize: 14, color: 'var(--red)' }}>{error}</div>
           )}
         </div>
         <div className="modal-foot">

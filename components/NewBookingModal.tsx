@@ -157,7 +157,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
             </div>
           </div>
           {error && (
-            <div style={{ marginTop: 14, fontSize: 13, color: 'var(--red)' }}>{error}</div>
+            <div style={{ marginTop: 14, fontSize: 14, color: 'var(--red)' }}>{error}</div>
           )}
         </div>
         <div className="modal-foot">

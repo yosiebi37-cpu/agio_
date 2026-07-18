@@ -171,7 +171,7 @@ export default function BoardClient({ staff, bookings, date }: Props) {
                       <div className="sh-name" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         {s.name}
                         {s.employment_type === 'contract' && (
-                          <span className="tag tag-pend" style={{ fontSize: 10, padding: '1px 5px' }}>委託</span>
+                          <span className="tag tag-pend" style={{ fontSize: 11, padding: '1px 5px' }}>委託</span>
                         )}
                       </div>
                       <div className="sh-count">{list.length}件</div>
@@ -209,7 +209,7 @@ export default function BoardClient({ staff, bookings, date }: Props) {
 
         {nowVisible && (
           <div className="now-line" style={{ top: nowTop, left: 58 }}>
-            <div style={{ position: 'absolute', left: 8, top: -8, fontSize: 10, background: 'var(--red)', color: '#fff', padding: '1px 5px', borderRadius: 3, fontWeight: 500 }}>
+            <div style={{ position: 'absolute', left: 8, top: -8, fontSize: 11, background: 'var(--red)', color: '#fff', padding: '1px 5px', borderRadius: 3, fontWeight: 500 }}>
               NOW {String(Math.floor((nowMin as number) / 60)).padStart(2, '0')}:{String((nowMin as number) % 60).padStart(2, '0')}
             </div>
           </div>
@@ -249,7 +249,7 @@ export default function BoardClient({ staff, bookings, date }: Props) {
               </div>
               <div className="drawer-row">
                 <div className="drawer-icon" style={{ background: 'var(--accent-l)', color: 'var(--accent)' }}><i className="ti ti-currency-yen"></i></div>
-                <div><div className="drawer-label">金額</div><div className="drawer-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 21 }}>{'¥' + (selected.amount ?? 0).toLocaleString('ja-JP')}</div></div>
+                <div><div className="drawer-label">金額</div><div className="drawer-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22 }}>{'¥' + (selected.amount ?? 0).toLocaleString('ja-JP')}</div></div>
               </div>
               <div className="drawer-row" style={{ border: 'none' }}>
                 <div className="drawer-icon" style={{ background: 'var(--sand)', color: 'var(--ink-m)' }}><i className="ti ti-note"></i></div>

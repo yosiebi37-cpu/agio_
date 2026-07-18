@@ -109,7 +109,7 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
             <textarea className="f-input f-textarea" rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
           {error && (
-            <div style={{ marginTop: 14, fontSize: 13, color: 'var(--red)' }}>{error}</div>
+            <div style={{ marginTop: 14, fontSize: 14, color: 'var(--red)' }}>{error}</div>
           )}
         </div>
         <div className="modal-foot">
