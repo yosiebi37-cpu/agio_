@@ -19,6 +19,7 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState(c.name);
+  const [furigana, setFurigana] = useState(c.furigana ?? '');
   const [phone, setPhone] = useState(c.phone ?? '');
   const [birthYear, setBirthYear] = useState(c.birth_year ? String(c.birth_year) : '');
   const [customerType, setCustomerType] = useState<CustomerType>(c.customer_type);
@@ -46,6 +47,7 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
         .from('customers')
         .update({
           name: name.trim(),
+          furigana: furigana.trim() || null,
           initials: initialsFromName(name),
           phone: phone.trim() || null,
           birth_year: birthYear ? parseInt(birthYear, 10) : null,
@@ -82,9 +84,15 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
           <button className="mclose" onClick={onClose}><i className="ti ti-x"></i></button>
         </div>
         <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          <div className="f-row">
-            <label className="f-label">お客様名</label>
-            <input className="f-input" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+          <div className="f-row2">
+            <div>
+              <label className="f-label">お客様名</label>
+              <input className="f-input" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div>
+              <label className="f-label">フリガナ</label>
+              <input className="f-input" type="text" placeholder="ヤマダ ハナコ" value={furigana} onChange={(e) => setFurigana(e.target.value)} />
+            </div>
           </div>
           <div className="f-row2">
             <div>
@@ -145,7 +153,7 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
             <input className="f-input" type="text" placeholder="2時間" value={nextDuration} onChange={(e) => setNextDuration(e.target.value)} />
           </div>
           {error && (
-            <div style={{ marginTop: 14, fontSize: 12, color: 'var(--red)' }}>{error}</div>
+            <div style={{ marginTop: 14, fontSize: 14, color: 'var(--red)' }}>{error}</div>
           )}
         </div>
         <div className="modal-foot">

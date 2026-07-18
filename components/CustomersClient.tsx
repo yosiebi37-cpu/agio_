@@ -24,7 +24,7 @@ export default function CustomersClient({ customers, staff }: Props) {
     return customers.filter((c) => {
       if (type !== 'all' && c.customer_type !== type) return false;
       if (stylist !== 'all' && (c.staff?.name ?? '') !== stylist) return false;
-      if (kw && !(c.name.includes(kw) || (c.phone ?? '').includes(kw))) return false;
+      if (kw && !(c.name.includes(kw) || (c.furigana ?? '').includes(kw) || (c.phone ?? '').includes(kw))) return false;
       return true;
     });
   }, [customers, q, type, stylist]);
@@ -72,11 +72,14 @@ export default function CustomersClient({ customers, staff }: Props) {
                 <tr key={c.id} onClick={() => router.push(`/karte/${c.id}`)}>
                   <td>
                     <div className="name-link">
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: c.avatar_bg, color: c.avatar_fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, flexShrink: 0 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: c.avatar_bg, color: c.avatar_fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0 }}>
                         {c.initials}
                       </div>
-                      {c.name}
-                      <i className="ti ti-chevron-right" style={{ fontSize: 12, opacity: 0.5 }}></i>
+                      <span>
+                        {c.name}
+                        {c.furigana && <div style={{ fontSize: 12, color: 'var(--ink-l)' }}>{c.furigana}</div>}
+                      </span>
+                      <i className="ti ti-chevron-right" style={{ fontSize: 14, opacity: 0.5 }}></i>
                     </div>
                   </td>
                   <td><span className={`tag ${TYPE_TAG_CLASS[c.customer_type]}`}>{TYPE_LABEL[c.customer_type]}</span></td>
@@ -84,7 +87,7 @@ export default function CustomersClient({ customers, staff }: Props) {
                   <td>{formatDateSlash(c.last_visit_on)}</td>
                   <td>{c.visit_count}回</td>
                   <td>{c.avg_cycle_days ? `${c.avg_cycle_days}日` : '—'}</td>
-                  <td style={{ fontSize: 11, color: 'var(--ink-l)' }}>{c.next_target ?? '—'}</td>
+                  <td style={{ fontSize: 13, color: 'var(--ink-l)' }}>{c.next_target ?? '—'}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (

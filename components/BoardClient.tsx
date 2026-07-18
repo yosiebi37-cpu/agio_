@@ -171,7 +171,7 @@ export default function BoardClient({ staff, bookings, date }: Props) {
                       <div className="sh-name" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         {s.name}
                         {s.employment_type === 'contract' && (
-                          <span className="tag tag-pend" style={{ fontSize: 9, padding: '1px 5px' }}>委託</span>
+                          <span className="tag tag-pend" style={{ fontSize: 11, padding: '1px 5px' }}>委託</span>
                         )}
                       </div>
                       <div className="sh-count">{list.length}件</div>
@@ -209,7 +209,7 @@ export default function BoardClient({ staff, bookings, date }: Props) {
 
         {nowVisible && (
           <div className="now-line" style={{ top: nowTop, left: 58 }}>
-            <div style={{ position: 'absolute', left: 8, top: -8, fontSize: 9, background: 'var(--red)', color: '#fff', padding: '1px 5px', borderRadius: 3, fontWeight: 500 }}>
+            <div style={{ position: 'absolute', left: 8, top: -8, fontSize: 11, background: 'var(--red)', color: '#fff', padding: '1px 5px', borderRadius: 3, fontWeight: 500 }}>
               NOW {String(Math.floor((nowMin as number) / 60)).padStart(2, '0')}:{String((nowMin as number) % 60).padStart(2, '0')}
             </div>
           </div>
@@ -226,11 +226,11 @@ export default function BoardClient({ staff, bookings, date }: Props) {
             </div>
             <div className="drawer-body">
               <div className="drawer-row">
-                <div className="drawer-icon" style={{ background: '#E8F0ED', color: '#2C4A3E' }}><i className="ti ti-clock"></i></div>
+                <div className="drawer-icon" style={{ background: 'var(--accent-l)', color: 'var(--accent)' }}><i className="ti ti-clock"></i></div>
                 <div><div className="drawer-label">時間</div><div className="drawer-val">{hhmm(selected.start_time)} — {hhmm(selected.end_time)}</div></div>
               </div>
               <div className="drawer-row">
-                <div className="drawer-icon" style={{ background: '#FAF4E6', color: '#8A6A1A' }}><i className="ti ti-scissors"></i></div>
+                <div className="drawer-icon" style={{ background: 'var(--gold-l)', color: 'var(--gold-d)' }}><i className="ti ti-scissors"></i></div>
                 <div><div className="drawer-label">メニュー</div><div className="drawer-val">{selected.menu}</div></div>
               </div>
               <div className="drawer-row">
@@ -248,8 +248,8 @@ export default function BoardClient({ staff, bookings, date }: Props) {
                 </div>
               </div>
               <div className="drawer-row">
-                <div className="drawer-icon" style={{ background: '#E8F0ED', color: '#2C4A3E' }}><i className="ti ti-currency-yen"></i></div>
-                <div><div className="drawer-label">金額</div><div className="drawer-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20 }}>{'¥' + (selected.amount ?? 0).toLocaleString('ja-JP')}</div></div>
+                <div className="drawer-icon" style={{ background: 'var(--accent-l)', color: 'var(--accent)' }}><i className="ti ti-currency-yen"></i></div>
+                <div><div className="drawer-label">金額</div><div className="drawer-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22 }}>{'¥' + (selected.amount ?? 0).toLocaleString('ja-JP')}</div></div>
               </div>
               <div className="drawer-row" style={{ border: 'none' }}>
                 <div className="drawer-icon" style={{ background: 'var(--sand)', color: 'var(--ink-m)' }}><i className="ti ti-note"></i></div>

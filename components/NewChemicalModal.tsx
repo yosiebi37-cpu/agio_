@@ -120,7 +120,7 @@ export default function NewChemicalModal({ open, onClose, customerId }: Props) {
             パッチテスト実施済み
           </label>
           {error && (
-            <div style={{ marginTop: 14, fontSize: 12, color: 'var(--red)' }}>{error}</div>
+            <div style={{ marginTop: 14, fontSize: 14, color: 'var(--red)' }}>{error}</div>
           )}
         </div>
         <div className="modal-foot">

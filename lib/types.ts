@@ -20,6 +20,7 @@ export interface Staff {
 export interface Customer {
   id: string;
   name: string;
+  furigana: string | null;
   initials: string;
   phone: string | null;
   birth_year: number | null;

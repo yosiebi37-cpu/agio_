@@ -82,11 +82,11 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
         <div className="fl-top-title">業務委託スタッフ 報酬計算</div>
         <div className="cal-nav-row" style={{ marginRight: 8 }}>
           <div className="cal-arrow" onClick={() => shiftDate(-1)}><i className="ti ti-chevron-left"></i></div>
-          <div style={{ fontSize: 12, color: 'var(--ink-l)', minWidth: 150, textAlign: 'center' }}>{formatDateLong(date)}</div>
+          <div style={{ fontSize: 14, color: 'var(--ink-l)', minWidth: 150, textAlign: 'center' }}>{formatDateLong(date)}</div>
           <div className="cal-arrow" onClick={() => shiftDate(1)}><i className="ti ti-chevron-right"></i></div>
         </div>
         <div className="rate-box">
-          <div className="rate-dot" style={{ background: '#2C4A3E' }}></div>
+          <div className="rate-dot" style={{ background: 'var(--accent)' }}></div>
           <span className="rate-label">既存客</span>
           <input
             className="rate-input"
@@ -100,7 +100,7 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
           <span className="rate-pct">%</span>
         </div>
         <div className="rate-box">
-          <div className="rate-dot" style={{ background: '#C9A84C' }}></div>
+          <div className="rate-dot" style={{ background: 'var(--gold)' }}></div>
           <span className="rate-label">新規客（店舗）</span>
           <input
             className="rate-input"
@@ -134,9 +134,9 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
                   <div><div className="flc-name">{r.name}</div><div className="flc-role">業務委託 ・ {r.count}件</div></div>
                 </div>
                 <div className="flc-breakdown">
-                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: '#2C4A3E' }}></div>既存客売上</span><span className="flc-val">{yen(r.exSales)}</span></div>
-                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: '#C9A84C' }}></div>新規客売上</span><span className="flc-val">{yen(r.nwSales)}</span></div>
-                  <div className="flc-row"><span className="flc-key">合計売上</span><span className="flc-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 15 }}>{yen(r.exSales + r.nwSales)}</span></div>
+                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客売上</span><span className="flc-val">{yen(r.exSales)}</span></div>
+                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客売上</span><span className="flc-val">{yen(r.nwSales)}</span></div>
+                  <div className="flc-row"><span className="flc-key">合計売上</span><span className="flc-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17 }}>{yen(r.exSales + r.nwSales)}</span></div>
                   <div className="flc-row"><span className="flc-key">既存報酬({rex}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(exR)}</span></div>
                   <div className="flc-row" style={{ border: 'none' }}><span className="flc-key">新規報酬({rnw}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(nwR)}</span></div>
                 </div>

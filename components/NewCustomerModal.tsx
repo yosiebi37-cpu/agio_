@@ -18,6 +18,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
+  const [furigana, setFurigana] = useState('');
   const [phone, setPhone] = useState('');
   const [birthYear, setBirthYear] = useState('');
   const [customerType, setCustomerType] = useState<CustomerType>('new');
@@ -30,6 +31,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
 
   const reset = () => {
     setName('');
+    setFurigana('');
     setPhone('');
     setBirthYear('');
     setCustomerType('new');
@@ -52,6 +54,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
         .from('customers')
         .insert({
           name: name.trim(),
+          furigana: furigana.trim() || null,
           initials: initialsFromName(name),
           phone: phone.trim() || null,
           birth_year: birthYear ? parseInt(birthYear, 10) : null,
@@ -87,9 +90,15 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
           <button className="mclose" onClick={onClose}><i className="ti ti-x"></i></button>
         </div>
         <div className="modal-body">
-          <div className="f-row">
-            <label className="f-label">お客様名</label>
-            <input className="f-input" type="text" placeholder="山田 花子" value={name} onChange={(e) => setName(e.target.value)} />
+          <div className="f-row2">
+            <div>
+              <label className="f-label">お客様名</label>
+              <input className="f-input" type="text" placeholder="山田 花子" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div>
+              <label className="f-label">フリガナ</label>
+              <input className="f-input" type="text" placeholder="ヤマダ ハナコ" value={furigana} onChange={(e) => setFurigana(e.target.value)} />
+            </div>
           </div>
           <div className="f-row2">
             <div>
@@ -132,7 +141,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
             </div>
           </div>
           {error && (
-            <div style={{ marginTop: 14, fontSize: 12, color: 'var(--red)' }}>{error}</div>
+            <div style={{ marginTop: 14, fontSize: 14, color: 'var(--red)' }}>{error}</div>
           )}
         </div>
         <div className="modal-foot">
