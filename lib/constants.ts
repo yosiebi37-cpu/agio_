@@ -1,9 +1,10 @@
 import type { BookingStatus, CustomerType } from './types';
 
-// 予約ボードのレイアウト定数
+// 予約ボードのレイアウト定数（スタッフ = 行、時刻 = 列）
 export const OPEN_HOUR = 9; // 開店（先頭の時刻ラベル）
 export const ROW_COUNT = 11; // 表示する時間枠の数（9:00〜20:00）
-export const ROW_PX = 72; // 1時間あたりの高さ(px)
+export const HOUR_W = 96; // 1時間あたりの幅(px)
+export const STAFF_COL_W = 170; // スタッフ名 列（固定表示）の幅(px)
 export const HOURS: number[] = Array.from({ length: ROW_COUNT }, (_, i) => OPEN_HOUR + i);
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {

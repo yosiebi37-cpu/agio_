@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import {
   OPEN_HOUR,
-  ROW_PX,
+  HOUR_W,
+  STAFF_COL_W,
   HOURS,
   STATUS_DOT,
   STATUS_LABEL,
@@ -64,6 +65,17 @@ export default function BoardClient({ staff, bookings, date }: Props) {
     return map;
   }, [bookings]);
 
+  const hourlyStats = useMemo(() => {
+    return HOURS.map((h) => {
+      const hStart = h * 60;
+      const hEnd = hStart + 60;
+      const count = bookings.filter(
+        (b) => toMinutes(b.start_time) < hEnd && toMinutes(b.end_time) > hStart,
+      ).length;
+      return { hour: h, count, remaining: Math.max(staff.length - count, 0) };
+    });
+  }, [bookings, staff]);
+
   const summary = useMemo(() => {
     const visible = bookings.filter((b) => !hidden.has(b.staff_id));
     return {
@@ -107,8 +119,8 @@ export default function BoardClient({ staff, bookings, date }: Props) {
     router.refresh();
   };
 
-  const colBodyHeight = `calc(var(--row) * ${HOURS.length})`;
-  const nowTop = nowMin !== null ? 52 + ((nowMin - OPEN_HOUR * 60) / 60) * ROW_PX : 0;
+  const rowBodyWidth = `calc(var(--hourw) * ${HOURS.length})`;
+  const nowLeft = nowMin !== null ? STAFF_COL_W + ((nowMin - OPEN_HOUR * 60) / 60) * HOUR_W : 0;
   const nowVisible =
     nowMin !== null && nowMin >= OPEN_HOUR * 60 && nowMin <= (OPEN_HOUR + HOURS.length) * 60;
 
@@ -153,19 +165,38 @@ export default function BoardClient({ staff, bookings, date }: Props) {
       {/* board */}
       <div className="board-scroll">
         <div className="board-grid">
-          <div className="board-left">
-            <div className="board-left-head">時刻</div>
+          <div className="board-head-row">
+            <div className="board-corner">時刻</div>
             {HOURS.map((h) => (
-              <div className="time-slot" key={h}>{h}:00</div>
+              <div className="time-col-head" key={h}>{h}:00</div>
             ))}
           </div>
 
-          <div className="board-cols">
+          <div className="board-summary-row" style={{ top: 52 }}>
+            <div className="board-summary-label">予約数</div>
+            {hourlyStats.map((hs) => (
+              <div className="summary-cell" key={hs.hour}>{hs.count}</div>
+            ))}
+          </div>
+          <div className="board-summary-row" style={{ top: 80 }}>
+            <div className="board-summary-label">残り受付可能数</div>
+            {hourlyStats.map((hs) => (
+              <div
+                className="summary-cell"
+                key={hs.hour}
+                style={hs.remaining === 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined}
+              >
+                {hs.remaining}
+              </div>
+            ))}
+          </div>
+
+          <div className="board-body">
             {visibleStaff.map((s) => {
               const list = byStaff.get(s.id) ?? [];
               return (
-                <div className="staff-col" key={s.id}>
-                  <div className="staff-head">
+                <div className="staff-row" key={s.id}>
+                  <div className="staff-row-head">
                     <div className="sh-avatar" style={{ background: s.bg_color, color: s.fg_color }}>{s.initials}</div>
                     <div>
                       <div className="sh-name" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -177,20 +208,20 @@ export default function BoardClient({ staff, bookings, date }: Props) {
                       <div className="sh-count">{list.length}件</div>
                     </div>
                   </div>
-                  <div className="col-body" style={{ height: colBodyHeight }}>
+                  <div className="staff-row-body" style={{ width: rowBodyWidth }}>
                     {HOURS.map((h) => (
-                      <div className="hour-cell" key={h}><div className="half-line"></div></div>
+                      <div className="hour-cell-v" key={h}><div className="half-line-v"></div></div>
                     ))}
                     {list.map((b) => {
                       const bg = b.staff?.color ?? s.color;
                       const fg = textOn(bg);
-                      const top = ((toMinutes(b.start_time) - OPEN_HOUR * 60) / 60) * ROW_PX;
-                      const height = ((toMinutes(b.end_time) - toMinutes(b.start_time)) / 60) * ROW_PX;
+                      const left = ((toMinutes(b.start_time) - OPEN_HOUR * 60) / 60) * HOUR_W;
+                      const width = ((toMinutes(b.end_time) - toMinutes(b.start_time)) / 60) * HOUR_W;
                       return (
                         <div
                           key={b.id}
                           className="booking-block"
-                          style={{ top, height, background: bg, color: fg }}
+                          style={{ left, width, background: bg, color: fg }}
                           onClick={() => setSelected(b)}
                         >
                           <div className="bb-time">{hhmm(b.start_time)} — {hhmm(b.end_time)}</div>
@@ -204,16 +235,16 @@ export default function BoardClient({ staff, bookings, date }: Props) {
                 </div>
               );
             })}
+
+            {nowVisible && (
+              <div className="now-line-v" style={{ left: nowLeft }}>
+                <div className="now-badge">
+                  NOW {String(Math.floor((nowMin as number) / 60)).padStart(2, '0')}:{String((nowMin as number) % 60).padStart(2, '0')}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-
-        {nowVisible && (
-          <div className="now-line" style={{ top: nowTop, left: 58 }}>
-            <div style={{ position: 'absolute', left: 8, top: -8, fontSize: 11, background: 'var(--red)', color: '#fff', padding: '1px 5px', borderRadius: 3, fontWeight: 500 }}>
-              NOW {String(Math.floor((nowMin as number) / 60)).padStart(2, '0')}:{String((nowMin as number) % 60).padStart(2, '0')}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* drawer */}
