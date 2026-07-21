@@ -172,13 +172,13 @@ export default function BoardClient({ staff, bookings, date }: Props) {
             ))}
           </div>
 
-          <div className="board-summary-row" style={{ top: 52 }}>
+          <div className="board-summary-row" style={{ top: 56 }}>
             <div className="board-summary-label">予約数</div>
             {hourlyStats.map((hs) => (
               <div className="summary-cell" key={hs.hour}>{hs.count}</div>
             ))}
           </div>
-          <div className="board-summary-row" style={{ top: 80 }}>
+          <div className="board-summary-row" style={{ top: 86 }}>
             <div className="board-summary-label">残り受付可能数</div>
             {hourlyStats.map((hs) => (
               <div
