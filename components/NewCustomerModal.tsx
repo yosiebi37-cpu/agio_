@@ -90,15 +90,11 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
           <button className="mclose" onClick={onClose}><i className="ti ti-x"></i></button>
         </div>
         <div className="modal-body">
-          <div className="f-row2">
-            <div>
-              <label className="f-label">お客様名</label>
-              <input className="f-input" type="text" placeholder="山田 花子" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div>
-              <label className="f-label">フリガナ</label>
-              <input className="f-input" type="text" placeholder="ヤマダ ハナコ" value={furigana} onChange={(e) => setFurigana(e.target.value)} />
-            </div>
+          <div className="f-row f-name-group">
+            <label className="f-label f-label-ruby">フリガナ</label>
+            <input className="f-input f-input-ruby" type="text" placeholder="ヤマダ ハナコ" value={furigana} onChange={(e) => setFurigana(e.target.value)} />
+            <label className="f-label">お客様名</label>
+            <input className="f-input" type="text" placeholder="山田 花子" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="f-row2">
             <div>

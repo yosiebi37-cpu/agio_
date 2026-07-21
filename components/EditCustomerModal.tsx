@@ -84,15 +84,11 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
           <button className="mclose" onClick={onClose}><i className="ti ti-x"></i></button>
         </div>
         <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          <div className="f-row2">
-            <div>
-              <label className="f-label">お客様名</label>
-              <input className="f-input" type="text" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div>
-              <label className="f-label">フリガナ</label>
-              <input className="f-input" type="text" placeholder="ヤマダ ハナコ" value={furigana} onChange={(e) => setFurigana(e.target.value)} />
-            </div>
+          <div className="f-row f-name-group">
+            <label className="f-label f-label-ruby">フリガナ</label>
+            <input className="f-input f-input-ruby" type="text" placeholder="ヤマダ ハナコ" value={furigana} onChange={(e) => setFurigana(e.target.value)} />
+            <label className="f-label">お客様名</label>
+            <input className="f-input" type="text" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="f-row2">
             <div>
