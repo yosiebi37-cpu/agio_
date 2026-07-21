@@ -65,6 +65,17 @@ export default function BoardClient({ staff, bookings, date }: Props) {
     return map;
   }, [bookings]);
 
+  const hourlyStats = useMemo(() => {
+    return HOURS.map((h) => {
+      const hStart = h * 60;
+      const hEnd = hStart + 60;
+      const count = bookings.filter(
+        (b) => toMinutes(b.start_time) < hEnd && toMinutes(b.end_time) > hStart,
+      ).length;
+      return { hour: h, count, remaining: Math.max(staff.length - count, 0) };
+    });
+  }, [bookings, staff]);
+
   const summary = useMemo(() => {
     const visible = bookings.filter((b) => !hidden.has(b.staff_id));
     return {
@@ -158,6 +169,25 @@ export default function BoardClient({ staff, bookings, date }: Props) {
             <div className="board-corner">時刻</div>
             {HOURS.map((h) => (
               <div className="time-col-head" key={h}>{h}:00</div>
+            ))}
+          </div>
+
+          <div className="board-summary-row" style={{ top: 52 }}>
+            <div className="board-summary-label">予約数</div>
+            {hourlyStats.map((hs) => (
+              <div className="summary-cell" key={hs.hour}>{hs.count}</div>
+            ))}
+          </div>
+          <div className="board-summary-row" style={{ top: 80 }}>
+            <div className="board-summary-label">残り受付可能数</div>
+            {hourlyStats.map((hs) => (
+              <div
+                className="summary-cell"
+                key={hs.hour}
+                style={hs.remaining === 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined}
+              >
+                {hs.remaining}
+              </div>
             ))}
           </div>
 
