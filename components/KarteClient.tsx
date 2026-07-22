@@ -7,7 +7,8 @@ import { yenK, formatDateLong } from '@/lib/format';
 import EditCustomerModal from './EditCustomerModal';
 import NewTreatmentModal from './NewTreatmentModal';
 import NewChemicalModal from './NewChemicalModal';
-import type { Customer, TreatmentRecord, ChemicalRecord, Staff } from '@/lib/types';
+import KartePhotoTab from './KartePhotoTab';
+import type { Customer, TreatmentRecord, ChemicalRecord, Staff, KartePhoto } from '@/lib/types';
 
 type CustomerWithStaff = Customer & { staff?: { name: string } | null };
 type TreatmentWithStaff = TreatmentRecord & { staff?: { name: string } | null };
@@ -17,11 +18,12 @@ interface Props {
   treatments: TreatmentWithStaff[];
   chemicals: ChemicalRecord[];
   staff: Staff[];
+  photos: KartePhoto[];
 }
 
 type Tab = 'hist' | 'drug' | 'photo' | 'next';
 
-export default function KarteClient({ customer: c, treatments, chemicals, staff }: Props) {
+export default function KarteClient({ customer: c, treatments, chemicals, staff, photos }: Props) {
   const [tab, setTab] = useState<Tab>('hist');
   const [editOpen, setEditOpen] = useState(false);
   const [treatmentOpen, setTreatmentOpen] = useState(false);
@@ -148,25 +150,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff 
               </div>
             )}
 
-            {tab === 'photo' && (
-              <div className="kcard">
-                <div className="kcard-head"><div className="kcard-title">ビフォーアフター写真</div><button className="btn-sm"><i className="ti ti-upload"></i>アップロード</button></div>
-                <div style={{ padding: '12px 16px' }}>
-                  <div style={{ fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 8 }}>サンプル表示</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 13, color: 'var(--ink-l)', marginBottom: 5 }}>ビフォー</div>
-                      <div style={{ height: 140, background: 'linear-gradient(135deg,var(--sand),var(--sand-d))', borderRadius: 7, border: '1px solid var(--sand-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38 }}>📷</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, color: 'var(--ink-l)', marginBottom: 5 }}>アフター</div>
-                      <div style={{ height: 140, background: 'linear-gradient(135deg,var(--accent-l),var(--gold-l))', borderRadius: 7, border: '1px solid var(--sand-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38 }}>✨</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="upload-zone"><i className="ti ti-cloud-upload"></i><p>ドラッグ＆ドロップ または クリックでアップロード</p><p style={{ marginTop: 3, fontSize: 12 }}>Supabase Storage（karte-photos バケット）に保存予定</p></div>
-              </div>
-            )}
+            {tab === 'photo' && <KartePhotoTab customerId={c.id} photos={photos} />}
 
             {tab === 'next' && (
               <div className="kcard">
