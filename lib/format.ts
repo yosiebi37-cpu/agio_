@@ -47,6 +47,32 @@ export const toISODate = (d: Date): string => {
   return `${d.getFullYear()}-${mm}-${dd}`;
 };
 
+/** 'YYYY-MM-DD' + n日 -> 'YYYY-MM-DD' */
+export const addDays = (iso: string, n: number): string => {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return toISODate(d);
+};
+
+/** 'YYYY-MM-DD' -> その週の日曜日（週の開始日） */
+export const startOfWeek = (iso: string): string => {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() - d.getDay());
+  return toISODate(d);
+};
+
+/** 'YYYY-MM' -> "2026年7月" */
+export const formatMonthLong = (ym: string): string => {
+  const [y, m] = ym.split('-').map(Number);
+  return `${y}年${m}月`;
+};
+
+/** 'YYYY-MM-DD' -> "5/30(土)" */
+export const formatDateTiny = (iso: string): string => {
+  const d = new Date(iso + 'T00:00:00');
+  return `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY[d.getDay()]})`;
+};
+
 /** "山田 花子" -> "山花"、区切りが無ければ先頭2文字 */
 export const initialsFromName = (name: string): string => {
   const parts = name.trim().split(/\s+/).filter(Boolean);

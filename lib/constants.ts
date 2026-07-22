@@ -36,3 +36,15 @@ export const TYPE_TAG_CLASS: Record<CustomerType, string> = {
   existing: 'tag-ok',
   new: 'tag-new',
 };
+
+// スタッフ登録フォームの配色プリセット（予約ボードで担当ごとに見分けるため）
+export const STAFF_PALETTE: { color: string; bg: string; fg: string }[] = [
+  { color: '#2C4A3E', bg: '#E8F0ED', fg: '#2C4A3E' },
+  { color: '#C9A84C', bg: '#FAF4E6', fg: '#8A6A1A' },
+  { color: '#7B5EA7', bg: '#F0EBF8', fg: '#5A3D8A' },
+  { color: '#2C7A4E', bg: '#E8F5F0', fg: '#1A6B4A' },
+  { color: '#4A4540', bg: '#F5F0E8', fg: '#4A4540' },
+  { color: '#4A6B5C', bg: '#E5EDE9', fg: '#4A6B5C' },
+  { color: '#A15C4A', bg: '#F3E6E1', fg: '#A15C4A' },
+  { color: '#3D6B8A', bg: '#E5EEF3', fg: '#3D6B8A' },
+];

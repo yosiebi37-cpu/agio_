@@ -1,19 +1,24 @@
 import { isSupabaseConfigured, getServerSupabase } from '@/lib/supabase/server';
 import SetupNotice from '@/components/SetupNotice';
 import BoardClient from '@/components/BoardClient';
-import { toISODate } from '@/lib/format';
+import BoardWeekView from '@/components/BoardWeekView';
+import BoardMonthView from '@/components/BoardMonthView';
+import { toISODate, addDays, startOfWeek } from '@/lib/format';
 import type { Staff, BookingWithStaff } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
+type ViewMode = 'day' | 'week' | 'month';
+
 export default async function BoardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; view?: string }>;
 }) {
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
-  const { date: dateParam } = await searchParams;
+  const { date: dateParam, view: viewParam } = await searchParams;
+  const view: ViewMode = viewParam === 'week' || viewParam === 'month' ? viewParam : 'day';
   const sb = await getServerSupabase();
 
   let date: string;
@@ -27,6 +32,44 @@ export default async function BoardPage({
       .limit(1)
       .maybeSingle();
     date = (latest?.booking_date as string | null) ?? toISODate(new Date());
+  }
+
+  if (view === 'week') {
+    const start = startOfWeek(date);
+    const end = addDays(start, 6);
+    const [{ data: staffData }, { data: bookingData }] = await Promise.all([
+      sb.from('staff').select('*').eq('is_active', true).order('sort_order'),
+      sb
+        .from('bookings')
+        .select('booking_date,staff_id,amount,status')
+        .gte('booking_date', start)
+        .lte('booking_date', end),
+    ]);
+    return (
+      <BoardWeekView
+        staff={(staffData ?? []) as Staff[]}
+        bookings={(bookingData ?? []) as { booking_date: string; staff_id: string; amount: number; status: string }[]}
+        date={date}
+        weekStart={start}
+      />
+    );
+  }
+
+  if (view === 'month') {
+    const [y, m] = date.split('-').map(Number);
+    const start = toISODate(new Date(y, m - 1, 1));
+    const end = toISODate(new Date(y, m, 0));
+    const { data: bookingData } = await sb
+      .from('bookings')
+      .select('booking_date,amount,status')
+      .gte('booking_date', start)
+      .lte('booking_date', end);
+    return (
+      <BoardMonthView
+        bookings={(bookingData ?? []) as { booking_date: string; amount: number; status: string }[]}
+        date={date}
+      />
+    );
   }
 
   const [{ data: staffData }, { data: bookingData }] = await Promise.all([

@@ -10,6 +10,8 @@ const NAV = [
   { href: '/board', label: '予約ボード', icon: 'ti-calendar-event' },
   { href: '/customers', label: '顧客管理', icon: 'ti-users' },
   { href: '/freelance', label: '業務委託', icon: 'ti-receipt' },
+  { href: '/sales', label: '売上', icon: 'ti-chart-bar' },
+  { href: '/settings', label: '設定', icon: 'ti-settings' },
 ];
 
 export default function TopBar() {
@@ -43,8 +45,6 @@ export default function TopBar() {
               {n.label}
             </Link>
           ))}
-          <span className="tnav"><i className="ti ti-chart-bar"></i>売上</span>
-          <span className="tnav"><i className="ti ti-settings"></i>設定</span>
         </div>
         <div className="top-right">
           <div className="date-badge">{today}</div>

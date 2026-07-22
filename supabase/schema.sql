@@ -173,3 +173,39 @@ begin
       'create policy "staff_authenticated_all" on %I for all to authenticated using (true) with check (true);', t);
   end loop;
 end $$;
+
+-- ============================================================================
+--  顧客の来店回数・累計売上・平均周期・最終来店日を自動更新するトリガー
+--  （施術履歴 treatment_records の追加・変更・削除に連動）
+-- ============================================================================
+create or replace function recalc_customer_stats() returns trigger
+language plpgsql
+as $$
+declare
+  cust_id uuid;
+begin
+  cust_id := coalesce(new.customer_id, old.customer_id);
+  if cust_id is null then
+    return coalesce(new, old);
+  end if;
+
+  update customers set
+    visit_count    = (select count(*) from treatment_records where customer_id = cust_id),
+    lifetime_value = (select coalesce(sum(amount), 0) from treatment_records where customer_id = cust_id),
+    last_visit_on  = (select max(performed_on) from treatment_records where customer_id = cust_id),
+    avg_cycle_days = (
+      select case when count(*) > 1
+        then round((max(performed_on) - min(performed_on))::numeric / (count(*) - 1))::int
+        else null end
+      from treatment_records where customer_id = cust_id
+    )
+  where id = cust_id;
+
+  return coalesce(new, old);
+end;
+$$;
+
+drop trigger if exists trg_recalc_customer_stats on treatment_records;
+create trigger trg_recalc_customer_stats
+after insert or update or delete on treatment_records
+for each row execute function recalc_customer_stats();

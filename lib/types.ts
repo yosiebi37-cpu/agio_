@@ -73,6 +73,16 @@ export interface TreatmentRecord {
   created_at: string;
 }
 
+export interface KartePhoto {
+  id: string;
+  customer_id: string;
+  treatment_record_id: string | null;
+  taken_on: string | null;
+  kind: 'before' | 'after' | null;
+  storage_path: string;
+  created_at: string;
+}
+
 export interface ChemicalRecord {
   id: string;
   customer_id: string;

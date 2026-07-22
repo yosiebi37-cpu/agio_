@@ -90,10 +90,14 @@ npm run dev
 アクセスはブロックされます。
 
 スタッフアカウントの追加・削除は Supabase ダッシュボード **Authentication → Users** から行います。
+スタッフ本体（担当スタイリスト）の追加・編集は、アプリ内の **設定** 画面から行えます。
 
-## 今後の拡張余地
+## テスト / CI
 
-- 顧客新規登録フォーム / カルテ・薬剤記録の追加編集
-- 写真の Supabase Storage アップロード（`karte-photos` バケット）
-- 売上・設定ページ、週／月ビュー
-- 集計値（来店回数・累計売上・平均周期）のトリガー／ビューによる自動更新
+```bash
+npm test
+```
+
+`lib/format.ts` の日付・金額フォーマッタ等をユニットテストしています（Vitest）。
+`.github/workflows/ci.yml` により、push / PR のたびに `npm test` と `npm run build`
+（型チェック含む）が自動実行されます。
