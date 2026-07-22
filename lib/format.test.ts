@@ -13,6 +13,7 @@ import {
   formatMonthLong,
   formatDateTiny,
   initialsFromName,
+  datesInRangeByWeekday,
 } from './format';
 
 describe('yen', () => {
@@ -107,5 +108,23 @@ describe('initialsFromName', () => {
   });
   it('trims surrounding whitespace', () => {
     expect(initialsFromName('  田中 京子  ')).toBe('田京');
+  });
+});
+
+describe('datesInRangeByWeekday', () => {
+  it('returns only dates matching the requested weekdays', () => {
+    // 2026-07-19 is a Sunday, 2026-07-25 is a Saturday
+    const mondaysAndWednesdays = datesInRangeByWeekday('2026-07-19', '2026-07-25', new Set([1, 3]));
+    expect(mondaysAndWednesdays).toEqual(['2026-07-20', '2026-07-22']);
+  });
+  it('includes both endpoints when they match', () => {
+    const sundays = datesInRangeByWeekday('2026-07-19', '2026-07-26', new Set([0]));
+    expect(sundays).toEqual(['2026-07-19', '2026-07-26']);
+  });
+  it('returns an empty array when no weekdays are selected', () => {
+    expect(datesInRangeByWeekday('2026-07-19', '2026-07-25', new Set())).toEqual([]);
+  });
+  it('returns an empty array when the range is inverted', () => {
+    expect(datesInRangeByWeekday('2026-07-25', '2026-07-19', new Set([0, 1, 2, 3, 4, 5, 6]))).toEqual([]);
   });
 });

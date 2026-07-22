@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDays, formatDateTiny, hhmm, toISODate } from '@/lib/format';
 import ShiftEditModal from './ShiftEditModal';
+import ShiftBulkModal from './ShiftBulkModal';
 import type { Staff, Shift } from '@/lib/types';
 
 interface Props {
@@ -17,6 +18,7 @@ const WEEKDAY = ['日', '月', '火', '水', '木', '金', '土'];
 export default function ShiftClient({ staff, shifts, weekStart }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState<{ staffId: string; staffName: string; date: string } | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const today = toISODate(new Date());
@@ -42,6 +44,9 @@ export default function ShiftClient({ staff, shifts, weekStart }: Props) {
           <div className="cal-arrow" onClick={() => shiftWeek(1)}><i className="ti ti-chevron-right"></i></div>
         </div>
         <div style={{ fontSize: 12, color: 'var(--ink-l)' }}>セルをクリックしてシフトを設定・変更できます</div>
+        <button className="btn-new" style={{ marginLeft: 'auto' }} onClick={() => setBulkOpen(true)}>
+          <i className="ti ti-calendar-repeat"></i>曜日でまとめて設定
+        </button>
       </div>
 
       <div className="board-scroll">
@@ -102,6 +107,7 @@ export default function ShiftClient({ staff, shifts, weekStart }: Props) {
           existingShift={editingShift}
         />
       )}
+      <ShiftBulkModal open={bulkOpen} onClose={() => setBulkOpen(false)} staff={staff} />
     </div>
   );
 }
