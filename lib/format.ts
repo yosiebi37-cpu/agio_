@@ -61,6 +61,17 @@ export const startOfWeek = (iso: string): string => {
   return toISODate(d);
 };
 
+/** start〜end（両端含む）の範囲から、指定した曜日（0=日）に該当する日付だけを抽出 */
+export const datesInRangeByWeekday = (start: string, end: string, weekdays: Set<number>): string[] => {
+  const dates: string[] = [];
+  let d = start;
+  while (d <= end) {
+    if (weekdays.has(new Date(d + 'T00:00:00').getDay())) dates.push(d);
+    d = addDays(d, 1);
+  }
+  return dates;
+};
+
 /** 'YYYY-MM' -> "2026年7月" */
 export const formatMonthLong = (ym: string): string => {
   const [y, m] = ym.split('-').map(Number);
