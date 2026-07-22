@@ -17,6 +17,15 @@ export interface Staff {
   created_at: string;
 }
 
+export interface Shift {
+  id: string;
+  staff_id: string;
+  shift_date: string;
+  start_time: string;
+  end_time: string;
+  created_at: string;
+}
+
 export interface Customer {
   id: string;
   name: string;

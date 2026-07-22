@@ -10,6 +10,7 @@ const NAV = [
   { href: '/board', label: '予約ボード', icon: 'ti-calendar-event' },
   { href: '/customers', label: '顧客管理', icon: 'ti-users' },
   { href: '/freelance', label: '業務委託', icon: 'ti-receipt' },
+  { href: '/shifts', label: 'シフト', icon: 'ti-calendar-user' },
   { href: '/sales', label: '売上', icon: 'ti-chart-bar' },
   { href: '/settings', label: '設定', icon: 'ti-settings' },
 ];

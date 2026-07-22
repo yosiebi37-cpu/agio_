@@ -145,6 +145,19 @@ create table if not exists commission_settings (
   constraint commission_single_row check (id = 1)
 );
 
+-- ---------------------------------------------------------------------------
+-- シフト（スタッフの出勤予定）
+-- ---------------------------------------------------------------------------
+create table if not exists shifts (
+  id         uuid primary key default gen_random_uuid(),
+  staff_id   uuid not null references staff(id) on delete cascade,
+  shift_date date not null,
+  start_time time not null,
+  end_time   time not null,
+  created_at timestamptz not null default now(),
+  unique (staff_id, shift_date)
+);
+
 -- ============================================================================
 --  Row Level Security
 --  ログイン済み（authenticated）スタッフのみ読み書き可能。未ログイン（anon）は不可。
@@ -158,13 +171,14 @@ alter table treatment_records   enable row level security;
 alter table chemical_records    enable row level security;
 alter table karte_photos        enable row level security;
 alter table commission_settings enable row level security;
+alter table shifts              enable row level security;
 
 do $$
 declare t text;
 begin
   foreach t in array array[
     'staff','customers','bookings','treatment_records',
-    'chemical_records','karte_photos','commission_settings'
+    'chemical_records','karte_photos','commission_settings','shifts'
   ]
   loop
     execute format(
