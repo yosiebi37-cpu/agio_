@@ -47,6 +47,20 @@ export const toISODate = (d: Date): string => {
   return `${d.getFullYear()}-${mm}-${dd}`;
 };
 
+/** 'YYYY-MM-DD' + n日 -> 'YYYY-MM-DD' */
+export const addDays = (iso: string, n: number): string => {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return toISODate(d);
+};
+
+/** 'YYYY-MM-DD' -> その週の日曜日（週の開始日） */
+export const startOfWeek = (iso: string): string => {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() - d.getDay());
+  return toISODate(d);
+};
+
 /** 'YYYY-MM' -> "2026年7月" */
 export const formatMonthLong = (ym: string): string => {
   const [y, m] = ym.split('-').map(Number);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import {
@@ -135,8 +136,8 @@ export default function BoardClient({ staff, bookings, date }: Props) {
         </div>
         <div className="view-tabs">
           <div className="view-tab active">日</div>
-          <div className="view-tab">週</div>
-          <div className="view-tab">月</div>
+          <Link href={`/board?view=week&date=${date}`} className="view-tab">週</Link>
+          <Link href={`/board?view=month&date=${date}`} className="view-tab">月</Link>
         </div>
         <div className="bc-sep"></div>
         <div className="filter-staff">
