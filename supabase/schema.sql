@@ -158,6 +158,25 @@ create table if not exists shifts (
   unique (staff_id, shift_date)
 );
 
+-- ---------------------------------------------------------------------------
+-- 定休日（毎週の曜日 + 特定の休業日）
+-- ---------------------------------------------------------------------------
+create table if not exists salon_settings (
+  id              int primary key default 1,
+  closed_weekdays int[] not null default '{}',              -- 0=日 ... 6=土
+  updated_at      timestamptz not null default now(),
+  constraint salon_settings_single_row check (id = 1)
+);
+
+insert into salon_settings (id) values (1) on conflict (id) do nothing;
+
+create table if not exists holidays (
+  id           uuid primary key default gen_random_uuid(),
+  holiday_date date not null unique,
+  note         text,
+  created_at   timestamptz not null default now()
+);
+
 -- ============================================================================
 --  Row Level Security
 --  ログイン済み（authenticated）スタッフのみ読み書き可能。未ログイン（anon）は不可。
@@ -172,13 +191,16 @@ alter table chemical_records    enable row level security;
 alter table karte_photos        enable row level security;
 alter table commission_settings enable row level security;
 alter table shifts              enable row level security;
+alter table salon_settings      enable row level security;
+alter table holidays            enable row level security;
 
 do $$
 declare t text;
 begin
   foreach t in array array[
     'staff','customers','bookings','treatment_records',
-    'chemical_records','karte_photos','commission_settings','shifts'
+    'chemical_records','karte_photos','commission_settings','shifts',
+    'salon_settings','holidays'
   ]
   loop
     execute format(
