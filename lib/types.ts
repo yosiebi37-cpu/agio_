@@ -114,6 +114,19 @@ export interface CommissionSettings {
   updated_at: string;
 }
 
+export interface SalonSettings {
+  id: number;
+  closed_weekdays: number[]; // 0=日 ... 6=土
+  updated_at: string;
+}
+
+export interface Holiday {
+  id: string;
+  holiday_date: string;
+  note: string | null;
+  created_at: string;
+}
+
 // 画面表示用に結合したデータ
 export interface BookingWithStaff extends Booking {
   staff?: Pick<Staff, 'name' | 'color' | 'employment_type'> | null;

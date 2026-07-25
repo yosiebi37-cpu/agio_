@@ -31,9 +31,10 @@ interface Props {
   staff: Staff[];
   bookings: BookingWithStaff[];
   date: string;
+  closedLabel?: string | null;
 }
 
-export default function BoardClient({ staff, bookings, date }: Props) {
+export default function BoardClient({ staff, bookings, date, closedLabel }: Props) {
   const router = useRouter();
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<BookingWithStaff | null>(null);
@@ -132,6 +133,7 @@ export default function BoardClient({ staff, bookings, date }: Props) {
         <div className="cal-nav-row">
           <div className="cal-arrow" onClick={() => shiftDate(-1)}><i className="ti ti-chevron-left"></i></div>
           <div className="cal-today">{formatDateShort(date)}</div>
+          {closedLabel && <span className="tag" style={{ background: '#F6E4E2', color: 'var(--red)' }}>{closedLabel}</span>}
           <div className="cal-arrow" onClick={() => shiftDate(1)}><i className="ti ti-chevron-right"></i></div>
         </div>
         <div className="view-tabs">

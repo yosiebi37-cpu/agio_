@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { addDays, formatDateTiny, hhmm, toISODate } from '@/lib/format';
+import { toISODate, formatMonthLong, hhmm } from '@/lib/format';
 import ShiftEditModal from './ShiftEditModal';
 import ShiftBulkModal from './ShiftBulkModal';
 import type { Staff, Shift } from '@/lib/types';
@@ -11,18 +11,24 @@ import type { Staff, Shift } from '@/lib/types';
 interface Props {
   staff: Staff[];
   shifts: Shift[];
-  weekStart: string;
+  date: string;
 }
 
 const WEEKDAY = ['日', '月', '火', '水', '木', '金', '土'];
 
-export default function ShiftClient({ staff, shifts, weekStart }: Props) {
+export default function ShiftMonthView({ staff, shifts, date }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState<{ staffId: string; staffName: string; date: string } | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  const [y, m] = date.split('-').map(Number);
+  const month = `${y}-${String(m).padStart(2, '0')}`;
   const today = toISODate(new Date());
+
+  const days = useMemo(() => {
+    const daysInMonth = new Date(y, m, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, i) => toISODate(new Date(y, m - 1, i + 1)));
+  }, [y, m]);
 
   const shiftMap = useMemo(() => {
     const map = new Map<string, Shift>();
@@ -30,8 +36,9 @@ export default function ShiftClient({ staff, shifts, weekStart }: Props) {
     return map;
   }, [shifts]);
 
-  const shiftWeek = (delta: number) => {
-    router.push(`/shifts?date=${addDays(weekStart, delta * 7)}`);
+  const shiftMonth = (delta: number) => {
+    const d = new Date(y, m - 1 + delta, 1);
+    router.push(`/shifts?view=month&date=${toISODate(d)}`);
   };
 
   const editingShift = editing ? shiftMap.get(`${editing.staffId}|${editing.date}`) ?? null : null;
@@ -40,13 +47,13 @@ export default function ShiftClient({ staff, shifts, weekStart }: Props) {
     <div className="page-wrap">
       <div className="board-controls">
         <div className="cal-nav-row">
-          <div className="cal-arrow" onClick={() => shiftWeek(-1)}><i className="ti ti-chevron-left"></i></div>
-          <div className="cal-today">{formatDateTiny(weekStart)} 〜 {formatDateTiny(addDays(weekStart, 6))}</div>
-          <div className="cal-arrow" onClick={() => shiftWeek(1)}><i className="ti ti-chevron-right"></i></div>
+          <div className="cal-arrow" onClick={() => shiftMonth(-1)}><i className="ti ti-chevron-left"></i></div>
+          <div className="cal-today">{formatMonthLong(month)}</div>
+          <div className="cal-arrow" onClick={() => shiftMonth(1)}><i className="ti ti-chevron-right"></i></div>
         </div>
         <div className="view-tabs">
-          <div className="view-tab active">週</div>
-          <Link href={`/shifts?view=month&date=${weekStart}`} className="view-tab">月</Link>
+          <Link href={`/shifts?date=${date}`} className="view-tab">週</Link>
+          <div className="view-tab active">月</div>
         </div>
         <div style={{ fontSize: 12, color: 'var(--ink-l)' }}>セルをクリックしてシフトを設定・変更できます</div>
         <button className="btn-new" style={{ marginLeft: 'auto' }} onClick={() => setBulkOpen(true)}>
@@ -64,8 +71,8 @@ export default function ShiftClient({ staff, shifts, weekStart }: Props) {
                 className="time-col-head"
                 style={{ flexDirection: 'column', gap: 2, color: d === today ? 'var(--accent)' : undefined, fontWeight: d === today ? 600 : undefined }}
               >
-                <span>{WEEKDAY[new Date(d + 'T00:00:00').getDay()]}</span>
-                <span style={{ fontSize: 11 }}>{formatDateTiny(d).split('(')[0]}</span>
+                <span>{Number(d.slice(-2))}</span>
+                <span style={{ fontSize: 10 }}>{WEEKDAY[new Date(d + 'T00:00:00').getDay()]}</span>
               </div>
             ))}
           </div>
@@ -86,9 +93,9 @@ export default function ShiftClient({ staff, shifts, weekStart }: Props) {
                       onClick={() => setEditing({ staffId: s.id, staffName: s.name, date: d })}
                     >
                       {shift ? (
-                        <div className="day-cell-count">{hhmm(shift.start_time)}〜{hhmm(shift.end_time)}</div>
+                        <div className="day-cell-count" style={{ fontSize: 11 }}>{hhmm(shift.start_time)}〜{hhmm(shift.end_time)}</div>
                       ) : (
-                        <div className="day-cell-empty">休み</div>
+                        <div className="day-cell-empty">休</div>
                       )}
                     </div>
                   );

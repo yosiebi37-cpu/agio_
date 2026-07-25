@@ -14,11 +14,13 @@ interface BookingRow {
 interface Props {
   bookings: BookingRow[];
   date: string;
+  closedWeekdays: number[];
+  holidayDates: string[];
 }
 
 const WEEKDAY = ['日', '月', '火', '水', '木', '金', '土'];
 
-export default function BoardMonthView({ bookings, date }: Props) {
+export default function BoardMonthView({ bookings, date, closedWeekdays, holidayDates }: Props) {
   const router = useRouter();
   const [y, m] = date.split('-').map(Number);
   const month = `${y}-${String(m).padStart(2, '0')}`;
@@ -53,6 +55,9 @@ export default function BoardMonthView({ bookings, date }: Props) {
     router.push(`/board?view=month&date=${toISODate(d)}`);
   };
 
+  const holidaySet = useMemo(() => new Set(holidayDates), [holidayDates]);
+  const isClosed = (d: string) => closedWeekdays.includes(new Date(d + 'T00:00:00').getDay()) || holidaySet.has(d);
+
   return (
     <div className="page-wrap">
       <div className="board-controls">
@@ -78,22 +83,29 @@ export default function BoardMonthView({ bookings, date }: Props) {
           <div className="month-week-row" key={i}>
             {row.map((d, j) => {
               const cell = d ? cellData.get(d) : undefined;
+              const closed = d ? isClosed(d) : false;
               return (
                 <Link
                   href={d ? `/board?date=${d}` : '#'}
                   key={j}
-                  className={`month-cell${d ? '' : ' empty'}${d === today ? ' today' : ''}`}
+                  className={`month-cell${d ? '' : ' empty'}${d === today ? ' today' : ''}${closed ? ' closed' : ''}`}
                   aria-disabled={!d}
                   onClick={(e) => { if (!d) e.preventDefault(); }}
                 >
                   {d && (
                     <>
                       <div className="month-cell-day">{Number(d.slice(-2))}</div>
-                      {cell && (
+                      {closed ? (
                         <div className="month-cell-stats">
-                          <div className="month-cell-count">{cell.count}件</div>
-                          {cell.sales > 0 && <div className="month-cell-sales">{yenK(cell.sales)}</div>}
+                          <div className="month-cell-closed">休</div>
                         </div>
+                      ) : (
+                        cell && (
+                          <div className="month-cell-stats">
+                            <div className="month-cell-count">{cell.count}件</div>
+                            {cell.sales > 0 && <div className="month-cell-sales">{yenK(cell.sales)}</div>}
+                          </div>
+                        )
                       )}
                     </>
                   )}
