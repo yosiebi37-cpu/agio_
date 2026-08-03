@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { yen, formatMonthLong, formatDateTiny } from '@/lib/format';
+import { yen, formatMonthLong, formatDateTiny, toISODate } from '@/lib/format';
 import type { Staff } from '@/lib/types';
 
 interface BookingRow {
@@ -68,6 +69,10 @@ export default function SalesClient({ month, bookings, staff }: Props) {
           <div className="cal-arrow" onClick={() => shiftMonth(-1)}><i className="ti ti-chevron-left"></i></div>
           <div style={{ fontSize: 14, color: 'var(--ink-l)', minWidth: 100, textAlign: 'center' }}>{formatMonthLong(month)}</div>
           <div className="cal-arrow" onClick={() => shiftMonth(1)}><i className="ti ti-chevron-right"></i></div>
+        </div>
+        <div className="view-tabs">
+          <div className="view-tab active">月次</div>
+          <Link href={`/sales?view=day&date=${toISODate(new Date())}`} className="view-tab">日計表</Link>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { isSupabaseConfigured, getServerSupabase } from '@/lib/supabase/server';
 import SetupNotice from '@/components/SetupNotice';
 import SalesClient from '@/components/SalesClient';
+import DailyReportClient from '@/components/DailyReportClient';
 import { toISODate } from '@/lib/format';
 import type { Staff } from '@/lib/types';
 
@@ -16,16 +17,48 @@ function monthRange(ym: string): { start: string; end: string } {
 export default async function SalesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; view?: string; date?: string }>;
 }) {
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
-  const { month: monthParam } = await searchParams;
+  const { month: monthParam, view: viewParam, date: dateParam } = await searchParams;
+  const sb = await getServerSupabase();
+
+  if (viewParam === 'day') {
+    const date = dateParam ?? toISODate(new Date());
+    const [{ data: bookingsData }, { data: staffData }] = await Promise.all([
+      sb
+        .from('bookings')
+        .select('id,customer_name,staff_id,start_time,menu,amount,status,customer_type')
+        .eq('booking_date', date)
+        .order('start_time'),
+      sb.from('staff').select('*').order('sort_order'),
+    ]);
+
+    return (
+      <DailyReportClient
+        date={date}
+        bookings={
+          (bookingsData ?? []) as {
+            id: string;
+            customer_name: string;
+            staff_id: string;
+            start_time: string;
+            menu: string;
+            amount: number;
+            status: string;
+            customer_type: string;
+          }[]
+        }
+        staff={(staffData ?? []) as Staff[]}
+      />
+    );
+  }
+
   const now = new Date();
   const month = monthParam ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const { start, end } = monthRange(month);
 
-  const sb = await getServerSupabase();
   const [{ data: bookingsData }, { data: staffData }] = await Promise.all([
     sb
       .from('bookings')
