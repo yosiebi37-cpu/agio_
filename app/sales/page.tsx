@@ -3,7 +3,7 @@ import SetupNotice from '@/components/SetupNotice';
 import SalesClient from '@/components/SalesClient';
 import DailyReportClient from '@/components/DailyReportClient';
 import { toISODate } from '@/lib/format';
-import type { Staff } from '@/lib/types';
+import type { Staff, RetailSale } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,13 +26,14 @@ export default async function SalesPage({
 
   if (viewParam === 'day') {
     const date = dateParam ?? toISODate(new Date());
-    const [{ data: bookingsData }, { data: staffData }] = await Promise.all([
+    const [{ data: bookingsData }, { data: staffData }, { data: retailData }] = await Promise.all([
       sb
         .from('bookings')
         .select('id,customer_name,staff_id,start_time,menu,amount,status,customer_type')
         .eq('booking_date', date)
         .order('start_time'),
       sb.from('staff').select('*').order('sort_order'),
+      sb.from('retail_sales').select('*').eq('sale_date', date).order('created_at'),
     ]);
 
     return (
@@ -51,6 +52,7 @@ export default async function SalesPage({
           }[]
         }
         staff={(staffData ?? []) as Staff[]}
+        retailSales={(retailData ?? []) as RetailSale[]}
       />
     );
   }
@@ -59,20 +61,24 @@ export default async function SalesPage({
   const month = monthParam ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const { start, end } = monthRange(month);
 
-  const [{ data: bookingsData }, { data: staffData }] = await Promise.all([
+  const [{ data: bookingsData }, { data: staffData }, { data: retailData }] = await Promise.all([
     sb
       .from('bookings')
       .select('booking_date,staff_id,amount,status,customer_type')
       .gte('booking_date', start)
       .lte('booking_date', end),
     sb.from('staff').select('*').order('sort_order'),
+    sb.from('retail_sales').select('amount').gte('sale_date', start).lte('sale_date', end),
   ]);
+
+  const retailTotal = (retailData ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
 
   return (
     <SalesClient
       month={month}
       bookings={(bookingsData ?? []) as { booking_date: string; staff_id: string; amount: number; status: string; customer_type: string }[]}
       staff={(staffData ?? []) as Staff[]}
+      retailTotal={retailTotal}
     />
   );
 }

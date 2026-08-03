@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { yen, hhmm, formatDateLong, addDays, toISODate } from '@/lib/format';
 import { STATUS_LABEL, STATUS_TAG_CLASS, TYPE_LABEL, TYPE_TAG_CLASS } from '@/lib/constants';
-import type { Staff, BookingStatus, CustomerType } from '@/lib/types';
+import { getBrowserSupabase } from '@/lib/supabase/client';
+import NewRetailSaleModal from './NewRetailSaleModal';
+import type { Staff, BookingStatus, CustomerType, RetailSale } from '@/lib/types';
 
 interface BookingRow {
   id: string;
@@ -22,13 +24,23 @@ interface Props {
   date: string;
   bookings: BookingRow[];
   staff: Staff[];
+  retailSales: RetailSale[];
 }
 
-export default function DailyReportClient({ date, bookings, staff }: Props) {
+export default function DailyReportClient({ date, bookings, staff, retailSales }: Props) {
   const router = useRouter();
   const today = toISODate(new Date());
+  const [retailModalOpen, setRetailModalOpen] = useState(false);
 
   const staffMap = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
+
+  const retailTotal = useMemo(() => retailSales.reduce((s, r) => s + (r.amount ?? 0), 0), [retailSales]);
+
+  const deleteRetailSale = async (id: string) => {
+    const sb = getBrowserSupabase();
+    await sb.from('retail_sales').delete().eq('id', id);
+    router.refresh();
+  };
 
   const shiftDay = (delta: number) => {
     router.push(`/sales?view=day&date=${addDays(date, delta)}`);
@@ -79,8 +91,11 @@ export default function DailyReportClient({ date, bookings, staff }: Props) {
           <Link href={`/sales?month=${date.slice(0, 7)}`} className="view-tab">月次</Link>
           <div className="view-tab active">日計表</div>
         </div>
+        <button className="btn-new" style={{ marginLeft: date !== today ? undefined : 'auto' }} onClick={() => setRetailModalOpen(true)}>
+          <i className="ti ti-plus"></i>店販を追加
+        </button>
         {date !== today && (
-          <div className="cal-today" style={{ marginLeft: 'auto', cursor: 'pointer' }} onClick={() => router.push(`/sales?view=day&date=${today}`)}>
+          <div className="cal-today" style={{ marginLeft: 8, cursor: 'pointer' }} onClick={() => router.push(`/sales?view=day&date=${today}`)}>
             今日に戻る
           </div>
         )}
@@ -88,12 +103,60 @@ export default function DailyReportClient({ date, bookings, staff }: Props) {
 
       <div className="fl-body">
         <div className="fl-kpis">
-          <div className="kpi"><div className="kpi-label">確定売上</div><div className="kpi-val">{yen(stats.realized)}</div><div className="kpi-sub">来店済み {stats.visitedCount}件</div></div>
+          <div className="kpi"><div className="kpi-label">施術売上</div><div className="kpi-val">{yen(stats.realized)}</div><div className="kpi-sub">来店済み {stats.visitedCount}件</div></div>
+          <div className="kpi"><div className="kpi-label">店販売上</div><div className="kpi-val">{yen(retailTotal)}</div><div className="kpi-sub">{retailSales.length}件</div></div>
+          <div className="kpi"><div className="kpi-label">合計売上</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{yen(stats.realized + retailTotal)}</div><div className="kpi-sub">施術＋店販</div></div>
           <div className="kpi"><div className="kpi-label">客単価</div><div className="kpi-val">{yen(stats.avgTicket)}</div><div className="kpi-sub">来店済み平均</div></div>
+        </div>
+        <div className="fl-kpis">
           <div className="kpi"><div className="kpi-label">新規客</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{stats.byType.new.count}件</div><div className="kpi-sub">{yen(stats.byType.new.sales)}</div></div>
           <div className="kpi"><div className="kpi-label">既存客</div><div className="kpi-val">{stats.byType.existing.count}件</div><div className="kpi-sub">{yen(stats.byType.existing.sales)}</div></div>
         </div>
 
+        <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 8 }}>店販</div>
+        <div className="tbl-wrap" style={{ marginBottom: 16 }}>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>商品名</th>
+                <th>担当</th>
+                <th>金額</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {retailSales.map((r) => {
+                const s = r.staff_id ? staffMap.get(r.staff_id) : undefined;
+                return (
+                  <tr key={r.id}>
+                    <td>{r.product_name}</td>
+                    <td>
+                      {s && (
+                        <div className="name-link" style={{ color: 'var(--ink)', cursor: 'default' }}>
+                          <div style={{ width: 22, height: 22, borderRadius: '50%', background: s.bg_color, color: s.fg_color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, flexShrink: 0 }}>
+                            {s.initials}
+                          </div>
+                          {s.name}
+                        </div>
+                      )}
+                    </td>
+                    <td>{yen(r.amount)}</td>
+                    <td>
+                      <button className="btn-cancel" style={{ padding: '2px 8px', fontSize: 12, color: 'var(--red)' }} onClick={() => deleteRetailSale(r.id)}>
+                        削除
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {retailSales.length === 0 && (
+                <tr><td colSpan={4}><div className="empty-row">この日の店販はまだありません。</div></td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 8 }}>予約一覧</div>
         <div className="tbl-wrap" style={{ marginBottom: 16 }}>
           <table className="tbl">
             <thead>
@@ -138,6 +201,7 @@ export default function DailyReportClient({ date, bookings, staff }: Props) {
           </table>
         </div>
 
+        <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 8 }}>スタッフ別(施術)</div>
         <div className="tbl-wrap">
           <table className="tbl">
             <thead><tr><th>スタッフ</th><th>来店数</th><th>売上</th></tr></thead>
@@ -163,6 +227,8 @@ export default function DailyReportClient({ date, bookings, staff }: Props) {
           </table>
         </div>
       </div>
+
+      <NewRetailSaleModal open={retailModalOpen} onClose={() => setRetailModalOpen(false)} date={date} staff={staff} />
     </div>
   );
 }

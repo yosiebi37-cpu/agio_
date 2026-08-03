@@ -111,6 +111,7 @@ export interface CommissionSettings {
   id: number;
   existing_rate: number;
   new_rate: number;
+  retail_rate: number;
   updated_at: string;
 }
 
@@ -124,6 +125,15 @@ export interface Holiday {
   id: string;
   holiday_date: string;
   note: string | null;
+  created_at: string;
+}
+
+export interface RetailSale {
+  id: string;
+  sale_date: string;
+  staff_id: string | null;
+  product_name: string;
+  amount: number;
   created_at: string;
 }
 

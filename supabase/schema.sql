@@ -141,8 +141,21 @@ create table if not exists commission_settings (
   id            int primary key default 1,
   existing_rate int not null default 60,                    -- 既存客 報酬率 %
   new_rate      int not null default 50,                    -- 新規客 報酬率 %
+  retail_rate   int not null default 20,                    -- 店販 報酬率 %
   updated_at    timestamptz not null default now(),
   constraint commission_single_row check (id = 1)
+);
+
+-- ---------------------------------------------------------------------------
+-- 店販売上（シャンプー・スタイリング剤などの店頭販売）
+-- ---------------------------------------------------------------------------
+create table if not exists retail_sales (
+  id           uuid primary key default gen_random_uuid(),
+  sale_date    date not null,
+  staff_id     uuid references staff(id) on delete set null,
+  product_name text not null,
+  amount       int not null default 0,
+  created_at   timestamptz not null default now()
 );
 
 -- ---------------------------------------------------------------------------
@@ -193,6 +206,7 @@ alter table commission_settings enable row level security;
 alter table shifts              enable row level security;
 alter table salon_settings      enable row level security;
 alter table holidays            enable row level security;
+alter table retail_sales        enable row level security;
 
 do $$
 declare t text;
@@ -200,7 +214,7 @@ begin
   foreach t in array array[
     'staff','customers','bookings','treatment_records',
     'chemical_records','karte_photos','commission_settings','shifts',
-    'salon_settings','holidays'
+    'salon_settings','holidays','retail_sales'
   ]
   loop
     execute format(

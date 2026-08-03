@@ -39,17 +39,27 @@ export default async function FreelancePage({
   const ids = staff.map((s) => s.id);
 
   let bookings: { staff_id: string; customer_type: string; amount: number }[] = [];
+  let retailSales: { staff_id: string | null; amount: number }[] = [];
   if (ids.length) {
-    const { data } = await sb
-      .from('bookings')
-      .select('staff_id,customer_type,amount')
-      .eq('booking_date', date)
-      .in('staff_id', ids);
-    bookings = (data ?? []) as typeof bookings;
+    const [{ data: bookingData }, { data: retailData }] = await Promise.all([
+      sb
+        .from('bookings')
+        .select('staff_id,customer_type,amount')
+        .eq('booking_date', date)
+        .in('staff_id', ids),
+      sb
+        .from('retail_sales')
+        .select('staff_id,amount')
+        .eq('sale_date', date)
+        .in('staff_id', ids),
+    ]);
+    bookings = (bookingData ?? []) as typeof bookings;
+    retailSales = (retailData ?? []) as typeof retailSales;
   }
 
   const rows: FreelanceRow[] = staff.map((s) => {
     const mine = bookings.filter((b) => b.staff_id === s.id);
+    const myRetail = retailSales.filter((r) => r.staff_id === s.id);
     return {
       id: s.id,
       name: s.name,
@@ -59,6 +69,7 @@ export default async function FreelancePage({
       count: mine.length,
       exSales: mine.filter((b) => b.customer_type === 'existing').reduce((sum, b) => sum + (b.amount ?? 0), 0),
       nwSales: mine.filter((b) => b.customer_type === 'new').reduce((sum, b) => sum + (b.amount ?? 0), 0),
+      retailSales: myRetail.reduce((sum, r) => sum + (r.amount ?? 0), 0),
     };
   });
 
@@ -74,6 +85,7 @@ export default async function FreelancePage({
       date={date}
       initialExRate={settings?.existing_rate ?? 60}
       initialNwRate={settings?.new_rate ?? 50}
+      initialRetailRate={settings?.retail_rate ?? 20}
     />
   );
 }
