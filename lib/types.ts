@@ -127,6 +127,15 @@ export interface Holiday {
   created_at: string;
 }
 
+export interface RetailSale {
+  id: string;
+  sale_date: string;
+  staff_id: string | null;
+  product_name: string;
+  amount: number;
+  created_at: string;
+}
+
 // 画面表示用に結合したデータ
 export interface BookingWithStaff extends Booking {
   staff?: Pick<Staff, 'name' | 'color' | 'employment_type'> | null;

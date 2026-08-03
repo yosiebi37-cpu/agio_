@@ -18,9 +18,10 @@ interface Props {
   month: string;
   bookings: BookingRow[];
   staff: Staff[];
+  retailTotal: number;
 }
 
-export default function SalesClient({ month, bookings, staff }: Props) {
+export default function SalesClient({ month, bookings, staff, retailTotal }: Props) {
   const router = useRouter();
 
   const shiftMonth = (delta: number) => {
@@ -78,9 +79,13 @@ export default function SalesClient({ month, bookings, staff }: Props) {
 
       <div className="fl-body">
         <div className="fl-kpis">
-          <div className="kpi"><div className="kpi-label">確定売上</div><div className="kpi-val">{yen(stats.realized)}</div><div className="kpi-sub">来店済み {stats.visitedCount}件</div></div>
-          <div className="kpi"><div className="kpi-label">予約総額</div><div className="kpi-val">{yen(stats.projected)}</div><div className="kpi-sub">全ステータス合計</div></div>
+          <div className="kpi"><div className="kpi-label">施術売上</div><div className="kpi-val">{yen(stats.realized)}</div><div className="kpi-sub">来店済み {stats.visitedCount}件</div></div>
+          <div className="kpi"><div className="kpi-label">店販売上</div><div className="kpi-val">{yen(retailTotal)}</div><div className="kpi-sub">{formatMonthLong(month)}</div></div>
+          <div className="kpi"><div className="kpi-label">合計売上</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{yen(stats.realized + retailTotal)}</div><div className="kpi-sub">施術＋店販</div></div>
           <div className="kpi"><div className="kpi-label">客単価</div><div className="kpi-val">{yen(stats.avgTicket)}</div><div className="kpi-sub">来店済み平均</div></div>
+        </div>
+        <div className="fl-kpis">
+          <div className="kpi"><div className="kpi-label">予約総額</div><div className="kpi-val">{yen(stats.projected)}</div><div className="kpi-sub">全ステータス合計</div></div>
           <div className="kpi"><div className="kpi-label">来店数</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{stats.visitedCount}件</div><div className="kpi-sub">{formatMonthLong(month)}</div></div>
         </div>
 
