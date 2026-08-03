@@ -111,6 +111,7 @@ export interface CommissionSettings {
   id: number;
   existing_rate: number;
   new_rate: number;
+  retail_rate: number;
   updated_at: string;
 }
 

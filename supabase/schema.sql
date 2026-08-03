@@ -141,6 +141,7 @@ create table if not exists commission_settings (
   id            int primary key default 1,
   existing_rate int not null default 60,                    -- 既存客 報酬率 %
   new_rate      int not null default 50,                    -- 新規客 報酬率 %
+  retail_rate   int not null default 20,                    -- 店販 報酬率 %
   updated_at    timestamptz not null default now(),
   constraint commission_single_row check (id = 1)
 );
