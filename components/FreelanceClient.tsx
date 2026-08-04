@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { yen, formatDateLong, toISODate } from '@/lib/format';
@@ -12,8 +12,10 @@ export interface FreelanceRow {
   bg: string;
   fg: string;
   count: number;
-  exSales: number;
-  nwSales: number;
+  bookingEx: number;
+  bookingNw: number;
+  manualEx: number;
+  manualNw: number;
   retailSales: number;
 }
 
@@ -30,14 +32,25 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
   const [rex, setRex] = useState(initialExRate);
   const [rnw, setRnw] = useState(initialNwRate);
   const [rret, setRret] = useState(initialRetailRate);
+  const [localRows, setLocalRows] = useState(rows);
+
+  useEffect(() => {
+    setLocalRows(rows);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
+
+  const totals = useMemo(
+    () => localRows.map((r) => ({ ...r, exSales: r.bookingEx + r.manualEx, nwSales: r.bookingNw + r.manualNw })),
+    [localRows],
+  );
 
   const calc = useMemo(() => {
-    const totalEx = rows.reduce((s, r) => s + r.exSales, 0);
-    const totalNw = rows.reduce((s, r) => s + r.nwSales, 0);
-    const totalRetail = rows.reduce((s, r) => s + r.retailSales, 0);
-    const rewardEx = rows.reduce((s, r) => s + Math.round((r.exSales * rex) / 100), 0);
-    const rewardNw = rows.reduce((s, r) => s + Math.round((r.nwSales * rnw) / 100), 0);
-    const rewardRetail = rows.reduce((s, r) => s + Math.round((r.retailSales * rret) / 100), 0);
+    const totalEx = totals.reduce((s, r) => s + r.exSales, 0);
+    const totalNw = totals.reduce((s, r) => s + r.nwSales, 0);
+    const totalRetail = totals.reduce((s, r) => s + r.retailSales, 0);
+    const rewardEx = totals.reduce((s, r) => s + Math.round((r.exSales * rex) / 100), 0);
+    const rewardNw = totals.reduce((s, r) => s + Math.round((r.nwSales * rnw) / 100), 0);
+    const rewardRetail = totals.reduce((s, r) => s + Math.round((r.retailSales * rret) / 100), 0);
     return {
       totalEx,
       totalNw,
@@ -47,9 +60,9 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
       rewardNw,
       rewardRetail,
       totalReward: rewardEx + rewardNw + rewardRetail,
-      count: rows.reduce((s, r) => s + r.count, 0),
+      count: totals.reduce((s, r) => s + r.count, 0),
     };
-  }, [rows, rex, rnw, rret]);
+  }, [totals, rex, rnw, rret]);
 
   const persistRates = async (ex: number, nw: number, retail: number) => {
     try {
@@ -57,6 +70,27 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
       await sb.from('commission_settings').upsert({ id: 1, existing_rate: ex, new_rate: nw, retail_rate: retail, updated_at: new Date().toISOString() });
     } catch {
       /* 設定の保存に失敗しても画面の計算は継続する */
+    }
+  };
+
+  const updateManual = (staffId: string, field: 'ex' | 'nw', value: number) => {
+    setLocalRows((prev) =>
+      prev.map((r) => (r.id === staffId ? { ...r, manualEx: field === 'ex' ? value : r.manualEx, manualNw: field === 'nw' ? value : r.manualNw } : r)),
+    );
+  };
+
+  const persistManual = async (staffId: string) => {
+    const row = localRows.find((r) => r.id === staffId);
+    if (!row) return;
+    try {
+      const sb = getBrowserSupabase();
+      await sb.from('freelance_daily_sales').upsert(
+        { staff_id: staffId, sale_date: date, existing_amount: row.manualEx, new_amount: row.manualNw },
+        { onConflict: 'staff_id,sale_date' },
+      );
+      router.refresh();
+    } catch {
+      /* 保存に失敗しても画面の入力値は維持する */
     }
   };
 
@@ -68,7 +102,7 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
 
   const exportCsv = () => {
     const header = ['スタッフ', '件数', '既存客売上', '新規客売上', '店販売上', '合計売上', `既存報酬(${rex}%)`, `新規報酬(${rnw}%)`, `店販報酬(${rret}%)`, '報酬合計'];
-    const lines = rows.map((r) => {
+    const lines = totals.map((r) => {
       const exR = Math.round((r.exSales * rex) / 100);
       const nwR = Math.round((r.nwSales * rnw) / 100);
       const retR = Math.round((r.retailSales * rret) / 100);
@@ -138,8 +172,11 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
       </div>
 
       <div className="fl-body">
+        <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 12 }}>
+          「既存客手入力」「新規客手入力」欄に金額を入れると、予約ボードの売上に上乗せして計算されます。入力欄を押して数字を入れ、他の場所を押すと自動で保存されます。
+        </div>
         <div className="fl-kpis">
-          <div className="kpi"><div className="kpi-label">委託売上合計</div><div className="kpi-val">{yen(calc.totalSales)}</div><div className="kpi-sub">{rows.length}名 / {calc.count}件</div></div>
+          <div className="kpi"><div className="kpi-label">委託売上合計</div><div className="kpi-val">{yen(calc.totalSales)}</div><div className="kpi-sub">{totals.length}名 / {calc.count}件</div></div>
           <div className="kpi"><div className="kpi-label">既存客売上</div><div className="kpi-val">{yen(calc.totalEx)}</div><div className="kpi-sub">@ {rex}%</div></div>
           <div className="kpi"><div className="kpi-label">新規客売上</div><div className="kpi-val">{yen(calc.totalNw)}</div><div className="kpi-sub">@ {rnw}%</div></div>
           <div className="kpi"><div className="kpi-label">店販売上</div><div className="kpi-val">{yen(calc.totalRetail)}</div><div className="kpi-sub">@ {rret}%</div></div>
@@ -149,7 +186,7 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
         </div>
 
         <div className="fl-cards">
-          {rows.map((r) => {
+          {totals.map((r) => {
             const exR = Math.round((r.exSales * rex) / 100);
             const nwR = Math.round((r.nwSales * rnw) / 100);
             const retR = Math.round((r.retailSales * rret) / 100);
@@ -160,8 +197,32 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
                   <div><div className="flc-name">{r.name}</div><div className="flc-role">業務委託 ・ {r.count}件</div></div>
                 </div>
                 <div className="flc-breakdown">
-                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客売上</span><span className="flc-val">{yen(r.exSales)}</span></div>
-                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客売上</span><span className="flc-val">{yen(r.nwSales)}</span></div>
+                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客売上（予約分）</span><span className="flc-val">{yen(r.bookingEx)}</span></div>
+                  <div className="flc-row">
+                    <span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客 手入力</span>
+                    <input
+                      className="rate-input"
+                      style={{ width: 90, textAlign: 'right' }}
+                      type="number"
+                      min={0}
+                      value={r.manualEx}
+                      onChange={(e) => updateManual(r.id, 'ex', parseInt(e.target.value, 10) || 0)}
+                      onBlur={() => persistManual(r.id)}
+                    />
+                  </div>
+                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客売上（予約分）</span><span className="flc-val">{yen(r.bookingNw)}</span></div>
+                  <div className="flc-row">
+                    <span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客 手入力</span>
+                    <input
+                      className="rate-input"
+                      style={{ width: 90, textAlign: 'right' }}
+                      type="number"
+                      min={0}
+                      value={r.manualNw}
+                      onChange={(e) => updateManual(r.id, 'nw', parseInt(e.target.value, 10) || 0)}
+                      onBlur={() => persistManual(r.id)}
+                    />
+                  </div>
                   <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--ink-l)' }}></div>店販売上</span><span className="flc-val">{yen(r.retailSales)}</span></div>
                   <div className="flc-row"><span className="flc-key">合計売上</span><span className="flc-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17 }}>{yen(r.exSales + r.nwSales + r.retailSales)}</span></div>
                   <div className="flc-row"><span className="flc-key">既存報酬({rex}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(exR)}</span></div>
@@ -172,7 +233,7 @@ export default function FreelanceClient({ rows, date, initialExRate, initialNwRa
               </div>
             );
           })}
-          {rows.length === 0 && <div className="empty-row">業務委託スタッフの予約がありません。</div>}
+          {totals.length === 0 && <div className="empty-row">業務委託スタッフが登録されていません。</div>}
         </div>
 
         <div className="fl-total-bar">

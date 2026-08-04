@@ -40,8 +40,9 @@ export default async function FreelancePage({
 
   let bookings: { staff_id: string; customer_type: string; amount: number }[] = [];
   let retailSales: { staff_id: string | null; amount: number }[] = [];
+  let manualSales: { staff_id: string; existing_amount: number; new_amount: number }[] = [];
   if (ids.length) {
-    const [{ data: bookingData }, { data: retailData }] = await Promise.all([
+    const [{ data: bookingData }, { data: retailData }, { data: manualData }] = await Promise.all([
       sb
         .from('bookings')
         .select('staff_id,customer_type,amount')
@@ -52,14 +53,21 @@ export default async function FreelancePage({
         .select('staff_id,amount')
         .eq('sale_date', date)
         .in('staff_id', ids),
+      sb
+        .from('freelance_daily_sales')
+        .select('staff_id,existing_amount,new_amount')
+        .eq('sale_date', date)
+        .in('staff_id', ids),
     ]);
     bookings = (bookingData ?? []) as typeof bookings;
     retailSales = (retailData ?? []) as typeof retailSales;
+    manualSales = (manualData ?? []) as typeof manualSales;
   }
 
   const rows: FreelanceRow[] = staff.map((s) => {
     const mine = bookings.filter((b) => b.staff_id === s.id);
     const myRetail = retailSales.filter((r) => r.staff_id === s.id);
+    const myManual = manualSales.find((m) => m.staff_id === s.id);
     return {
       id: s.id,
       name: s.name,
@@ -67,8 +75,10 @@ export default async function FreelancePage({
       bg: s.bg_color,
       fg: s.fg_color,
       count: mine.length,
-      exSales: mine.filter((b) => b.customer_type === 'existing').reduce((sum, b) => sum + (b.amount ?? 0), 0),
-      nwSales: mine.filter((b) => b.customer_type === 'new').reduce((sum, b) => sum + (b.amount ?? 0), 0),
+      bookingEx: mine.filter((b) => b.customer_type === 'existing').reduce((sum, b) => sum + (b.amount ?? 0), 0),
+      bookingNw: mine.filter((b) => b.customer_type === 'new').reduce((sum, b) => sum + (b.amount ?? 0), 0),
+      manualEx: myManual?.existing_amount ?? 0,
+      manualNw: myManual?.new_amount ?? 0,
       retailSales: myRetail.reduce((sum, r) => sum + (r.amount ?? 0), 0),
     };
   });
