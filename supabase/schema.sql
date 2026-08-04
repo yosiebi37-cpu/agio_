@@ -147,6 +147,19 @@ create table if not exists commission_settings (
 );
 
 -- ---------------------------------------------------------------------------
+-- 業務委託スタッフの日次売上（予約ボードを使わない場合の手入力）
+-- ---------------------------------------------------------------------------
+create table if not exists freelance_daily_sales (
+  id             uuid primary key default gen_random_uuid(),
+  staff_id       uuid not null references staff(id) on delete cascade,
+  sale_date      date not null,
+  existing_amount int not null default 0,
+  new_amount      int not null default 0,
+  created_at     timestamptz not null default now(),
+  unique (staff_id, sale_date)
+);
+
+-- ---------------------------------------------------------------------------
 -- 店販売上（シャンプー・スタイリング剤などの店頭販売）
 -- ---------------------------------------------------------------------------
 create table if not exists retail_sales (
@@ -207,6 +220,7 @@ alter table shifts              enable row level security;
 alter table salon_settings      enable row level security;
 alter table holidays            enable row level security;
 alter table retail_sales        enable row level security;
+alter table freelance_daily_sales enable row level security;
 
 do $$
 declare t text;
@@ -214,7 +228,7 @@ begin
   foreach t in array array[
     'staff','customers','bookings','treatment_records',
     'chemical_records','karte_photos','commission_settings','shifts',
-    'salon_settings','holidays','retail_sales'
+    'salon_settings','holidays','retail_sales','freelance_daily_sales'
   ]
   loop
     execute format(
