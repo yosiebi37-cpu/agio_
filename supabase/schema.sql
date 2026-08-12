@@ -135,6 +135,18 @@ create table if not exists karte_photos (
 create index if not exists photos_customer_idx on karte_photos (customer_id);
 
 -- ---------------------------------------------------------------------------
+-- 施術メニュー一覧（予約・カルテ登録時に選べるメニューと基本料金）
+-- ---------------------------------------------------------------------------
+create table if not exists menu_items (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  price      int not null default 0,
+  sort_order int not null default 0,
+  is_active  boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
 -- 業務委託の報酬率（単一行設定）
 -- ---------------------------------------------------------------------------
 create table if not exists commission_settings (
@@ -196,6 +208,19 @@ create table if not exists salon_settings (
 
 insert into salon_settings (id) values (1) on conflict (id) do nothing;
 
+insert into menu_items (name, price, sort_order)
+select * from (values
+  ('カット', 5500, 1),
+  ('カット + カラー', 12100, 2),
+  ('ハイライトカラー', 16500, 3),
+  ('グレイカラー', 8800, 4),
+  ('フルカラー', 8800, 5),
+  ('デジタルパーマ', 17600, 6),
+  ('縮毛矯正', 22000, 7),
+  ('トリートメント', 4400, 8)
+) as v(name, price, sort_order)
+where not exists (select 1 from menu_items);
+
 create table if not exists holidays (
   id           uuid primary key default gen_random_uuid(),
   holiday_date date not null unique,
@@ -221,6 +246,7 @@ alter table salon_settings      enable row level security;
 alter table holidays            enable row level security;
 alter table retail_sales        enable row level security;
 alter table freelance_daily_sales enable row level security;
+alter table menu_items          enable row level security;
 
 do $$
 declare t text;
@@ -228,7 +254,7 @@ begin
   foreach t in array array[
     'staff','customers','bookings','treatment_records',
     'chemical_records','karte_photos','commission_settings','shifts',
-    'salon_settings','holidays','retail_sales','freelance_daily_sales'
+    'salon_settings','holidays','retail_sales','freelance_daily_sales','menu_items'
   ]
   loop
     execute format(

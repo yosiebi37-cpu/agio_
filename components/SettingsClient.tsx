@@ -6,17 +6,19 @@ import { getBrowserSupabase } from '@/lib/supabase/client';
 import { formatDateLong } from '@/lib/format';
 import NewStaffModal from './NewStaffModal';
 import EditStaffModal from './EditStaffModal';
-import type { Staff, SalonSettings, Holiday } from '@/lib/types';
+import { yen } from '@/lib/format';
+import type { Staff, SalonSettings, Holiday, MenuItem } from '@/lib/types';
 
 interface Props {
   staff: Staff[];
   salonSettings: SalonSettings;
   holidays: Holiday[];
+  menuItems: MenuItem[];
 }
 
 const WEEKDAY = ['日', '月', '火', '水', '木', '金', '土'];
 
-export default function SettingsClient({ staff, salonSettings, holidays }: Props) {
+export default function SettingsClient({ staff, salonSettings, holidays, menuItems }: Props) {
   const router = useRouter();
   const [newOpen, setNewOpen] = useState(false);
   const [editing, setEditing] = useState<Staff | null>(null);
@@ -29,7 +31,13 @@ export default function SettingsClient({ staff, salonSettings, holidays }: Props
   const [savingHoliday, setSavingHoliday] = useState(false);
   const [holidayError, setHolidayError] = useState<string | null>(null);
 
+  const [menuName, setMenuName] = useState('');
+  const [menuPrice, setMenuPrice] = useState('');
+  const [savingMenu, setSavingMenu] = useState(false);
+  const [menuError, setMenuError] = useState<string | null>(null);
+
   const nextSortOrder = staff.reduce((max, s) => Math.max(max, s.sort_order), 0) + 1;
+  const nextMenuSortOrder = menuItems.reduce((max, m) => Math.max(max, m.sort_order), 0) + 1;
 
   const toggleWeekday = (w: number) => {
     setClosedWeekdays((prev) => {
@@ -81,6 +89,41 @@ export default function SettingsClient({ staff, salonSettings, holidays }: Props
   const removeHoliday = async (id: string) => {
     const sb = getBrowserSupabase();
     await sb.from('holidays').delete().eq('id', id);
+    router.refresh();
+  };
+
+  const addMenuItem = async () => {
+    if (!menuName.trim()) {
+      setMenuError('メニュー名を入力してください。');
+      return;
+    }
+    setSavingMenu(true);
+    setMenuError(null);
+    try {
+      const sb = getBrowserSupabase();
+      const { error } = await sb.from('menu_items').insert({
+        name: menuName.trim(),
+        price: parseInt(menuPrice, 10) || 0,
+        sort_order: nextMenuSortOrder,
+      });
+      if (error) {
+        setMenuError(error.message);
+        setSavingMenu(false);
+        return;
+      }
+      setMenuName('');
+      setMenuPrice('');
+      setSavingMenu(false);
+      router.refresh();
+    } catch (e) {
+      setMenuError(e instanceof Error ? e.message : String(e));
+      setSavingMenu(false);
+    }
+  };
+
+  const removeMenuItem = async (id: string) => {
+    const sb = getBrowserSupabase();
+    await sb.from('menu_items').delete().eq('id', id);
     router.refresh();
   };
 
@@ -183,6 +226,44 @@ export default function SettingsClient({ staff, salonSettings, holidays }: Props
                   <div style={{ fontSize: 13, minWidth: 160 }}>{formatDateLong(h.holiday_date)}</div>
                   <div style={{ fontSize: 12, color: 'var(--ink-l)', flex: 1 }}>{h.note ?? ''}</div>
                   <button className="btn-sm" onClick={() => removeHoliday(h.id)}><i className="ti ti-x"></i>削除</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="page-head" style={{ marginTop: 32 }}>
+          <div>
+            <div className="page-h1" style={{ fontSize: 22 }}>施術メニュー</div>
+            <div className="page-sub">予約・カルテ登録時に選べるメニューと基本料金を管理できます</div>
+          </div>
+        </div>
+
+        <div className="tbl-wrap" style={{ padding: 18 }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <label className="f-label" style={{ fontSize: 11 }}>メニュー名</label>
+              <input className="f-input" type="text" placeholder="カット" value={menuName} onChange={(e) => setMenuName(e.target.value)} />
+            </div>
+            <div>
+              <label className="f-label" style={{ fontSize: 11 }}>金額 (円)</label>
+              <input className="f-input" type="number" min="0" placeholder="5500" value={menuPrice} onChange={(e) => setMenuPrice(e.target.value)} />
+            </div>
+            <button className="btn-save" onClick={addMenuItem} disabled={savingMenu}>
+              {savingMenu ? '追加中…' : '追加する'}
+            </button>
+          </div>
+          {menuError && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{menuError}</div>}
+
+          {menuItems.length === 0 ? (
+            <div className="empty-row">施術メニューがまだ登録されていません。</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {menuItems.map((m) => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--sand)' }}>
+                  <div style={{ fontSize: 13, flex: 1 }}>{m.name}</div>
+                  <div style={{ fontSize: 13, color: 'var(--ink-l)', minWidth: 80, textAlign: 'right' }}>{yen(m.price)}</div>
+                  <button className="btn-sm" onClick={() => removeMenuItem(m.id)}><i className="ti ti-x"></i>削除</button>
                 </div>
               ))}
             </div>

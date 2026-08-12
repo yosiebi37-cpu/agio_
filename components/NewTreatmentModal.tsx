@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { toISODate } from '@/lib/format';
-import type { Staff } from '@/lib/types';
+import type { Staff, MenuItem } from '@/lib/types';
 
 interface Props {
   open: boolean;
@@ -17,6 +17,7 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
   const [performedOn, setPerformedOn] = useState(() => toISODate(new Date()));
   const [staffId, setStaffId] = useState('');
@@ -25,7 +26,31 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
   const [tags, setTags] = useState('');
   const [note, setNote] = useState('');
 
+  useEffect(() => {
+    if (!open) return;
+    const sb = getBrowserSupabase();
+    sb.from('menu_items')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order')
+      .then(({ data }) => {
+        const list = (data ?? []) as MenuItem[];
+        setMenuItems(list);
+        if (list.length && !menu) {
+          setMenu(list[0].name);
+          setAmount(String(list[0].price));
+        }
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   if (!open) return null;
+
+  const handleMenuChange = (value: string) => {
+    setMenu(value);
+    const item = menuItems.find((m) => m.name === value);
+    if (item) setAmount(String(item.price));
+  };
 
   const reset = () => {
     setPerformedOn(toISODate(new Date()));
@@ -92,7 +117,9 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
           </div>
           <div className="f-row">
             <label className="f-label">メニュー</label>
-            <input className="f-input" type="text" placeholder="カット + カラー" value={menu} onChange={(e) => setMenu(e.target.value)} />
+            <select className="f-select" value={menu} onChange={(e) => handleMenuChange(e.target.value)}>
+              {menuItems.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+            </select>
           </div>
           <div className="f-row2">
             <div>
