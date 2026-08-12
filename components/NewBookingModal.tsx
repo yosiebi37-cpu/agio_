@@ -4,27 +4,24 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { toISODate } from '@/lib/format';
-import type { Staff } from '@/lib/types';
-
-const MENUS = [
-  'カット',
-  'カット + カラー',
-  'ハイライトカラー',
-  'グレイカラー',
-  'フルカラー',
-  'デジタルパーマ',
-  '縮毛矯正',
-  'トリートメント',
-];
+import type { Staff, MenuItem } from '@/lib/types';
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
 
+interface CustomerOption {
+  id: string;
+  name: string;
+  furigana: string | null;
+}
+
 export default function NewBookingModal({ open, onClose }: Props) {
   const router = useRouter();
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +30,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
   const [start, setStart] = useState('10:00');
   const [end, setEnd] = useState('11:00');
   const [staffId, setStaffId] = useState('');
-  const [menu, setMenu] = useState(MENUS[0]);
+  const [menu, setMenu] = useState('');
   const [type, setType] = useState<'existing' | 'new'>('existing');
   const [amount, setAmount] = useState('8800');
 
@@ -55,6 +52,22 @@ export default function NewBookingModal({ open, onClose }: Props) {
           setStaff(list);
           if (list.length && !staffId) setStaffId(list[0].id);
         });
+      sb.from('menu_items')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order')
+        .then(({ data }) => {
+          const list = (data ?? []) as MenuItem[];
+          setMenuItems(list);
+          if (list.length && !menu) {
+            setMenu(list[0].name);
+            setAmount(String(list[0].price));
+          }
+        });
+      sb.from('customers')
+        .select('id,name,furigana')
+        .order('name')
+        .then(({ data }) => setCustomers((data ?? []) as CustomerOption[]));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -62,6 +75,12 @@ export default function NewBookingModal({ open, onClose }: Props) {
   }, [open]);
 
   if (!open) return null;
+
+  const handleMenuChange = (value: string) => {
+    setMenu(value);
+    const item = menuItems.find((m) => m.name === value);
+    if (item) setAmount(String(item.price));
+  };
 
   const submit = async () => {
     if (!name.trim() || !staffId) {
@@ -72,7 +91,9 @@ export default function NewBookingModal({ open, onClose }: Props) {
     setError(null);
     try {
       const sb = getBrowserSupabase();
+      const matchedCustomer = customers.find((c) => c.name === name.trim());
       const { error } = await sb.from('bookings').insert({
+        customer_id: matchedCustomer?.id ?? null,
         customer_name: name.trim(),
         staff_id: staffId,
         booking_date: date,
@@ -99,6 +120,8 @@ export default function NewBookingModal({ open, onClose }: Props) {
     }
   };
 
+  const matchedFurigana = customers.find((c) => c.name === name.trim())?.furigana;
+
   return (
     <div className="modal-bg open" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal">
@@ -109,7 +132,20 @@ export default function NewBookingModal({ open, onClose }: Props) {
         <div className="modal-body">
           <div className="f-row">
             <label className="f-label">お客様名</label>
-            <input className="f-input" type="text" placeholder="山田 花子" value={name} onChange={(e) => setName(e.target.value)} />
+            <input
+              className="f-input"
+              type="text"
+              placeholder="山田 花子"
+              list="nb-customer-options"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <datalist id="nb-customer-options">
+              {customers.map((c) => <option key={c.id} value={c.name} />)}
+            </datalist>
+            {matchedFurigana && (
+              <div style={{ fontSize: 12, color: 'var(--ink-l)', marginTop: 4 }}>{matchedFurigana}</div>
+            )}
           </div>
           <div className="f-row2">
             <div>
@@ -139,8 +175,8 @@ export default function NewBookingModal({ open, onClose }: Props) {
           </div>
           <div className="f-row">
             <label className="f-label">メニュー</label>
-            <select className="f-select" value={menu} onChange={(e) => setMenu(e.target.value)}>
-              {MENUS.map((m) => <option key={m}>{m}</option>)}
+            <select className="f-select" value={menu} onChange={(e) => handleMenuChange(e.target.value)}>
+              {menuItems.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
             </select>
           </div>
           <div className="f-row2" style={{ marginBottom: 0 }}>

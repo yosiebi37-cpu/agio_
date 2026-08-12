@@ -128,6 +128,15 @@ export interface Holiday {
   created_at: string;
 }
 
+export interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface RetailSale {
   id: string;
   sale_date: string;
