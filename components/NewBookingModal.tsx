@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { toISODate } from '@/lib/format';
+import { toISODate, initialsFromName } from '@/lib/format';
 import type { Staff, MenuItem } from '@/lib/types';
 
 interface Props {
@@ -26,6 +26,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
+  const [furigana, setFurigana] = useState('');
   const [date, setDate] = useState(() => toISODate(new Date()));
   const [start, setStart] = useState('10:00');
   const [end, setEnd] = useState('11:00');
@@ -91,9 +92,27 @@ export default function NewBookingModal({ open, onClose }: Props) {
     setError(null);
     try {
       const sb = getBrowserSupabase();
-      const matchedCustomer = customers.find((c) => c.name === name.trim());
+      let matchedCustomer = customers.find((c) => c.name === name.trim());
+      if (!matchedCustomer) {
+        const { data: newCustomer, error: customerError } = await sb
+          .from('customers')
+          .insert({
+            name: name.trim(),
+            furigana: furigana.trim() || null,
+            initials: initialsFromName(name),
+            customer_type: type,
+          })
+          .select('id,name,furigana')
+          .single();
+        if (customerError) {
+          setError(customerError.message);
+          setSaving(false);
+          return;
+        }
+        matchedCustomer = newCustomer as CustomerOption;
+      }
       const { error } = await sb.from('bookings').insert({
-        customer_id: matchedCustomer?.id ?? null,
+        customer_id: matchedCustomer.id,
         customer_name: name.trim(),
         staff_id: staffId,
         booking_date: date,
@@ -111,6 +130,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
       }
       setSaving(false);
       setName('');
+      setFurigana('');
       onClose();
       router.push(`/board?date=${date}`);
       router.refresh();
@@ -120,7 +140,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
     }
   };
 
-  const matchedFurigana = customers.find((c) => c.name === name.trim())?.furigana;
+  const matchedCustomer = customers.find((c) => c.name === name.trim());
 
   return (
     <div className="modal-bg open" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -130,7 +150,21 @@ export default function NewBookingModal({ open, onClose }: Props) {
           <button className="mclose" onClick={onClose}><i className="ti ti-x"></i></button>
         </div>
         <div className="modal-body">
-          <div className="f-row">
+          <div className="f-row f-name-group">
+            <label className="f-label f-label-ruby">フリガナ</label>
+            {matchedCustomer ? (
+              <div className="f-input f-input-ruby" style={{ display: 'flex', alignItems: 'center', color: 'var(--ink-l)' }}>
+                {matchedCustomer.furigana ?? ''}
+              </div>
+            ) : (
+              <input
+                className="f-input f-input-ruby"
+                type="text"
+                placeholder="ヤマダ ハナコ"
+                value={furigana}
+                onChange={(e) => setFurigana(e.target.value)}
+              />
+            )}
             <label className="f-label">お客様名</label>
             <input
               className="f-input"
@@ -143,8 +177,8 @@ export default function NewBookingModal({ open, onClose }: Props) {
             <datalist id="nb-customer-options">
               {customers.map((c) => <option key={c.id} value={c.name} />)}
             </datalist>
-            {matchedFurigana && (
-              <div style={{ fontSize: 12, color: 'var(--ink-l)', marginTop: 4 }}>{matchedFurigana}</div>
+            {!matchedCustomer && name.trim() && (
+              <div style={{ fontSize: 12, color: 'var(--ink-l)', marginTop: 4 }}>新しいお客様として登録されます</div>
             )}
           </div>
           <div className="f-row2">
