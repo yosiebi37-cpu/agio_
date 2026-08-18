@@ -184,6 +184,17 @@ create table if not exists retail_sales (
 );
 
 -- ---------------------------------------------------------------------------
+-- 経費（日ごとの支出）
+-- ---------------------------------------------------------------------------
+create table if not exists expenses (
+  id           uuid primary key default gen_random_uuid(),
+  expense_date date not null,
+  item_name    text not null,
+  amount       int not null default 0,
+  created_at   timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
 -- シフト（スタッフの出勤予定）
 -- ---------------------------------------------------------------------------
 create table if not exists shifts (
@@ -247,6 +258,7 @@ alter table holidays            enable row level security;
 alter table retail_sales        enable row level security;
 alter table freelance_daily_sales enable row level security;
 alter table menu_items          enable row level security;
+alter table expenses            enable row level security;
 
 do $$
 declare t text;
@@ -254,7 +266,7 @@ begin
   foreach t in array array[
     'staff','customers','bookings','treatment_records',
     'chemical_records','karte_photos','commission_settings','shifts',
-    'salon_settings','holidays','retail_sales','freelance_daily_sales','menu_items'
+    'salon_settings','holidays','retail_sales','freelance_daily_sales','menu_items','expenses'
   ]
   loop
     execute format(

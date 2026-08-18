@@ -3,7 +3,7 @@ import SetupNotice from '@/components/SetupNotice';
 import SalesClient from '@/components/SalesClient';
 import DailyReportClient from '@/components/DailyReportClient';
 import { toISODate } from '@/lib/format';
-import type { Staff, RetailSale } from '@/lib/types';
+import type { Staff, RetailSale, Expense } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +26,7 @@ export default async function SalesPage({
 
   if (viewParam === 'day') {
     const date = dateParam ?? toISODate(new Date());
-    const [{ data: bookingsData }, { data: staffData }, { data: retailData }, { data: manualData }] = await Promise.all([
+    const [{ data: bookingsData }, { data: staffData }, { data: retailData }, { data: manualData }, { data: expensesData }] = await Promise.all([
       sb
         .from('bookings')
         .select('id,customer_name,staff_id,start_time,menu,amount,status,customer_type')
@@ -35,6 +35,7 @@ export default async function SalesPage({
       sb.from('staff').select('*').eq('is_active', true).order('sort_order'),
       sb.from('retail_sales').select('*').eq('sale_date', date).order('created_at'),
       sb.from('freelance_daily_sales').select('staff_id,existing_amount,new_amount').eq('sale_date', date),
+      sb.from('expenses').select('*').eq('expense_date', date).order('created_at'),
     ]);
 
     return (
@@ -57,6 +58,7 @@ export default async function SalesPage({
         manualSales={
           (manualData ?? []) as { staff_id: string; existing_amount: number; new_amount: number }[]
         }
+        expenses={(expensesData ?? []) as Expense[]}
       />
     );
   }
