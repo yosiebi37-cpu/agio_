@@ -146,6 +146,14 @@ export interface RetailSale {
   created_at: string;
 }
 
+export interface Expense {
+  id: string;
+  expense_date: string;
+  item_name: string;
+  amount: number;
+  created_at: string;
+}
+
 // 画面表示用に結合したデータ
 export interface BookingWithStaff extends Booking {
   staff?: Pick<Staff, 'name' | 'color' | 'employment_type'> | null;

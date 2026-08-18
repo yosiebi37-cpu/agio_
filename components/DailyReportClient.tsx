@@ -7,7 +7,8 @@ import { yen, hhmm, formatDateLong, addDays, toISODate } from '@/lib/format';
 import { STATUS_LABEL, STATUS_TAG_CLASS, TYPE_LABEL, TYPE_TAG_CLASS } from '@/lib/constants';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import NewRetailSaleModal from './NewRetailSaleModal';
-import type { Staff, BookingStatus, CustomerType, RetailSale } from '@/lib/types';
+import NewExpenseModal from './NewExpenseModal';
+import type { Staff, BookingStatus, CustomerType, RetailSale, Expense } from '@/lib/types';
 
 interface BookingRow {
   id: string;
@@ -32,12 +33,14 @@ interface Props {
   staff: Staff[];
   retailSales: RetailSale[];
   manualSales: ManualSaleRow[];
+  expenses: Expense[];
 }
 
-export default function DailyReportClient({ date, bookings, staff, retailSales, manualSales }: Props) {
+export default function DailyReportClient({ date, bookings, staff, retailSales, manualSales, expenses }: Props) {
   const router = useRouter();
   const today = toISODate(new Date());
   const [retailModalOpen, setRetailModalOpen] = useState(false);
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [localManual, setLocalManual] = useState<Map<string, { ex: number; nw: number }>>(
     () => new Map(manualSales.map((m) => [m.staff_id, { ex: m.existing_amount, nw: m.new_amount }])),
   );
@@ -50,10 +53,17 @@ export default function DailyReportClient({ date, bookings, staff, retailSales, 
   const staffMap = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
 
   const retailTotal = useMemo(() => retailSales.reduce((s, r) => s + (r.amount ?? 0), 0), [retailSales]);
+  const expensesTotal = useMemo(() => expenses.reduce((s, e) => s + (e.amount ?? 0), 0), [expenses]);
 
   const deleteRetailSale = async (id: string) => {
     const sb = getBrowserSupabase();
     await sb.from('retail_sales').delete().eq('id', id);
+    router.refresh();
+  };
+
+  const deleteExpense = async (id: string) => {
+    const sb = getBrowserSupabase();
+    await sb.from('expenses').delete().eq('id', id);
     router.refresh();
   };
 
@@ -141,6 +151,9 @@ export default function DailyReportClient({ date, bookings, staff, retailSales, 
         <button className="btn-new" style={{ marginLeft: date !== today ? undefined : 'auto' }} onClick={() => setRetailModalOpen(true)}>
           <i className="ti ti-plus"></i>店販を追加
         </button>
+        <button className="btn-new" onClick={() => setExpenseModalOpen(true)}>
+          <i className="ti ti-plus"></i>経費を追加
+        </button>
         {date !== today && (
           <div className="cal-today" style={{ marginLeft: 8, cursor: 'pointer' }} onClick={() => router.push(`/sales?view=day&date=${today}`)}>
             今日に戻る
@@ -158,6 +171,8 @@ export default function DailyReportClient({ date, bookings, staff, retailSales, 
         <div className="fl-kpis">
           <div className="kpi"><div className="kpi-label">新規客</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{stats.byType.new.count}件</div><div className="kpi-sub">{yen(stats.byType.new.sales)}</div></div>
           <div className="kpi"><div className="kpi-label">既存客</div><div className="kpi-val">{stats.byType.existing.count}件</div><div className="kpi-sub">{yen(stats.byType.existing.sales)}</div></div>
+          <div className="kpi"><div className="kpi-label">経費</div><div className="kpi-val" style={{ color: 'var(--red)' }}>{yen(expensesTotal)}</div><div className="kpi-sub">{expenses.length}件</div></div>
+          <div className="kpi"><div className="kpi-label">利益</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{yen(stats.realized + retailTotal - expensesTotal)}</div><div className="kpi-sub">売上－経費</div></div>
         </div>
 
         <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 8 }}>店販</div>
@@ -198,6 +213,35 @@ export default function DailyReportClient({ date, bookings, staff, retailSales, 
               })}
               {retailSales.length === 0 && (
                 <tr><td colSpan={4}><div className="empty-row">この日の店販はまだありません。</div></td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 8 }}>経費</div>
+        <div className="tbl-wrap" style={{ marginBottom: 16 }}>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>項目名</th>
+                <th>金額</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.map((e) => (
+                <tr key={e.id}>
+                  <td>{e.item_name}</td>
+                  <td>{yen(e.amount)}</td>
+                  <td>
+                    <button className="btn-cancel" style={{ padding: '2px 8px', fontSize: 12, color: 'var(--red)' }} onClick={() => deleteExpense(e.id)}>
+                      削除
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {expenses.length === 0 && (
+                <tr><td colSpan={3}><div className="empty-row">この日の経費はまだありません。</div></td></tr>
               )}
             </tbody>
           </table>
@@ -302,6 +346,7 @@ export default function DailyReportClient({ date, bookings, staff, retailSales, 
       </div>
 
       <NewRetailSaleModal open={retailModalOpen} onClose={() => setRetailModalOpen(false)} date={date} staff={staff} />
+      <NewExpenseModal open={expenseModalOpen} onClose={() => setExpenseModalOpen(false)} date={date} />
     </div>
   );
 }
