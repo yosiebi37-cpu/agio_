@@ -26,14 +26,15 @@ export default async function SalesPage({
 
   if (viewParam === 'day') {
     const date = dateParam ?? toISODate(new Date());
-    const [{ data: bookingsData }, { data: staffData }, { data: retailData }] = await Promise.all([
+    const [{ data: bookingsData }, { data: staffData }, { data: retailData }, { data: manualData }] = await Promise.all([
       sb
         .from('bookings')
         .select('id,customer_name,staff_id,start_time,menu,amount,status,customer_type')
         .eq('booking_date', date)
         .order('start_time'),
-      sb.from('staff').select('*').order('sort_order'),
+      sb.from('staff').select('*').eq('is_active', true).order('sort_order'),
       sb.from('retail_sales').select('*').eq('sale_date', date).order('created_at'),
+      sb.from('freelance_daily_sales').select('staff_id,existing_amount,new_amount').eq('sale_date', date),
     ]);
 
     return (
@@ -53,6 +54,9 @@ export default async function SalesPage({
         }
         staff={(staffData ?? []) as Staff[]}
         retailSales={(retailData ?? []) as RetailSale[]}
+        manualSales={
+          (manualData ?? []) as { staff_id: string; existing_amount: number; new_amount: number }[]
+        }
       />
     );
   }

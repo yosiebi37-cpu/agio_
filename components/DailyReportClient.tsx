@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { yen, hhmm, formatDateLong, addDays, toISODate } from '@/lib/format';
@@ -20,17 +20,32 @@ interface BookingRow {
   customer_type: string;
 }
 
+interface ManualSaleRow {
+  staff_id: string;
+  existing_amount: number;
+  new_amount: number;
+}
+
 interface Props {
   date: string;
   bookings: BookingRow[];
   staff: Staff[];
   retailSales: RetailSale[];
+  manualSales: ManualSaleRow[];
 }
 
-export default function DailyReportClient({ date, bookings, staff, retailSales }: Props) {
+export default function DailyReportClient({ date, bookings, staff, retailSales, manualSales }: Props) {
   const router = useRouter();
   const today = toISODate(new Date());
   const [retailModalOpen, setRetailModalOpen] = useState(false);
+  const [localManual, setLocalManual] = useState<Map<string, { ex: number; nw: number }>>(
+    () => new Map(manualSales.map((m) => [m.staff_id, { ex: m.existing_amount, nw: m.new_amount }])),
+  );
+
+  useEffect(() => {
+    setLocalManual(new Map(manualSales.map((m) => [m.staff_id, { ex: m.existing_amount, nw: m.new_amount }])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
 
   const staffMap = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
 
@@ -46,16 +61,45 @@ export default function DailyReportClient({ date, bookings, staff, retailSales }
     router.push(`/sales?view=day&date=${addDays(date, delta)}`);
   };
 
+  const updateManual = (staffId: string, field: 'ex' | 'nw', value: number) => {
+    setLocalManual((prev) => {
+      const next = new Map(prev);
+      const cur = next.get(staffId) ?? { ex: 0, nw: 0 };
+      next.set(staffId, { ...cur, [field]: value });
+      return next;
+    });
+  };
+
+  const persistManual = async (staffId: string) => {
+    const cur = localManual.get(staffId) ?? { ex: 0, nw: 0 };
+    try {
+      const sb = getBrowserSupabase();
+      await sb.from('freelance_daily_sales').upsert(
+        { staff_id: staffId, sale_date: date, existing_amount: cur.ex, new_amount: cur.nw },
+        { onConflict: 'staff_id,sale_date' },
+      );
+      router.refresh();
+    } catch {
+      /* 保存に失敗しても画面の入力値は維持する */
+    }
+  };
+
   const stats = useMemo(() => {
     const visited = bookings.filter((b) => b.status === 'visited');
-    const realized = visited.reduce((s, b) => s + (b.amount ?? 0), 0);
-    const avgTicket = visited.length ? Math.round(realized / visited.length) : 0;
+    const bookingRealized = visited.reduce((s, b) => s + (b.amount ?? 0), 0);
+    const manualTotal = Array.from(localManual.values()).reduce((s, m) => s + m.ex + m.nw, 0);
+    const realized = bookingRealized + manualTotal;
+    const avgTicket = visited.length ? Math.round(bookingRealized / visited.length) : 0;
 
     const byType = { new: { count: 0, sales: 0 }, existing: { count: 0, sales: 0 } };
     for (const b of visited) {
       const key = b.customer_type === 'new' ? 'new' : 'existing';
       byType[key].count += 1;
       byType[key].sales += b.amount ?? 0;
+    }
+    for (const m of localManual.values()) {
+      byType.existing.sales += m.ex;
+      byType.new.sales += m.nw;
     }
 
     const byStaffMap = new Map<string, { count: number; sales: number }>();
@@ -66,12 +110,15 @@ export default function DailyReportClient({ date, bookings, staff, retailSales }
       byStaffMap.set(b.staff_id, cur);
     }
     const byStaff = staff
-      .map((s) => ({ staff: s, ...(byStaffMap.get(s.id) ?? { count: 0, sales: 0 }) }))
-      .filter((r) => r.count > 0)
+      .map((s) => {
+        const manual = localManual.get(s.id) ?? { ex: 0, nw: 0 };
+        const booking = byStaffMap.get(s.id) ?? { count: 0, sales: 0 };
+        return { staff: s, count: booking.count, sales: booking.sales + manual.ex + manual.nw, manualEx: manual.ex, manualNw: manual.nw };
+      })
       .sort((a, b) => b.sales - a.sales);
 
     return { realized, visitedCount: visited.length, avgTicket, byType, byStaff };
-  }, [bookings, staff]);
+  }, [bookings, staff, localManual]);
 
   const sortedBookings = useMemo(
     () => [...bookings].sort((a, b) => a.start_time.localeCompare(b.start_time)),
@@ -202,9 +249,12 @@ export default function DailyReportClient({ date, bookings, staff, retailSales }
         </div>
 
         <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 8 }}>スタッフ別(施術)</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 8 }}>
+          「既存客手入力」「新規客手入力」は直接入力できます。予約ボードの売上に上乗せして計算されます。
+        </div>
         <div className="tbl-wrap">
           <table className="tbl">
-            <thead><tr><th>スタッフ</th><th>来店数</th><th>売上</th></tr></thead>
+            <thead><tr><th>スタッフ</th><th>来店数</th><th>予約分売上</th><th>既存客手入力</th><th>新規客手入力</th><th>合計</th></tr></thead>
             <tbody>
               {stats.byStaff.map((r) => (
                 <tr key={r.staff.id}>
@@ -217,11 +267,34 @@ export default function DailyReportClient({ date, bookings, staff, retailSales }
                     </div>
                   </td>
                   <td>{r.count}件</td>
+                  <td>{yen(r.sales - r.manualEx - r.manualNw)}</td>
+                  <td>
+                    <input
+                      className="rate-input"
+                      style={{ width: 90, textAlign: 'right' }}
+                      type="number"
+                      min={0}
+                      value={r.manualEx}
+                      onChange={(e) => updateManual(r.staff.id, 'ex', parseInt(e.target.value, 10) || 0)}
+                      onBlur={() => persistManual(r.staff.id)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="rate-input"
+                      style={{ width: 90, textAlign: 'right' }}
+                      type="number"
+                      min={0}
+                      value={r.manualNw}
+                      onChange={(e) => updateManual(r.staff.id, 'nw', parseInt(e.target.value, 10) || 0)}
+                      onBlur={() => persistManual(r.staff.id)}
+                    />
+                  </td>
                   <td>{yen(r.sales)}</td>
                 </tr>
               ))}
               {stats.byStaff.length === 0 && (
-                <tr><td colSpan={3}><div className="empty-row">この日の来店済み予約はまだありません。</div></td></tr>
+                <tr><td colSpan={6}><div className="empty-row">スタッフが登録されていません。</div></td></tr>
               )}
             </tbody>
           </table>
