@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { toISODate } from '@/lib/format';
+import { FALLBACK_MENUS } from '@/lib/constants';
 import type { Staff, MenuItem } from '@/lib/types';
 
 interface Props {
@@ -34,7 +35,7 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
       .eq('is_active', true)
       .order('sort_order')
       .then(({ data }) => {
-        const list = (data ?? []) as MenuItem[];
+        const list = (data ?? []).length ? (data as MenuItem[]) : FALLBACK_MENUS;
         setMenuItems(list);
         if (list.length && !menu) {
           setMenu(list[0].name);
