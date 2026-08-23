@@ -95,7 +95,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
       const sb = getBrowserSupabase();
       let matchedCustomer = customers.find((c) => c.name === name.trim());
       if (!matchedCustomer) {
-        const { data: newCustomer, error: customerError } = await sb
+        let { data: newCustomer, error: customerError } = await sb
           .from('customers')
           .insert({
             name: name.trim(),
@@ -105,6 +105,19 @@ export default function NewBookingModal({ open, onClose }: Props) {
           })
           .select('id,name,furigana')
           .single();
+        if (customerError?.message.includes('schema cache')) {
+          // Supabase の PostgREST キャッシュが新しい列に追いついていない場合、
+          // フリガナなしで再試行する（後で顧客管理から追記できる）
+          ({ data: newCustomer, error: customerError } = await sb
+            .from('customers')
+            .insert({
+              name: name.trim(),
+              initials: initialsFromName(name),
+              customer_type: type,
+            })
+            .select('id,name,furigana')
+            .single());
+        }
         if (customerError) {
           setError(customerError.message);
           setSaving(false);
