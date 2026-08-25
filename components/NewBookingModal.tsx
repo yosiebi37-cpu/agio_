@@ -232,9 +232,17 @@ export default function NewBookingModal({ open, onClose }: Props) {
           </div>
           <div className="f-row">
             <label className="f-label">メニュー</label>
-            <select className="f-select" value={menu} onChange={(e) => handleMenuChange(e.target.value)}>
-              {menuItems.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
-            </select>
+            <input
+              className="f-input"
+              type="text"
+              list="nb-menu-options"
+              value={menu}
+              onChange={(e) => handleMenuChange(e.target.value)}
+              placeholder="カット"
+            />
+            <datalist id="nb-menu-options">
+              {menuItems.map((m) => <option key={m.id} value={m.name} />)}
+            </datalist>
           </div>
           <div className="f-row2" style={{ marginBottom: 0 }}>
             <div>
