@@ -69,7 +69,14 @@ export default function NewBookingModal({ open, onClose }: Props) {
       sb.from('customers')
         .select('id,name,furigana')
         .order('name')
-        .then(({ data }) => setCustomers((data ?? []) as CustomerOption[]));
+        .then(async ({ data, error: customersError }) => {
+          if (customersError?.message.toLowerCase().includes('furigana')) {
+            const retry = await sb.from('customers').select('id,name').order('name');
+            setCustomers(((retry.data ?? []) as { id: string; name: string }[]).map((c) => ({ ...c, furigana: null })));
+            return;
+          }
+          setCustomers((data ?? []) as CustomerOption[]);
+        });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -105,18 +112,20 @@ export default function NewBookingModal({ open, onClose }: Props) {
           })
           .select('id,name,furigana')
           .single();
-        if (customerError?.message.includes('schema cache')) {
-          // Supabase の PostgREST キャッシュが新しい列に追いついていない場合、
+        if (customerError?.message.toLowerCase().includes('furigana')) {
+          // furigana 列が使えない環境（キャッシュ未反映・列不足など）では、
           // フリガナなしで再試行する（後で顧客管理から追記できる）
-          ({ data: newCustomer, error: customerError } = await sb
+          const retry = await sb
             .from('customers')
             .insert({
               name: name.trim(),
               initials: initialsFromName(name),
               customer_type: type,
             })
-            .select('id,name,furigana')
-            .single());
+            .select('id,name')
+            .single();
+          newCustomer = retry.data ? { ...retry.data, furigana: null } : null;
+          customerError = retry.error;
         }
         if (customerError) {
           setError(customerError.message);
