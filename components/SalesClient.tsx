@@ -19,9 +19,10 @@ interface Props {
   bookings: BookingRow[];
   staff: Staff[];
   retailTotal: number;
+  commissionTotal: number;
 }
 
-export default function SalesClient({ month, bookings, staff, retailTotal }: Props) {
+export default function SalesClient({ month, bookings, staff, retailTotal, commissionTotal }: Props) {
   const router = useRouter();
 
   const shiftMonth = (delta: number) => {
@@ -87,6 +88,7 @@ export default function SalesClient({ month, bookings, staff, retailTotal }: Pro
         <div className="fl-kpis">
           <div className="kpi"><div className="kpi-label">予約総額</div><div className="kpi-val">{yen(stats.projected)}</div><div className="kpi-sub">全ステータス合計</div></div>
           <div className="kpi"><div className="kpi-label">来店数</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{stats.visitedCount}件</div><div className="kpi-sub">{formatMonthLong(month)}</div></div>
+          <div className="kpi"><div className="kpi-label">業務委託報酬</div><div className="kpi-val" style={{ color: 'var(--red)' }}>{yen(commissionTotal)}</div><div className="kpi-sub">今月のお支払い予定</div></div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
