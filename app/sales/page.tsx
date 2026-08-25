@@ -67,24 +67,58 @@ export default async function SalesPage({
   const month = monthParam ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const { start, end } = monthRange(month);
 
-  const [{ data: bookingsData }, { data: staffData }, { data: retailData }] = await Promise.all([
+  const [{ data: bookingsData }, { data: staffData }, { data: retailData }, { data: manualData }, { data: settingsData }] = await Promise.all([
     sb
       .from('bookings')
       .select('booking_date,staff_id,amount,status,customer_type')
       .gte('booking_date', start)
       .lte('booking_date', end),
     sb.from('staff').select('*').order('sort_order'),
-    sb.from('retail_sales').select('amount').gte('sale_date', start).lte('sale_date', end),
+    sb.from('retail_sales').select('staff_id,amount').gte('sale_date', start).lte('sale_date', end),
+    sb
+      .from('freelance_daily_sales')
+      .select('staff_id,existing_amount,new_amount')
+      .gte('sale_date', start)
+      .lte('sale_date', end),
+    sb.from('commission_settings').select('*').eq('id', 1).maybeSingle(),
   ]);
 
-  const retailTotal = (retailData ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
+  const bookings = (bookingsData ?? []) as { booking_date: string; staff_id: string; amount: number; status: string; customer_type: string }[];
+  const staff = (staffData ?? []) as Staff[];
+  const retail = (retailData ?? []) as { staff_id: string | null; amount: number }[];
+  const manual = (manualData ?? []) as { staff_id: string; existing_amount: number; new_amount: number }[];
+
+  const retailTotal = retail.reduce((s, r) => s + (r.amount ?? 0), 0);
+
+  const contractIds = new Set(staff.filter((s) => s.employment_type === 'contract').map((s) => s.id));
+  const exRate = settingsData?.existing_rate ?? 60;
+  const nwRate = settingsData?.new_rate ?? 50;
+  const retailRate = settingsData?.retail_rate ?? 20;
+
+  const contractEx = bookings
+    .filter((b) => contractIds.has(b.staff_id) && b.customer_type === 'existing')
+    .reduce((s, b) => s + (b.amount ?? 0), 0)
+    + manual.filter((m) => contractIds.has(m.staff_id)).reduce((s, m) => s + (m.existing_amount ?? 0), 0);
+  const contractNw = bookings
+    .filter((b) => contractIds.has(b.staff_id) && b.customer_type === 'new')
+    .reduce((s, b) => s + (b.amount ?? 0), 0)
+    + manual.filter((m) => contractIds.has(m.staff_id)).reduce((s, m) => s + (m.new_amount ?? 0), 0);
+  const contractRetail = retail
+    .filter((r) => r.staff_id && contractIds.has(r.staff_id))
+    .reduce((s, r) => s + (r.amount ?? 0), 0);
+
+  const commissionTotal =
+    Math.round((contractEx * exRate) / 100) +
+    Math.round((contractNw * nwRate) / 100) +
+    Math.round((contractRetail * retailRate) / 100);
 
   return (
     <SalesClient
       month={month}
-      bookings={(bookingsData ?? []) as { booking_date: string; staff_id: string; amount: number; status: string; customer_type: string }[]}
-      staff={(staffData ?? []) as Staff[]}
+      bookings={bookings}
+      staff={staff}
       retailTotal={retailTotal}
+      commissionTotal={commissionTotal}
     />
   );
 }
