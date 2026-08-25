@@ -5,6 +5,12 @@ import DailyReportClient from '@/components/DailyReportClient';
 import { toISODate } from '@/lib/format';
 import type { Staff, RetailSale, Expense } from '@/lib/types';
 
+interface ManualSaleDay {
+  sale_date: string;
+  existing_amount: number;
+  new_amount: number;
+}
+
 export const dynamic = 'force-dynamic';
 
 function monthRange(ym: string): { start: string; end: string } {
@@ -67,7 +73,7 @@ export default async function SalesPage({
   const month = monthParam ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const { start, end } = monthRange(month);
 
-  const [{ data: bookingsData }, { data: staffData }, { data: retailData }] = await Promise.all([
+  const [{ data: bookingsData }, { data: staffData }, { data: retailData }, { data: expensesData }, { data: manualData }] = await Promise.all([
     sb
       .from('bookings')
       .select('booking_date,staff_id,amount,status,customer_type')
@@ -75,6 +81,12 @@ export default async function SalesPage({
       .lte('booking_date', end),
     sb.from('staff').select('*').order('sort_order'),
     sb.from('retail_sales').select('amount').gte('sale_date', start).lte('sale_date', end),
+    sb.from('expenses').select('*').gte('expense_date', start).lte('expense_date', end).order('expense_date'),
+    sb
+      .from('freelance_daily_sales')
+      .select('sale_date,existing_amount,new_amount')
+      .gte('sale_date', start)
+      .lte('sale_date', end),
   ]);
 
   const retailTotal = (retailData ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
@@ -85,6 +97,8 @@ export default async function SalesPage({
       bookings={(bookingsData ?? []) as { booking_date: string; staff_id: string; amount: number; status: string; customer_type: string }[]}
       staff={(staffData ?? []) as Staff[]}
       retailTotal={retailTotal}
+      expenses={(expensesData ?? []) as Expense[]}
+      manualSales={(manualData ?? []) as ManualSaleDay[]}
     />
   );
 }
