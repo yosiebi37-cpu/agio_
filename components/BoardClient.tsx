@@ -16,6 +16,7 @@ import {
   TYPE_TAG_CLASS,
 } from '@/lib/constants';
 import { hhmm, toMinutes, yenK, formatDateShort, toISODate } from '@/lib/format';
+import EditBookingModal from './EditBookingModal';
 import type { Staff, BookingWithStaff } from '@/lib/types';
 
 function textOn(bg: string): string {
@@ -38,6 +39,7 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
   const router = useRouter();
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<BookingWithStaff | null>(null);
+  const [editing, setEditing] = useState<BookingWithStaff | null>(null);
   const [nowMin, setNowMin] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -300,11 +302,21 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
               >
                 <i className="ti ti-id-badge"></i>カルテを開く
               </button>
+              <button className="daction" style={{ background: 'var(--sand)', color: 'var(--ink)' }} disabled={busy} onClick={() => setEditing(selected)}><i className="ti ti-edit"></i>編集</button>
               <button className="daction daction-done" disabled={busy} onClick={() => markVisited(selected)}><i className="ti ti-check"></i>来店済みに</button>
               <button className="daction daction-cancel" disabled={busy} onClick={() => cancelBooking(selected)}><i className="ti ti-x"></i>キャンセル</button>
             </div>
           </div>
         </div>
+      )}
+
+      {editing && (
+        <EditBookingModal
+          open={!!editing}
+          onClose={() => { setEditing(null); setSelected(null); }}
+          booking={editing}
+          staff={staff}
+        />
       )}
     </div>
   );
