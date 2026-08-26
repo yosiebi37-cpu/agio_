@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { toISODate, initialsFromName } from '@/lib/format';
 import { FALLBACK_MENUS } from '@/lib/constants';
+import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
 import type { Staff, MenuItem } from '@/lib/types';
 
 interface Props {
@@ -27,7 +28,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
-  const [furigana, setFurigana] = useState('');
+  const { furigana, onFuriganaChange, nameCompositionHandlers, reset: resetFurigana } = useFuriganaAutofill();
   const [date, setDate] = useState(() => toISODate(new Date()));
   const [start, setStart] = useState('10:00');
   const [end, setEnd] = useState('11:00');
@@ -153,7 +154,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
       }
       setSaving(false);
       setName('');
-      setFurigana('');
+      resetFurigana();
       onClose();
       router.push(`/board?date=${date}`);
       router.refresh();
@@ -185,7 +186,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
                 type="text"
                 placeholder="ヤマダ ハナコ"
                 value={furigana}
-                onChange={(e) => setFurigana(e.target.value)}
+                onChange={onFuriganaChange}
               />
             )}
             <label className="f-label">お客様名</label>
@@ -196,6 +197,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
               list="nb-customer-options"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              {...(matchedCustomer ? {} : nameCompositionHandlers)}
             />
             <datalist id="nb-customer-options">
               {customers.map((c) => <option key={c.id} value={c.name} />)}
