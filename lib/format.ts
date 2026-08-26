@@ -90,3 +90,7 @@ export const initialsFromName = (name: string): string => {
   if (parts.length >= 2) return parts[0][0] + parts[1][0];
   return name.trim().slice(0, 2);
 };
+
+/** ひらがな -> カタカナ（IME変換前の読みからフリガナを自動生成するために使用） */
+export const hiraganaToKatakana = (s: string): string =>
+  s.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));

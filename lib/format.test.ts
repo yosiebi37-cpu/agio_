@@ -14,6 +14,7 @@ import {
   formatDateTiny,
   initialsFromName,
   datesInRangeByWeekday,
+  hiraganaToKatakana,
 } from './format';
 
 describe('yen', () => {
@@ -126,5 +127,17 @@ describe('datesInRangeByWeekday', () => {
   });
   it('returns an empty array when the range is inverted', () => {
     expect(datesInRangeByWeekday('2026-07-25', '2026-07-19', new Set([0, 1, 2, 3, 4, 5, 6]))).toEqual([]);
+  });
+});
+
+describe('hiraganaToKatakana', () => {
+  it('converts hiragana characters to katakana', () => {
+    expect(hiraganaToKatakana('やまだ')).toBe('ヤマダ');
+  });
+  it('leaves non-hiragana characters untouched', () => {
+    expect(hiraganaToKatakana('やまだ はなこ123')).toBe('ヤマダ ハナコ123');
+  });
+  it('handles an empty string', () => {
+    expect(hiraganaToKatakana('')).toBe('');
   });
 });

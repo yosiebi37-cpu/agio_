@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { initialsFromName } from '@/lib/format';
+import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
 import type { Staff, CustomerType } from '@/lib/types';
 
 interface Props {
@@ -18,7 +19,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
-  const [furigana, setFurigana] = useState('');
+  const { furigana, onFuriganaChange, nameCompositionHandlers, reset: resetFurigana } = useFuriganaAutofill();
   const [phone, setPhone] = useState('');
   const [birthYear, setBirthYear] = useState('');
   const [customerType, setCustomerType] = useState<CustomerType>('new');
@@ -31,7 +32,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
 
   const reset = () => {
     setName('');
-    setFurigana('');
+    resetFurigana();
     setPhone('');
     setBirthYear('');
     setCustomerType('new');
@@ -92,9 +93,22 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
         <div className="modal-body">
           <div className="f-row f-name-group">
             <label className="f-label f-label-ruby">フリガナ</label>
-            <input className="f-input f-input-ruby" type="text" placeholder="ヤマダ ハナコ" value={furigana} onChange={(e) => setFurigana(e.target.value)} />
+            <input
+              className="f-input f-input-ruby"
+              type="text"
+              placeholder="ヤマダ ハナコ"
+              value={furigana}
+              onChange={onFuriganaChange}
+            />
             <label className="f-label">お客様名</label>
-            <input className="f-input" type="text" placeholder="山田 花子" value={name} onChange={(e) => setName(e.target.value)} />
+            <input
+              className="f-input"
+              type="text"
+              placeholder="山田 花子"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              {...nameCompositionHandlers}
+            />
           </div>
           <div className="f-row2">
             <div>

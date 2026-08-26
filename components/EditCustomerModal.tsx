@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { initialsFromName } from '@/lib/format';
+import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
 import type { Customer, Staff, CustomerType } from '@/lib/types';
 
 interface Props {
@@ -19,7 +20,7 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState(c.name);
-  const [furigana, setFurigana] = useState(c.furigana ?? '');
+  const { furigana, onFuriganaChange, nameCompositionHandlers } = useFuriganaAutofill(c.furigana ?? '');
   const [phone, setPhone] = useState(c.phone ?? '');
   const [birthYear, setBirthYear] = useState(c.birth_year ? String(c.birth_year) : '');
   const [customerType, setCustomerType] = useState<CustomerType>(c.customer_type);
@@ -86,9 +87,9 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
         <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
           <div className="f-row f-name-group">
             <label className="f-label f-label-ruby">フリガナ</label>
-            <input className="f-input f-input-ruby" type="text" placeholder="ヤマダ ハナコ" value={furigana} onChange={(e) => setFurigana(e.target.value)} />
+            <input className="f-input f-input-ruby" type="text" placeholder="ヤマダ ハナコ" value={furigana} onChange={onFuriganaChange} />
             <label className="f-label">お客様名</label>
-            <input className="f-input" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+            <input className="f-input" type="text" value={name} onChange={(e) => setName(e.target.value)} {...nameCompositionHandlers} />
           </div>
           <div className="f-row2">
             <div>
