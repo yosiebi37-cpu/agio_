@@ -1,4 +1,5 @@
-import { isSupabaseConfigured, getServerSupabase } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import { isSupabaseConfigured, getServerSupabase, getCurrentStaff } from '@/lib/supabase/server';
 import SetupNotice from '@/components/SetupNotice';
 import FreelanceClient, { type FreelanceRow } from '@/components/FreelanceClient';
 import { toISODate } from '@/lib/format';
@@ -15,6 +16,7 @@ export default async function FreelancePage({
 
   const { date: dateParam } = await searchParams;
   const sb = await getServerSupabase();
+  if (await getCurrentStaff(sb)) redirect('/board');
 
   let date: string;
   if (dateParam) {

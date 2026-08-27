@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import NewBookingModal from './NewBookingModal';
 import { formatDateLong, toISODate } from '@/lib/format';
 
-const NAV = [
+const ADMIN_NAV = [
   { href: '/board', label: '予約ボード', icon: 'ti-calendar-event' },
   { href: '/customers', label: '顧客管理', icon: 'ti-users' },
   { href: '/freelance', label: '業務委託', icon: 'ti-receipt' },
@@ -15,10 +15,22 @@ const NAV = [
   { href: '/settings', label: '設定', icon: 'ti-settings' },
 ];
 
-export default function TopBar() {
+const STAFF_NAV = [
+  { href: '/board', label: '予約ボード', icon: 'ti-calendar-event' },
+  { href: '/customers', label: '顧客管理', icon: 'ti-users' },
+  { href: '/shifts', label: 'シフト', icon: 'ti-calendar-user' },
+  { href: '/my-reward', label: '自分の実績', icon: 'ti-receipt' },
+];
+
+interface Props {
+  isStaff?: boolean;
+}
+
+export default function TopBar({ isStaff = false }: Props) {
   const pathname = usePathname();
   const [today, setToday] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const NAV = isStaff ? STAFF_NAV : ADMIN_NAV;
 
   useEffect(() => {
     setToday(formatDateLong(toISODate(new Date())));

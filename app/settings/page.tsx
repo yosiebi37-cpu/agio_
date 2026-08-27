@@ -1,4 +1,5 @@
-import { isSupabaseConfigured, getServerSupabase } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import { isSupabaseConfigured, getServerSupabase, getCurrentStaff } from '@/lib/supabase/server';
 import SetupNotice from '@/components/SetupNotice';
 import SettingsClient from '@/components/SettingsClient';
 import type { Staff, SalonSettings, Holiday, MenuItem } from '@/lib/types';
@@ -9,6 +10,7 @@ export default async function SettingsPage() {
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
   const sb = await getServerSupabase();
+  if (await getCurrentStaff(sb)) redirect('/board');
   const [{ data: staffData }, { data: salonSettingsData }, { data: holidaysData }, { data: menuItemsData }] = await Promise.all([
     sb.from('staff').select('*').order('sort_order'),
     sb.from('salon_settings').select('*').eq('id', 1).maybeSingle(),

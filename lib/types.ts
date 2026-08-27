@@ -14,6 +14,7 @@ export interface Staff {
   employment_type: EmploymentType;
   is_active: boolean;
   sort_order: number;
+  user_id: string | null;
   created_at: string;
 }
 

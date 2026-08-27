@@ -1,4 +1,5 @@
-import { isSupabaseConfigured, getServerSupabase } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import { isSupabaseConfigured, getServerSupabase, getCurrentStaff } from '@/lib/supabase/server';
 import SetupNotice from '@/components/SetupNotice';
 import SalesClient from '@/components/SalesClient';
 import DailyReportClient from '@/components/DailyReportClient';
@@ -23,6 +24,7 @@ export default async function SalesPage({
 
   const { month: monthParam, view: viewParam, date: dateParam } = await searchParams;
   const sb = await getServerSupabase();
+  if (await getCurrentStaff(sb)) redirect('/board');
 
   if (viewParam === 'day') {
     const date = dateParam ?? toISODate(new Date());

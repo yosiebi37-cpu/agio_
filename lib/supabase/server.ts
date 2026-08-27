@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Staff } from '@/lib/types';
 
 /** 環境変数が設定済みか（未設定なら画面に案内を表示する） */
 export function isSupabaseConfigured(): boolean {
@@ -31,4 +32,17 @@ export async function getServerSupabase(): Promise<SupabaseClient> {
       },
     },
   });
+}
+
+/**
+ * ログイン中のユーザーが「スタッフ用アカウント」に紐付いているか調べる。
+ * 見つかれば、そのスタッフの閲覧範囲だけに制限する（オーナーアカウントは null になる）。
+ */
+export async function getCurrentStaff(sb: SupabaseClient): Promise<Staff | null> {
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) return null;
+  const { data } = await sb.from('staff').select('*').eq('user_id', user.id).maybeSingle();
+  return (data as Staff | null) ?? null;
 }
