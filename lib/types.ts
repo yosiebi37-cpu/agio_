@@ -65,6 +65,8 @@ export interface Booking {
   customer_type: CustomerType;
   amount: number;
   note: string | null;
+  source: 'manual' | 'hotpepper';
+  hotpepper_reservation_id: string | null;
   created_at: string;
 }
 
