@@ -15,6 +15,7 @@ import {
   initialsFromName,
   datesInRangeByWeekday,
   hiraganaToKatakana,
+  minutesToHHMM,
 } from './format';
 
 describe('yen', () => {
@@ -127,6 +128,16 @@ describe('datesInRangeByWeekday', () => {
   });
   it('returns an empty array when the range is inverted', () => {
     expect(datesInRangeByWeekday('2026-07-25', '2026-07-19', new Set([0, 1, 2, 3, 4, 5, 6]))).toEqual([]);
+  });
+});
+
+describe('minutesToHHMM', () => {
+  it('formats minutes since midnight as HH:MM', () => {
+    expect(minutesToHHMM(540)).toBe('09:00');
+    expect(minutesToHHMM(1230)).toBe('20:30');
+  });
+  it('pads single-digit hours and minutes', () => {
+    expect(minutesToHHMM(65)).toBe('01:05');
   });
 });
 

@@ -33,6 +33,7 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
 
   const [menuName, setMenuName] = useState('');
   const [menuPrice, setMenuPrice] = useState('');
+  const [menuDuration, setMenuDuration] = useState('60');
   const [savingMenu, setSavingMenu] = useState(false);
   const [menuError, setMenuError] = useState<string | null>(null);
 
@@ -104,6 +105,7 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
       const { error } = await sb.from('menu_items').insert({
         name: menuName.trim(),
         price: parseInt(menuPrice, 10) || 0,
+        duration_minutes: parseInt(menuDuration, 10) || 60,
         sort_order: nextMenuSortOrder,
       });
       if (error) {
@@ -113,6 +115,7 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
       }
       setMenuName('');
       setMenuPrice('');
+      setMenuDuration('60');
       setSavingMenu(false);
       router.refresh();
     } catch (e) {
@@ -249,6 +252,10 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
               <label className="f-label" style={{ fontSize: 11 }}>金額 (円)</label>
               <input className="f-input" type="number" min="0" placeholder="5500" value={menuPrice} onChange={(e) => setMenuPrice(e.target.value)} />
             </div>
+            <div>
+              <label className="f-label" style={{ fontSize: 11 }}>所要時間 (分)</label>
+              <input className="f-input" type="number" min="0" step="10" placeholder="60" value={menuDuration} onChange={(e) => setMenuDuration(e.target.value)} />
+            </div>
             <button className="btn-save" onClick={addMenuItem} disabled={savingMenu}>
               {savingMenu ? '追加中…' : '追加する'}
             </button>
@@ -262,6 +269,7 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
               {menuItems.map((m) => (
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--sand)' }}>
                   <div style={{ fontSize: 13, flex: 1 }}>{m.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--ink-l)', minWidth: 50, textAlign: 'right' }}>{m.duration_minutes}分</div>
                   <div style={{ fontSize: 13, color: 'var(--ink-l)', minWidth: 80, textAlign: 'right' }}>{yen(m.price)}</div>
                   <button className="btn-sm" onClick={() => removeMenuItem(m.id)}><i className="ti ti-x"></i>削除</button>
                 </div>

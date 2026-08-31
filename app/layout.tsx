@@ -1,13 +1,20 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import TopBar from '@/components/TopBar';
+import { isSupabaseConfigured, getServerSupabase, getCurrentStaff } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
   title: 'Atelier — 予約管理',
   description: '美容室向けの予約・顧客・カルテ・業務委託管理ダッシュボード',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  let isStaff = false;
+  if (isSupabaseConfigured()) {
+    const sb = await getServerSupabase();
+    isStaff = !!(await getCurrentStaff(sb));
+  }
+
   return (
     <html lang="ja">
       <head>
@@ -23,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <TopBar />
+        <TopBar isStaff={isStaff} />
         <main className="app-main">{children}</main>
       </body>
     </html>

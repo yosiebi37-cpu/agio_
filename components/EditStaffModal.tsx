@@ -27,6 +27,7 @@ export default function EditStaffModal({ open, onClose, staffMember: s }: Props)
   const [employmentType, setEmploymentType] = useState<EmploymentType>(s.employment_type);
   const [paletteIndex, setPaletteIndex] = useState(closestPaletteIndex(s.color));
   const [isActive, setIsActive] = useState(s.is_active);
+  const [userId, setUserId] = useState(s.user_id ?? '');
 
   if (!open) return null;
 
@@ -50,6 +51,7 @@ export default function EditStaffModal({ open, onClose, staffMember: s }: Props)
           bg_color: p.bg,
           fg_color: p.fg,
           is_active: isActive,
+          user_id: userId.trim() || null,
         })
         .eq('id', s.id);
       if (error) {
@@ -111,10 +113,23 @@ export default function EditStaffModal({ open, onClose, staffMember: s }: Props)
               ))}
             </div>
           </div>
-          <label className="f-check" style={{ marginBottom: 0 }}>
+          <label className="f-check">
             <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
             在籍中（予約ボードに表示する）
           </label>
+          <div className="f-row" style={{ marginBottom: 0 }}>
+            <label className="f-label">ログイン用ユーザーID（任意）</label>
+            <input
+              className="f-input"
+              type="text"
+              placeholder="Supabaseで発行したユーザーIDを貼り付け"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+            />
+            <div style={{ fontSize: 11, color: 'var(--ink-l)', marginTop: 4 }}>
+              スタッフ本人にログインしてもらう場合、Supabaseの「Authentication → Users」でこの人用のアカウントを作り、そのUser UIDをここに貼り付けてください。空欄のままなら通常のオーナー権限のログインとして扱われます。
+            </div>
+          </div>
           {error && (
             <div style={{ marginTop: 14, fontSize: 12, color: 'var(--red)' }}>{error}</div>
           )}

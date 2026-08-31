@@ -14,6 +14,7 @@ export interface Staff {
   employment_type: EmploymentType;
   is_active: boolean;
   sort_order: number;
+  user_id: string | null;
   created_at: string;
 }
 
@@ -132,6 +133,7 @@ export interface MenuItem {
   id: string;
   name: string;
   price: number;
+  duration_minutes: number;
   sort_order: number;
   is_active: boolean;
   created_at: string;

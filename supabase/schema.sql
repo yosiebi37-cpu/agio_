@@ -26,8 +26,10 @@ create table if not exists staff (
                     check (employment_type in ('staff', 'contract')), -- 社員 / 業務委託
   is_active       boolean not null default true,
   sort_order      int not null default 0,
+  user_id         uuid references auth.users(id) on delete set null,  -- スタッフ本人のログインアカウント
   created_at      timestamptz not null default now()
 );
+create unique index if not exists staff_user_id_idx on staff (user_id) where user_id is not null;
 
 -- ---------------------------------------------------------------------------
 -- 顧客
@@ -138,12 +140,13 @@ create index if not exists photos_customer_idx on karte_photos (customer_id);
 -- 施術メニュー一覧（予約・カルテ登録時に選べるメニューと基本料金）
 -- ---------------------------------------------------------------------------
 create table if not exists menu_items (
-  id         uuid primary key default gen_random_uuid(),
-  name       text not null,
-  price      int not null default 0,
-  sort_order int not null default 0,
-  is_active  boolean not null default true,
-  created_at timestamptz not null default now()
+  id               uuid primary key default gen_random_uuid(),
+  name             text not null,
+  price            int not null default 0,
+  duration_minutes int not null default 60,
+  sort_order       int not null default 0,
+  is_active        boolean not null default true,
+  created_at       timestamptz not null default now()
 );
 
 -- ---------------------------------------------------------------------------
@@ -219,17 +222,17 @@ create table if not exists salon_settings (
 
 insert into salon_settings (id) values (1) on conflict (id) do nothing;
 
-insert into menu_items (name, price, sort_order)
+insert into menu_items (name, price, duration_minutes, sort_order)
 select * from (values
-  ('カット', 5500, 1),
-  ('カット + カラー', 12100, 2),
-  ('ハイライトカラー', 16500, 3),
-  ('グレイカラー', 8800, 4),
-  ('フルカラー', 8800, 5),
-  ('デジタルパーマ', 17600, 6),
-  ('縮毛矯正', 22000, 7),
-  ('トリートメント', 4400, 8)
-) as v(name, price, sort_order)
+  ('カット', 5500, 60, 1),
+  ('カット + カラー', 12100, 120, 2),
+  ('ハイライトカラー', 16500, 150, 3),
+  ('グレイカラー', 8800, 90, 4),
+  ('フルカラー', 8800, 90, 5),
+  ('デジタルパーマ', 17600, 150, 6),
+  ('縮毛矯正', 22000, 150, 7),
+  ('トリートメント', 4400, 30, 8)
+) as v(name, price, duration_minutes, sort_order)
 where not exists (select 1 from menu_items);
 
 create table if not exists holidays (
@@ -277,6 +280,44 @@ begin
 end $$;
 
 -- ============================================================================
+--  スタッフ用アカウント（user_id で紐付いたスタッフ）は、
+--  自分の予約・顧客対応はできるが、他人の報酬や店舗設定は見られないようにする
+-- ============================================================================
+create or replace function current_staff_id() returns uuid
+language sql stable
+as $$
+  select id from staff where user_id = auth.uid();
+$$;
+
+create or replace function is_admin() returns boolean
+language sql stable
+as $$
+  select auth.uid() is not null and current_staff_id() is null;
+$$;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['staff', 'commission_settings', 'menu_items', 'salon_settings', 'holidays', 'expenses']
+  loop
+    execute format('drop policy if exists "staff_authenticated_all" on %I;', t);
+    execute format('create policy "%1$s_select_all" on %1$I for select to authenticated using (true);', t);
+    execute format('create policy "%1$s_admin_insert" on %1$I for insert to authenticated with check (is_admin());', t);
+    execute format('create policy "%1$s_admin_update" on %1$I for update to authenticated using (is_admin()) with check (is_admin());', t);
+    execute format('create policy "%1$s_admin_delete" on %1$I for delete to authenticated using (is_admin());', t);
+  end loop;
+
+  foreach t in array array['freelance_daily_sales', 'retail_sales']
+  loop
+    execute format('drop policy if exists "staff_authenticated_all" on %I;', t);
+    execute format('create policy "%1$s_select_own" on %1$I for select to authenticated using (is_admin() or staff_id = current_staff_id());', t);
+    execute format('create policy "%1$s_admin_insert" on %1$I for insert to authenticated with check (is_admin());', t);
+    execute format('create policy "%1$s_admin_update" on %1$I for update to authenticated using (is_admin()) with check (is_admin());', t);
+    execute format('create policy "%1$s_admin_delete" on %1$I for delete to authenticated using (is_admin());', t);
+  end loop;
+end $$;
+
+-- ============================================================================
 --  顧客の来店回数・累計売上・平均周期・最終来店日を自動更新するトリガー
 --  （施術履歴 treatment_records の追加・変更・削除に連動）
 -- ============================================================================
@@ -311,3 +352,47 @@ drop trigger if exists trg_recalc_customer_stats on treatment_records;
 create trigger trg_recalc_customer_stats
 after insert or update or delete on treatment_records
 for each row execute function recalc_customer_stats();
+
+-- ============================================================================
+--  お客様向け予約ページ（未ログインの一般公開）用の設定
+--  メニュー・スタッフ・空き状況だけを安全に公開し、予約の作成だけを許可する
+-- ============================================================================
+create or replace view public_staff as
+  select id, name, initials, color, bg_color, fg_color, employment_type, is_active, sort_order
+  from staff
+  where is_active = true;
+
+create or replace view public_availability as
+  select staff_id, booking_date, start_time, end_time
+  from bookings;
+
+grant select on public_staff to anon;
+grant select on public_availability to anon;
+grant select on menu_items to anon;
+grant select on salon_settings to anon;
+grant select on holidays to anon;
+
+drop policy if exists "public_menu_items_select" on menu_items;
+create policy "public_menu_items_select" on menu_items for select to anon using (is_active = true);
+
+drop policy if exists "public_salon_settings_select" on salon_settings;
+create policy "public_salon_settings_select" on salon_settings for select to anon using (true);
+
+drop policy if exists "public_holidays_select" on holidays;
+create policy "public_holidays_select" on holidays for select to anon using (true);
+
+drop policy if exists "public_customer_insert" on customers;
+create policy "public_customer_insert" on customers for insert to anon with check (true);
+
+drop policy if exists "public_booking_insert" on bookings;
+create policy "public_booking_insert" on bookings for insert to anon with check (true);
+
+create or replace function public_find_customer_by_phone(p_phone text)
+returns table(id uuid, name text, customer_type text)
+language sql security definer
+set search_path = public
+as $$
+  select id, name, customer_type from customers where phone = p_phone limit 1;
+$$;
+
+grant execute on function public_find_customer_by_phone(text) to anon;
