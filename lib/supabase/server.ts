@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Staff } from '@/lib/types';
@@ -32,6 +33,16 @@ export async function getServerSupabase(): Promise<SupabaseClient> {
       },
     },
   });
+}
+
+/**
+ * ログイン不要のサーバー処理（Webhook など）専用のクライアント。
+ * Row Level Security を無視して読み書きできるため、ブラウザには絶対に渡さないこと。
+ */
+export function getServiceSupabase(): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(url, key, { auth: { persistSession: false } });
 }
 
 /**
