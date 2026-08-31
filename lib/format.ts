@@ -17,6 +17,13 @@ export const toMinutes = (t: string): number => {
   return h * 60 + m;
 };
 
+/** 0 時からの経過分 -> 'HH:MM' */
+export const minutesToHHMM = (mins: number): string => {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
 const WEEKDAY = ['日', '月', '火', '水', '木', '金', '土'];
 
 /** 'YYYY-MM-DD' -> "5月30日（土）" */

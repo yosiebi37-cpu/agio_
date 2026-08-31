@@ -133,6 +133,7 @@ export interface MenuItem {
   id: string;
   name: string;
   price: number;
+  duration_minutes: number;
   sort_order: number;
   is_active: boolean;
   created_at: string;

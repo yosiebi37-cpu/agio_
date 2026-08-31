@@ -42,7 +42,7 @@ export default function TopBar({ isStaff = false }: Props) {
     return pathname.startsWith(href);
   };
 
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname.startsWith('/book')) return null;
 
   return (
     <>
