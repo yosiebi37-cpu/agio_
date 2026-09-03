@@ -16,6 +16,7 @@ drop function if exists is_admin() cascade;
 drop function if exists current_staff_id() cascade;
 drop function if exists recalc_customer_stats() cascade;
 
+drop table if exists square_sync_log cascade;
 drop table if exists hotpepper_sync_log cascade;
 drop table if exists holidays cascade;
 drop table if exists salon_settings cascade;
@@ -53,6 +54,7 @@ create table if not exists staff (
   is_active       boolean not null default true,
   sort_order      int not null default 0,
   user_id         uuid references auth.users(id) on delete set null,  -- スタッフ本人のログインアカウント
+  square_team_member_id text unique,                        -- Square Appointments 連携用の担当者ID
   created_at      timestamptz not null default now()
 );
 create unique index if not exists staff_user_id_idx on staff (user_id) where user_id is not null;
@@ -110,10 +112,11 @@ create table if not exists bookings (
 create index if not exists bookings_date_idx on bookings (booking_date);
 create index if not exists bookings_staff_idx on bookings (staff_id);
 
--- HotPepper Beauty（SALON BOARD）のメール連携で使う予約番号・登録経路
+-- HotPepper Beauty（SALON BOARD）のメール連携・Square Appointments連携で使う予約ID・登録経路
 alter table bookings add column if not exists hotpepper_reservation_id text unique;
+alter table bookings add column if not exists square_booking_id text unique;
 alter table bookings add column if not exists source text not null default 'manual'
-  check (source in ('manual', 'hotpepper'));
+  check (source in ('manual', 'hotpepper', 'square'));
 
 -- ---------------------------------------------------------------------------
 -- 施術履歴（カルテ）
@@ -285,6 +288,18 @@ create table if not exists hotpepper_sync_log (
   created_at timestamptz not null default now()
 );
 
+-- ---------------------------------------------------------------------------
+-- Square Appointments 連携の処理ログ
+-- ---------------------------------------------------------------------------
+create table if not exists square_sync_log (
+  id         uuid primary key default gen_random_uuid(),
+  event_type text,
+  raw_body   text,
+  result     text not null check (result in ('created', 'cancelled', 'skipped', 'error')),
+  message    text,
+  created_at timestamptz not null default now()
+);
+
 -- ============================================================================
 --  Row Level Security
 --  ログイン済み（authenticated）スタッフのみ読み書き可能。未ログイン（anon）は不可。
@@ -306,6 +321,7 @@ alter table freelance_daily_sales enable row level security;
 alter table menu_items          enable row level security;
 alter table expenses            enable row level security;
 alter table hotpepper_sync_log  enable row level security;
+alter table square_sync_log     enable row level security;
 
 do $$
 declare t text;
@@ -314,7 +330,7 @@ begin
     'staff','customers','bookings','treatment_records',
     'chemical_records','karte_photos','commission_settings','shifts',
     'salon_settings','holidays','retail_sales','freelance_daily_sales','menu_items','expenses',
-    'hotpepper_sync_log'
+    'hotpepper_sync_log','square_sync_log'
   ]
   loop
     execute format(

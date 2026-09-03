@@ -15,6 +15,7 @@ export interface Staff {
   is_active: boolean;
   sort_order: number;
   user_id: string | null;
+  square_team_member_id: string | null;
   created_at: string;
 }
 
@@ -65,8 +66,9 @@ export interface Booking {
   customer_type: CustomerType;
   amount: number;
   note: string | null;
-  source: 'manual' | 'hotpepper';
+  source: 'manual' | 'hotpepper' | 'square';
   hotpepper_reservation_id: string | null;
+  square_booking_id: string | null;
   created_at: string;
 }
 

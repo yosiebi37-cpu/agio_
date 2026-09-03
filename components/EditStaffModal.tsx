@@ -28,6 +28,7 @@ export default function EditStaffModal({ open, onClose, staffMember: s }: Props)
   const [paletteIndex, setPaletteIndex] = useState(closestPaletteIndex(s.color));
   const [isActive, setIsActive] = useState(s.is_active);
   const [userId, setUserId] = useState(s.user_id ?? '');
+  const [squareTeamMemberId, setSquareTeamMemberId] = useState(s.square_team_member_id ?? '');
 
   if (!open) return null;
 
@@ -52,6 +53,7 @@ export default function EditStaffModal({ open, onClose, staffMember: s }: Props)
           fg_color: p.fg,
           is_active: isActive,
           user_id: userId.trim() || null,
+          square_team_member_id: squareTeamMemberId.trim() || null,
         })
         .eq('id', s.id);
       if (error) {
@@ -128,6 +130,19 @@ export default function EditStaffModal({ open, onClose, staffMember: s }: Props)
             />
             <div style={{ fontSize: 11, color: 'var(--ink-l)', marginTop: 4 }}>
               スタッフ本人にログインしてもらう場合、Supabaseの「Authentication → Users」でこの人用のアカウントを作り、そのUser UIDをここに貼り付けてください。空欄のままなら通常のオーナー権限のログインとして扱われます。
+            </div>
+          </div>
+          <div className="f-row" style={{ marginBottom: 0, marginTop: 14 }}>
+            <label className="f-label">Square担当者ID（任意）</label>
+            <input
+              className="f-input"
+              type="text"
+              placeholder="SquareのTeam Member IDを貼り付け"
+              value={squareTeamMemberId}
+              onChange={(e) => setSquareTeamMemberId(e.target.value)}
+            />
+            <div style={{ fontSize: 11, color: 'var(--ink-l)', marginTop: 4 }}>
+              Square Appointmentsの予約を自動反映する時に、この人の予約として振り分けるためのIDです。空欄の場合は「フリー」というスタッフに割り当てられます。
             </div>
           </div>
           {error && (
