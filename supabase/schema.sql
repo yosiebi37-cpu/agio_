@@ -157,6 +157,18 @@ create table if not exists menu_items (
 );
 
 -- ---------------------------------------------------------------------------
+-- 店販商品マスタ（店販の商品を事前登録して、商品別に集計できるようにする）
+-- ---------------------------------------------------------------------------
+create table if not exists retail_products (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  price      int not null default 0,
+  sort_order int not null default 0,
+  is_active  boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
 -- 業務委託の報酬率（単一行設定）
 -- ---------------------------------------------------------------------------
 create table if not exists commission_settings (
@@ -295,6 +307,7 @@ alter table menu_items          enable row level security;
 alter table expenses            enable row level security;
 alter table hotpepper_sync_log  enable row level security;
 alter table square_sync_log     enable row level security;
+alter table retail_products     enable row level security;
 
 do $$
 declare t text;
@@ -303,7 +316,7 @@ begin
     'staff','customers','bookings','treatment_records',
     'chemical_records','karte_photos','commission_settings','shifts',
     'salon_settings','holidays','retail_sales','freelance_daily_sales','menu_items','expenses',
-    'hotpepper_sync_log','square_sync_log'
+    'hotpepper_sync_log','square_sync_log','retail_products'
   ]
   loop
     execute format(
@@ -332,7 +345,7 @@ $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['staff', 'commission_settings', 'menu_items', 'salon_settings', 'holidays', 'expenses']
+  foreach t in array array['staff', 'commission_settings', 'menu_items', 'salon_settings', 'holidays', 'expenses', 'retail_products']
   loop
     execute format('drop policy if exists "staff_authenticated_all" on %I;', t);
     execute format('create policy "%1$s_select_all" on %1$I for select to authenticated using (true);', t);

@@ -143,6 +143,15 @@ export interface MenuItem {
   created_at: string;
 }
 
+export interface RetailProduct {
+  id: string;
+  name: string;
+  price: number;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface RetailSale {
   id: string;
   sale_date: string;

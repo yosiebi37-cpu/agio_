@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { formatDateLong } from '@/lib/format';
-import type { Staff } from '@/lib/types';
+import { FALLBACK_RETAIL_PRODUCTS } from '@/lib/constants';
+import type { RetailProduct, Staff } from '@/lib/types';
 
 interface Props {
   open: boolean;
@@ -18,14 +19,34 @@ export default function NewRetailSaleModal({ open, onClose, date, staff }: Props
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [staffId, setStaffId] = useState(staff[0]?.id ?? '');
+  const [products, setProducts] = useState<RetailProduct[]>([]);
   const [productName, setProductName] = useState('');
   const [amount, setAmount] = useState('');
 
+  useEffect(() => {
+    if (!open) return;
+    const sb = getBrowserSupabase();
+    sb.from('retail_products')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order')
+      .then(({ data }) => {
+        const list = (data as RetailProduct[] | null) ?? [];
+        setProducts(list.length ? list : FALLBACK_RETAIL_PRODUCTS);
+      });
+  }, [open]);
+
   if (!open) return null;
+
+  const selectProduct = (name: string) => {
+    setProductName(name);
+    const match = products.find((p) => p.name === name);
+    if (match) setAmount(String(match.price));
+  };
 
   const submit = async () => {
     if (!productName.trim()) {
-      setError('商品名を入力してください。');
+      setError('商品を選択してください。');
       return;
     }
     if (!amount || Number(amount) <= 0) {
@@ -72,14 +93,12 @@ export default function NewRetailSaleModal({ open, onClose, date, staff }: Props
           </div>
           <div className="f-row">
             <label className="f-label">商品名</label>
-            <input
-              className="f-input"
-              type="text"
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              placeholder="例: シャンプー"
-              autoFocus
-            />
+            <select className="f-select" value={productName} onChange={(e) => selectProduct(e.target.value)} autoFocus>
+              <option value="">選択してください</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
           </div>
           <div className="f-row2" style={{ marginBottom: 0 }}>
             <div>

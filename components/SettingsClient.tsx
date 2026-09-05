@@ -7,18 +7,19 @@ import { formatDateLong } from '@/lib/format';
 import NewStaffModal from './NewStaffModal';
 import EditStaffModal from './EditStaffModal';
 import { yen } from '@/lib/format';
-import type { Staff, SalonSettings, Holiday, MenuItem } from '@/lib/types';
+import type { Staff, SalonSettings, Holiday, MenuItem, RetailProduct } from '@/lib/types';
 
 interface Props {
   staff: Staff[];
   salonSettings: SalonSettings;
   holidays: Holiday[];
   menuItems: MenuItem[];
+  retailProducts: RetailProduct[];
 }
 
 const WEEKDAY = ['日', '月', '火', '水', '木', '金', '土'];
 
-export default function SettingsClient({ staff, salonSettings, holidays, menuItems }: Props) {
+export default function SettingsClient({ staff, salonSettings, holidays, menuItems, retailProducts }: Props) {
   const router = useRouter();
   const [newOpen, setNewOpen] = useState(false);
   const [editing, setEditing] = useState<Staff | null>(null);
@@ -37,8 +38,14 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
   const [savingMenu, setSavingMenu] = useState(false);
   const [menuError, setMenuError] = useState<string | null>(null);
 
+  const [productName, setProductName] = useState('');
+  const [productPrice, setProductPrice] = useState('');
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [productError, setProductError] = useState<string | null>(null);
+
   const nextSortOrder = staff.reduce((max, s) => Math.max(max, s.sort_order), 0) + 1;
   const nextMenuSortOrder = menuItems.reduce((max, m) => Math.max(max, m.sort_order), 0) + 1;
+  const nextProductSortOrder = retailProducts.reduce((max, p) => Math.max(max, p.sort_order), 0) + 1;
 
   const toggleWeekday = (w: number) => {
     setClosedWeekdays((prev) => {
@@ -127,6 +134,41 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
   const removeMenuItem = async (id: string) => {
     const sb = getBrowserSupabase();
     await sb.from('menu_items').delete().eq('id', id);
+    router.refresh();
+  };
+
+  const addProduct = async () => {
+    if (!productName.trim()) {
+      setProductError('商品名を入力してください。');
+      return;
+    }
+    setSavingProduct(true);
+    setProductError(null);
+    try {
+      const sb = getBrowserSupabase();
+      const { error } = await sb.from('retail_products').insert({
+        name: productName.trim(),
+        price: parseInt(productPrice, 10) || 0,
+        sort_order: nextProductSortOrder,
+      });
+      if (error) {
+        setProductError(error.message);
+        setSavingProduct(false);
+        return;
+      }
+      setProductName('');
+      setProductPrice('');
+      setSavingProduct(false);
+      router.refresh();
+    } catch (e) {
+      setProductError(e instanceof Error ? e.message : String(e));
+      setSavingProduct(false);
+    }
+  };
+
+  const removeProduct = async (id: string) => {
+    const sb = getBrowserSupabase();
+    await sb.from('retail_products').delete().eq('id', id);
     router.refresh();
   };
 
@@ -272,6 +314,44 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
                   <div style={{ fontSize: 12, color: 'var(--ink-l)', minWidth: 50, textAlign: 'right' }}>{m.duration_minutes}分</div>
                   <div style={{ fontSize: 13, color: 'var(--ink-l)', minWidth: 80, textAlign: 'right' }}>{yen(m.price)}</div>
                   <button className="btn-sm" onClick={() => removeMenuItem(m.id)}><i className="ti ti-x"></i>削除</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="page-head" style={{ marginTop: 32 }}>
+          <div>
+            <div className="page-h1" style={{ fontSize: 22 }}>店販商品</div>
+            <div className="page-sub">店販の記録時に選べる商品を管理できます（商品別の売上集計に使われます）</div>
+          </div>
+        </div>
+
+        <div className="tbl-wrap" style={{ padding: 18 }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <label className="f-label" style={{ fontSize: 11 }}>商品名</label>
+              <input className="f-input" type="text" placeholder="シャンプー" value={productName} onChange={(e) => setProductName(e.target.value)} />
+            </div>
+            <div>
+              <label className="f-label" style={{ fontSize: 11 }}>金額 (円)</label>
+              <input className="f-input" type="number" min="0" placeholder="3300" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} />
+            </div>
+            <button className="btn-save" onClick={addProduct} disabled={savingProduct}>
+              {savingProduct ? '追加中…' : '追加する'}
+            </button>
+          </div>
+          {productError && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{productError}</div>}
+
+          {retailProducts.length === 0 ? (
+            <div className="empty-row">店販商品がまだ登録されていません。</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {retailProducts.map((p) => (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--sand)' }}>
+                  <div style={{ fontSize: 13, flex: 1 }}>{p.name}</div>
+                  <div style={{ fontSize: 13, color: 'var(--ink-l)', minWidth: 80, textAlign: 'right' }}>{yen(p.price)}</div>
+                  <button className="btn-sm" onClick={() => removeProduct(p.id)}><i className="ti ti-x"></i>削除</button>
                 </div>
               ))}
             </div>
