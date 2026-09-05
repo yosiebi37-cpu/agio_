@@ -14,15 +14,21 @@ interface BookingRow {
   customer_type: string;
 }
 
+interface RetailByProduct {
+  name: string;
+  amount: number;
+}
+
 interface Props {
   month: string;
   bookings: BookingRow[];
   staff: Staff[];
   retailTotal: number;
+  retailByProduct: RetailByProduct[];
   commissionTotal: number;
 }
 
-export default function SalesClient({ month, bookings, staff, retailTotal, commissionTotal }: Props) {
+export default function SalesClient({ month, bookings, staff, retailTotal, retailByProduct, commissionTotal }: Props) {
   const router = useRouter();
 
   const shiftMonth = (delta: number) => {
@@ -134,6 +140,23 @@ export default function SalesClient({ month, bookings, staff, retailTotal, commi
               </tbody>
             </table>
           </div>
+        </div>
+
+        <div className="tbl-wrap" style={{ marginTop: 16 }}>
+          <table className="tbl">
+            <thead><tr><th>店販 商品別売上</th><th>売上</th></tr></thead>
+            <tbody>
+              {retailByProduct.map((r) => (
+                <tr key={r.name}>
+                  <td>{r.name}</td>
+                  <td>{yen(r.amount)}</td>
+                </tr>
+              ))}
+              {retailByProduct.length === 0 && (
+                <tr><td colSpan={2}><div className="empty-row">この月の店販売上はまだありません。</div></td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

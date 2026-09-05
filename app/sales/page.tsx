@@ -76,7 +76,7 @@ export default async function SalesPage({
       .gte('booking_date', start)
       .lte('booking_date', end),
     sb.from('staff').select('*').order('sort_order'),
-    sb.from('retail_sales').select('staff_id,amount').gte('sale_date', start).lte('sale_date', end),
+    sb.from('retail_sales').select('staff_id,amount,product_name').gte('sale_date', start).lte('sale_date', end),
     sb
       .from('freelance_daily_sales')
       .select('staff_id,existing_amount,new_amount')
@@ -87,10 +87,18 @@ export default async function SalesPage({
 
   const bookings = (bookingsData ?? []) as { booking_date: string; staff_id: string; amount: number; status: string; customer_type: string }[];
   const staff = (staffData ?? []) as Staff[];
-  const retail = (retailData ?? []) as { staff_id: string | null; amount: number }[];
+  const retail = (retailData ?? []) as { staff_id: string | null; amount: number; product_name: string }[];
   const manual = (manualData ?? []) as { staff_id: string; existing_amount: number; new_amount: number }[];
 
   const retailTotal = retail.reduce((s, r) => s + (r.amount ?? 0), 0);
+
+  const retailByProductMap = new Map<string, number>();
+  for (const r of retail) {
+    retailByProductMap.set(r.product_name, (retailByProductMap.get(r.product_name) ?? 0) + (r.amount ?? 0));
+  }
+  const retailByProduct = Array.from(retailByProductMap.entries())
+    .map(([name, amount]) => ({ name, amount }))
+    .sort((a, b) => b.amount - a.amount);
 
   const contractIds = new Set(staff.filter((s) => s.employment_type === 'contract').map((s) => s.id));
   const exRate = settingsData?.existing_rate ?? 60;
@@ -120,6 +128,7 @@ export default async function SalesPage({
       bookings={bookings}
       staff={staff}
       retailTotal={retailTotal}
+      retailByProduct={retailByProduct}
       commissionTotal={commissionTotal}
     />
   );
