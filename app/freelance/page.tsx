@@ -7,16 +7,25 @@ import type { Staff } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
+function monthRange(ym: string): { start: string; end: string } {
+  const [y, m] = ym.split('-').map(Number);
+  const start = new Date(y, m - 1, 1);
+  const end = new Date(y, m, 0);
+  return { start: toISODate(start), end: toISODate(end) };
+}
+
 export default async function FreelancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; view?: string; month?: string }>;
 }) {
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
-  const { date: dateParam } = await searchParams;
+  const { date: dateParam, view: viewParam, month: monthParam } = await searchParams;
   const sb = await getServerSupabase();
   if (await getCurrentStaff(sb)) redirect('/board');
+
+  const view: 'day' | 'month' = viewParam === 'month' ? 'month' : 'day';
 
   let date: string;
   if (dateParam) {
@@ -30,6 +39,11 @@ export default async function FreelancePage({
       .maybeSingle();
     date = (latest?.booking_date as string | null) ?? toISODate(new Date());
   }
+
+  const now = new Date();
+  const month = monthParam ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const { start, end } = view === 'month' ? monthRange(month) : { start: date, end: date };
 
   const { data: staffData } = await sb
     .from('staff')
@@ -48,17 +62,20 @@ export default async function FreelancePage({
       sb
         .from('bookings')
         .select('staff_id,customer_type,amount')
-        .eq('booking_date', date)
+        .gte('booking_date', start)
+        .lte('booking_date', end)
         .in('staff_id', ids),
       sb
         .from('retail_sales')
         .select('staff_id,amount')
-        .eq('sale_date', date)
+        .gte('sale_date', start)
+        .lte('sale_date', end)
         .in('staff_id', ids),
       sb
         .from('freelance_daily_sales')
         .select('staff_id,existing_amount,new_amount')
-        .eq('sale_date', date)
+        .gte('sale_date', start)
+        .lte('sale_date', end)
         .in('staff_id', ids),
     ]);
     bookings = (bookingData ?? []) as typeof bookings;
@@ -69,7 +86,7 @@ export default async function FreelancePage({
   const rows: FreelanceRow[] = staff.map((s) => {
     const mine = bookings.filter((b) => b.staff_id === s.id);
     const myRetail = retailSales.filter((r) => r.staff_id === s.id);
-    const myManual = manualSales.find((m) => m.staff_id === s.id);
+    const myManual = manualSales.filter((m) => m.staff_id === s.id);
     return {
       id: s.id,
       name: s.name,
@@ -79,8 +96,8 @@ export default async function FreelancePage({
       count: mine.length,
       bookingEx: mine.filter((b) => b.customer_type === 'existing').reduce((sum, b) => sum + (b.amount ?? 0), 0),
       bookingNw: mine.filter((b) => b.customer_type === 'new').reduce((sum, b) => sum + (b.amount ?? 0), 0),
-      manualEx: myManual?.existing_amount ?? 0,
-      manualNw: myManual?.new_amount ?? 0,
+      manualEx: myManual.reduce((sum, m) => sum + (m.existing_amount ?? 0), 0),
+      manualNw: myManual.reduce((sum, m) => sum + (m.new_amount ?? 0), 0),
       retailSales: myRetail.reduce((sum, r) => sum + (r.amount ?? 0), 0),
     };
   });
@@ -95,6 +112,8 @@ export default async function FreelancePage({
     <FreelanceClient
       rows={rows}
       date={date}
+      view={view}
+      month={month}
       initialExRate={settings?.existing_rate ?? 60}
       initialNwRate={settings?.new_rate ?? 50}
       initialRetailRate={settings?.retail_rate ?? 20}
