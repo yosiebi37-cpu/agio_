@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { STAFF_PALETTE } from '@/lib/constants';
+import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
 import type { EmploymentType } from '@/lib/types';
 
 interface Props {
@@ -18,6 +19,7 @@ export default function NewStaffModal({ open, onClose, nextSortOrder }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
+  const { furigana, onFuriganaChange, nameCompositionHandlers, reset: resetFurigana } = useFuriganaAutofill();
   const [initials, setInitials] = useState('');
   const [employmentType, setEmploymentType] = useState<EmploymentType>('staff');
   const [paletteIndex, setPaletteIndex] = useState(0);
@@ -26,6 +28,7 @@ export default function NewStaffModal({ open, onClose, nextSortOrder }: Props) {
 
   const reset = () => {
     setName('');
+    resetFurigana();
     setInitials('');
     setEmploymentType('staff');
     setPaletteIndex(0);
@@ -43,6 +46,7 @@ export default function NewStaffModal({ open, onClose, nextSortOrder }: Props) {
       const p = STAFF_PALETTE[paletteIndex];
       const { error } = await sb.from('staff').insert({
         name: name.trim(),
+        furigana: furigana.trim() || null,
         initials: initials.trim().slice(0, 3).toUpperCase(),
         employment_type: employmentType,
         color: p.color,
@@ -73,22 +77,24 @@ export default function NewStaffModal({ open, onClose, nextSortOrder }: Props) {
           <button className="mclose" onClick={onClose}><i className="ti ti-x"></i></button>
         </div>
         <div className="modal-body">
+          <div className="f-row f-name-group">
+            <label className="f-label f-label-ruby">フリガナ</label>
+            <input className="f-input f-input-ruby" type="text" placeholder="タナカ キョウコ" value={furigana} onChange={onFuriganaChange} />
+            <label className="f-label">お名前</label>
+            <input className="f-input" type="text" placeholder="田中 京子" value={name} onChange={(e) => setName(e.target.value)} {...nameCompositionHandlers} />
+          </div>
           <div className="f-row2">
-            <div>
-              <label className="f-label">お名前</label>
-              <input className="f-input" type="text" placeholder="田中 京子" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
             <div>
               <label className="f-label">イニシャル</label>
               <input className="f-input" type="text" placeholder="TK" value={initials} onChange={(e) => setInitials(e.target.value)} maxLength={3} />
             </div>
-          </div>
-          <div className="f-row">
-            <label className="f-label">区分</label>
-            <select className="f-select" value={employmentType} onChange={(e) => setEmploymentType(e.target.value as EmploymentType)}>
-              <option value="staff">社員（スタッフ）</option>
-              <option value="contract">業務委託</option>
-            </select>
+            <div>
+              <label className="f-label">区分</label>
+              <select className="f-select" value={employmentType} onChange={(e) => setEmploymentType(e.target.value as EmploymentType)}>
+                <option value="staff">社員（スタッフ）</option>
+                <option value="contract">業務委託</option>
+              </select>
+            </div>
           </div>
           <div className="f-row" style={{ marginBottom: 0 }}>
             <label className="f-label">カラー</label>

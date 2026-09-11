@@ -200,7 +200,10 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
                       <div style={{ width: 26, height: 26, borderRadius: '50%', background: s.bg_color, color: s.fg_color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, flexShrink: 0 }}>
                         {s.initials}
                       </div>
-                      {s.name}
+                      <span>
+                        {s.name}
+                        {s.furigana && <div style={{ fontSize: 12, color: 'var(--ink-l)' }}>{s.furigana}</div>}
+                      </span>
                     </div>
                   </td>
                   <td>{s.employment_type === 'contract' ? '業務委託' : '社員'}</td>
