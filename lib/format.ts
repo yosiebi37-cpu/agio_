@@ -101,3 +101,6 @@ export const initialsFromName = (name: string): string => {
 /** ひらがな -> カタカナ（IME変換前の読みからフリガナを自動生成するために使用） */
 export const hiraganaToKatakana = (s: string): string =>
   s.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
+
+/** 漢字（CJK統一漢字）を含むか。IME変換候補が漢字化した後の入力を読みの更新から除外するために使用 */
+export const containsKanji = (s: string): boolean => /[一-鿿]/.test(s);

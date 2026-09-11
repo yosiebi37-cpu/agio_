@@ -16,6 +16,7 @@ import {
   datesInRangeByWeekday,
   hiraganaToKatakana,
   minutesToHHMM,
+  containsKanji,
 } from './format';
 
 describe('yen', () => {
@@ -150,5 +151,18 @@ describe('hiraganaToKatakana', () => {
   });
   it('handles an empty string', () => {
     expect(hiraganaToKatakana('')).toBe('');
+  });
+});
+
+describe('containsKanji', () => {
+  it('detects kanji characters', () => {
+    expect(containsKanji('山田')).toBe(true);
+    expect(containsKanji('やまだ山田')).toBe(true);
+  });
+  it('returns false for kana-only or latin text', () => {
+    expect(containsKanji('やまだ')).toBe(false);
+    expect(containsKanji('ヤマダ')).toBe(false);
+    expect(containsKanji('yamada')).toBe(false);
+    expect(containsKanji('')).toBe(false);
   });
 });
