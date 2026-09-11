@@ -18,6 +18,7 @@ create extension if not exists pgcrypto;
 create table if not exists staff (
   id              uuid primary key default gen_random_uuid(),
   name            text not null,
+  furigana        text,                                     -- フリガナ (例: タナカ キョウコ)
   initials        text not null default '',                 -- アバター用 (例: TK)
   color           text not null default '#2C4A3E',          -- 予約ブロックの色
   bg_color        text not null default '#E8F0ED',          -- アバター背景色

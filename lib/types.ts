@@ -7,6 +7,7 @@ export type BookingStatus = 'visited' | 'confirmed' | 'tentative';
 export interface Staff {
   id: string;
   name: string;
+  furigana: string | null;
   initials: string;
   color: string;
   bg_color: string;
