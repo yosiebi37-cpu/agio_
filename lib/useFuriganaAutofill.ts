@@ -1,10 +1,12 @@
 'use client';
 
 import { useRef, useState, type CompositionEvent, type ChangeEvent } from 'react';
-import { hiraganaToKatakana } from './format';
+import { hiraganaToKatakana, containsKanji } from './format';
 
 /**
  * お客様名（漢字）を入力している間、IME変換前の読み（ひらがな）からフリガナ欄を自動で埋める。
+ * IMEが変換候補として漢字を表示している間のcompositionupdateは無視し、直前のひらがな読みを保持する
+ * （そうしないと、変換後の漢字がそのままフリガナ欄に入ってしまう）。
  * ユーザーがフリガナ欄を一度でも手入力したら、以後は自動更新を止めて上書きしない。
  */
 export function useFuriganaAutofill(initial = '') {
@@ -25,6 +27,7 @@ export function useFuriganaAutofill(initial = '') {
   };
 
   const onNameCompositionUpdate = (e: CompositionEvent<HTMLInputElement>) => {
+    if (containsKanji(e.data)) return;
     currentRef.current = hiraganaToKatakana(e.data);
     applyLive();
   };
