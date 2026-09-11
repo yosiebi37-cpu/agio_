@@ -104,6 +104,10 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
     router.push(`/board?date=${toISODate(d)}`);
   };
 
+  const goToday = () => {
+    router.push(`/board?date=${toISODate(new Date())}`);
+  };
+
   const markVisited = async (b: BookingWithStaff) => {
     setBusy(true);
     const sb = getBrowserSupabase();
@@ -137,6 +141,7 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
           <div className="cal-today">{formatDateShort(date)}</div>
           {closedLabel && <span className="tag" style={{ background: '#F6E4E2', color: 'var(--red)' }}>{closedLabel}</span>}
           <div className="cal-arrow" onClick={() => shiftDate(1)}><i className="ti ti-chevron-right"></i></div>
+          <button className="btn-sm" onClick={goToday}>今日</button>
         </div>
         <div className="view-tabs">
           <div className="view-tab active">日</div>
