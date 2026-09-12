@@ -134,8 +134,22 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
   const cancelBooking = async (b: BookingWithStaff) => {
     if (!window.confirm(`${b.customer_name} 様の予約をキャンセル（削除）しますか？`)) return;
     setBusy(true);
-    const sb = getBrowserSupabase();
-    await sb.from('bookings').delete().eq('id', b.id);
+    if (b.source === 'square' && b.square_booking_id) {
+      const res = await fetch('/api/square-cancel-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: b.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error ?? 'キャンセルに失敗しました。');
+        setBusy(false);
+        return;
+      }
+    } else {
+      const sb = getBrowserSupabase();
+      await sb.from('bookings').delete().eq('id', b.id);
+    }
     setBusy(false);
     setSelected(null);
     router.refresh();
