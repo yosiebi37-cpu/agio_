@@ -19,16 +19,23 @@ interface RetailByProduct {
   amount: number;
 }
 
+interface ExpenseByCategory {
+  name: string;
+  amount: number;
+}
+
 interface Props {
   month: string;
   bookings: BookingRow[];
   staff: Staff[];
   retailTotal: number;
   retailByProduct: RetailByProduct[];
+  expensesTotal: number;
+  expensesByCategory: ExpenseByCategory[];
   commissionTotal: number;
 }
 
-export default function SalesClient({ month, bookings, staff, retailTotal, retailByProduct, commissionTotal }: Props) {
+export default function SalesClient({ month, bookings, staff, retailTotal, retailByProduct, expensesTotal, expensesByCategory, commissionTotal }: Props) {
   const router = useRouter();
 
   const shiftMonth = (delta: number) => {
@@ -96,6 +103,10 @@ export default function SalesClient({ month, bookings, staff, retailTotal, retai
           <div className="kpi"><div className="kpi-label">来店数</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{stats.visitedCount}件</div><div className="kpi-sub">{formatMonthLong(month)}</div></div>
           <div className="kpi"><div className="kpi-label">業務委託報酬</div><div className="kpi-val" style={{ color: 'var(--red)' }}>{yen(commissionTotal)}</div><div className="kpi-sub">今月のお支払い予定</div></div>
         </div>
+        <div className="fl-kpis">
+          <div className="kpi"><div className="kpi-label">経費</div><div className="kpi-val" style={{ color: 'var(--red)' }}>{yen(expensesTotal)}</div><div className="kpi-sub">{formatMonthLong(month)}</div></div>
+          <div className="kpi"><div className="kpi-label">利益</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{yen(stats.realized + retailTotal - expensesTotal)}</div><div className="kpi-sub">売上－経費</div></div>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div className="tbl-wrap">
@@ -142,21 +153,40 @@ export default function SalesClient({ month, bookings, staff, retailTotal, retai
           </div>
         </div>
 
-        <div className="tbl-wrap" style={{ marginTop: 16 }}>
-          <table className="tbl">
-            <thead><tr><th>店販 商品別売上</th><th>売上</th></tr></thead>
-            <tbody>
-              {retailByProduct.map((r) => (
-                <tr key={r.name}>
-                  <td>{r.name}</td>
-                  <td>{yen(r.amount)}</td>
-                </tr>
-              ))}
-              {retailByProduct.length === 0 && (
-                <tr><td colSpan={2}><div className="empty-row">この月の店販売上はまだありません。</div></td></tr>
-              )}
-            </tbody>
-          </table>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead><tr><th>店販 商品別売上</th><th>売上</th></tr></thead>
+              <tbody>
+                {retailByProduct.map((r) => (
+                  <tr key={r.name}>
+                    <td>{r.name}</td>
+                    <td>{yen(r.amount)}</td>
+                  </tr>
+                ))}
+                {retailByProduct.length === 0 && (
+                  <tr><td colSpan={2}><div className="empty-row">この月の店販売上はまだありません。</div></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead><tr><th>経費 カテゴリ別内訳</th><th>金額</th></tr></thead>
+              <tbody>
+                {expensesByCategory.map((r) => (
+                  <tr key={r.name}>
+                    <td>{r.name}</td>
+                    <td>{yen(r.amount)}</td>
+                  </tr>
+                ))}
+                {expensesByCategory.length === 0 && (
+                  <tr><td colSpan={2}><div className="empty-row">この月の経費はまだありません。</div></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

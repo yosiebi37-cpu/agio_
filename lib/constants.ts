@@ -19,6 +19,24 @@ export const FALLBACK_RETAIL_PRODUCTS: RetailProduct[] = [
   { id: 'fallback-3', name: 'スタイリング剤', price: 2750, sort_order: 3, is_active: true, created_at: '' },
 ];
 
+// 経費のカテゴリ（月ごとの経費集計をそろえるための固定リスト）
+export const EXPENSE_CATEGORIES: string[] = [
+  '家賃',
+  '水道',
+  '電気',
+  'ガス',
+  'シャンプー台リース',
+  '広告費',
+  '材料費',
+  '返済',
+  '通信費',
+  '報酬',
+  '消耗品',
+  '手数料',
+  '雑費',
+  'その他経費',
+];
+
 // 予約ボードのレイアウト定数（スタッフ = 行、時刻 = 列）
 export const OPEN_HOUR = 9; // 開店（先頭の時刻ラベル）
 export const ROW_COUNT = 11; // 表示する時間枠の数（9:00〜20:00）

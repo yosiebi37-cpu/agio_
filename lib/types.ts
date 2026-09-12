@@ -169,6 +169,7 @@ export interface RetailSale {
 export interface Expense {
   id: string;
   expense_date: string;
+  category: string;
   item_name: string;
   amount: number;
   created_at: string;
