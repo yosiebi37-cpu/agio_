@@ -44,6 +44,7 @@ export interface Customer {
   avatar_fg: string;
   assigned_staff_id: string | null;
   visit_count: number;
+  visit_count_offset: number;
   lifetime_value: number;
   avg_cycle_days: number | null;
   last_visit_on: string | null;
