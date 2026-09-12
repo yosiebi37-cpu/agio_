@@ -80,6 +80,7 @@ export interface TreatmentRecord {
   id: string;
   customer_id: string;
   staff_id: string | null;
+  booking_id: string | null;
   performed_on: string;
   menu: string;
   amount: number;

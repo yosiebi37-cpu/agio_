@@ -130,6 +130,7 @@ create table if not exists treatment_records (
   id           uuid primary key default gen_random_uuid(),
   customer_id  uuid not null references customers(id) on delete cascade,
   staff_id     uuid references staff(id) on delete set null,
+  booking_id   uuid references bookings(id) on delete set null,  -- 予約から自動生成された施術記録の紐付け
   performed_on date not null,
   menu         text not null,
   amount       int not null default 0,
@@ -141,6 +142,7 @@ create table if not exists treatment_records (
   created_at   timestamptz not null default now()
 );
 create index if not exists treatment_customer_idx on treatment_records (customer_id, performed_on desc);
+create unique index if not exists treatment_records_booking_id_idx on treatment_records (booking_id) where booking_id is not null;
 
 -- ---------------------------------------------------------------------------
 -- 薬剤・カラー記録
