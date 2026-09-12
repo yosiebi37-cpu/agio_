@@ -112,6 +112,20 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
     setBusy(true);
     const sb = getBrowserSupabase();
     await sb.from('bookings').update({ status: 'visited' }).eq('id', b.id);
+    if (b.customer_id) {
+      await sb.from('treatment_records').upsert(
+        {
+          booking_id: b.id,
+          customer_id: b.customer_id,
+          staff_id: b.staff_id,
+          performed_on: b.booking_date,
+          menu: b.menu,
+          amount: b.amount,
+          note: b.note,
+        },
+        { onConflict: 'booking_id' },
+      );
+    }
     setBusy(false);
     setSelected(null);
     router.refresh();

@@ -84,6 +84,20 @@ export default function EditBookingModal({ open, onClose, booking, staff }: Prop
           .from('customers')
           .update({ name: customerName.trim(), customer_type: type })
           .eq('id', booking.customer_id);
+        if (booking.status === 'visited') {
+          await sb.from('treatment_records').upsert(
+            {
+              booking_id: booking.id,
+              customer_id: booking.customer_id,
+              staff_id: staffId,
+              performed_on: date,
+              menu,
+              amount: parseInt(amount, 10) || 0,
+              note: note.trim() || null,
+            },
+            { onConflict: 'booking_id' },
+          );
+        }
       }
       setSaving(false);
       onClose();

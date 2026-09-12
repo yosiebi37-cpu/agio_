@@ -23,6 +23,8 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
   const { furigana, onFuriganaChange, nameCompositionHandlers } = useFuriganaAutofill(c.furigana ?? '');
   const [phone, setPhone] = useState(c.phone ?? '');
   const [birthYear, setBirthYear] = useState(c.birth_year ? String(c.birth_year) : '');
+  const [birthMonth, setBirthMonth] = useState(c.birth_month ? String(c.birth_month) : '');
+  const [birthDay, setBirthDay] = useState(c.birth_day ? String(c.birth_day) : '');
   const [customerType, setCustomerType] = useState<CustomerType>(c.customer_type);
   const [staffId, setStaffId] = useState(c.assigned_staff_id ?? '');
   const [visitCountOffset, setVisitCountOffset] = useState(String(c.visit_count_offset ?? 0));
@@ -55,6 +57,8 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
           initials: initialsFromName(name),
           phone: phone.trim() || null,
           birth_year: birthYear ? parseInt(birthYear, 10) : null,
+          birth_month: birthMonth ? parseInt(birthMonth, 10) : null,
+          birth_day: birthDay ? parseInt(birthDay, 10) : null,
           customer_type: customerType,
           assigned_staff_id: staffId || null,
           visit_count_offset: newOffset,
@@ -104,6 +108,16 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
             <div>
               <label className="f-label">生まれ年</label>
               <input className="f-input" type="number" value={birthYear} onChange={(e) => setBirthYear(e.target.value)} />
+            </div>
+          </div>
+          <div className="f-row2">
+            <div>
+              <label className="f-label">誕生月</label>
+              <input className="f-input" type="number" min="1" max="12" placeholder="8" value={birthMonth} onChange={(e) => setBirthMonth(e.target.value)} />
+            </div>
+            <div>
+              <label className="f-label">誕生日</label>
+              <input className="f-input" type="number" min="1" max="31" placeholder="15" value={birthDay} onChange={(e) => setBirthDay(e.target.value)} />
             </div>
           </div>
           <div className="f-row2">

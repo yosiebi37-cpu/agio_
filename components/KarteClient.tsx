@@ -43,7 +43,8 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff,
             {c.furigana && <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 1 }}>{c.furigana}</div>}
             <div className="k-name">{c.name}</div>
             <div className="k-meta">
-              {c.phone ?? '—'}<br />{c.birth_year ? `${c.birth_year}年生まれ` : ''}
+              {c.phone ?? '—'}<br />
+              {c.birth_year ? `${c.birth_year}年` : ''}{c.birth_month ? `${c.birth_month}月` : ''}{c.birth_day ? `${c.birth_day}日` : ''}{c.birth_year || c.birth_month ? '生まれ' : ''}
             </div>
             <div style={{ marginTop: 8 }}>
               <span className={`tag ${TYPE_TAG_CLASS[c.customer_type]}`}>{TYPE_LABEL[c.customer_type]}</span>
