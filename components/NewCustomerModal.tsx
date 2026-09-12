@@ -22,6 +22,8 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
   const { furigana, onFuriganaChange, nameCompositionHandlers, reset: resetFurigana } = useFuriganaAutofill();
   const [phone, setPhone] = useState('');
   const [birthYear, setBirthYear] = useState('');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthDay, setBirthDay] = useState('');
   const [customerType, setCustomerType] = useState<CustomerType>('new');
   const [staffId, setStaffId] = useState('');
   const [hairType, setHairType] = useState('');
@@ -35,6 +37,8 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
     resetFurigana();
     setPhone('');
     setBirthYear('');
+    setBirthMonth('');
+    setBirthDay('');
     setCustomerType('new');
     setStaffId('');
     setHairType('');
@@ -59,6 +63,8 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
           initials: initialsFromName(name),
           phone: phone.trim() || null,
           birth_year: birthYear ? parseInt(birthYear, 10) : null,
+          birth_month: birthMonth ? parseInt(birthMonth, 10) : null,
+          birth_day: birthDay ? parseInt(birthDay, 10) : null,
           customer_type: customerType,
           assigned_staff_id: staffId || null,
           hair_type: hairType.trim() || null,
@@ -118,6 +124,16 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
             <div>
               <label className="f-label">生まれ年</label>
               <input className="f-input" type="number" placeholder="1990" value={birthYear} onChange={(e) => setBirthYear(e.target.value)} />
+            </div>
+          </div>
+          <div className="f-row2">
+            <div>
+              <label className="f-label">誕生月</label>
+              <input className="f-input" type="number" min="1" max="12" placeholder="8" value={birthMonth} onChange={(e) => setBirthMonth(e.target.value)} />
+            </div>
+            <div>
+              <label className="f-label">誕生日</label>
+              <input className="f-input" type="number" min="1" max="31" placeholder="15" value={birthDay} onChange={(e) => setBirthDay(e.target.value)} />
             </div>
           </div>
           <div className="f-row2">

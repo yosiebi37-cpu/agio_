@@ -71,6 +71,8 @@ create table if not exists customers (
   initials          text not null default '',               -- アバター用 (例: 山花)
   phone             text,
   birth_year        int,
+  birth_month       int check (birth_month between 1 and 12),
+  birth_day         int check (birth_day between 1 and 31),
   customer_type     text not null default 'new'
                       check (customer_type in ('existing', 'new')),   -- 既存客 / 新規客
   hair_type         text,                                   -- 髪質メモ
