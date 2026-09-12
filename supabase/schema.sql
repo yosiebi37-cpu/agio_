@@ -52,6 +52,7 @@ create table if not exists customers (
   avatar_fg         text not null default '#2C4A3E',
   assigned_staff_id uuid references staff(id) on delete set null,
   visit_count       int not null default 0,                 -- 来店回数 (集計キャッシュ)
+  visit_count_offset int not null default 0,                -- 来店回数の手動調整分（システム外での来店実績など）
   lifetime_value    int not null default 0,                 -- 累計売上 円 (集計キャッシュ)
   avg_cycle_days    int,                                    -- 平均来店周期 日 (集計キャッシュ)
   last_visit_on     date,
@@ -381,7 +382,7 @@ begin
   end if;
 
   update customers set
-    visit_count    = (select count(*) from treatment_records where customer_id = cust_id),
+    visit_count    = coalesce(visit_count_offset, 0) + (select count(*) from treatment_records where customer_id = cust_id),
     lifetime_value = (select coalesce(sum(amount), 0) from treatment_records where customer_id = cust_id),
     last_visit_on  = (select max(performed_on) from treatment_records where customer_id = cust_id),
     avg_cycle_days = (

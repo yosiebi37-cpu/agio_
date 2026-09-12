@@ -25,6 +25,7 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
   const [birthYear, setBirthYear] = useState(c.birth_year ? String(c.birth_year) : '');
   const [customerType, setCustomerType] = useState<CustomerType>(c.customer_type);
   const [staffId, setStaffId] = useState(c.assigned_staff_id ?? '');
+  const [visitCountOffset, setVisitCountOffset] = useState(String(c.visit_count_offset ?? 0));
   const [hairType, setHairType] = useState(c.hair_type ?? '');
   const [allergyTag, setAllergyTag] = useState(c.allergy_tag ?? '');
   const [allergyNote, setAllergyNote] = useState(c.allergy_note ?? '');
@@ -44,6 +45,8 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
     setError(null);
     try {
       const sb = getBrowserSupabase();
+      const newOffset = parseInt(visitCountOffset, 10) || 0;
+      const trackedVisits = c.visit_count - (c.visit_count_offset ?? 0);
       const { error } = await sb
         .from('customers')
         .update({
@@ -54,6 +57,8 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
           birth_year: birthYear ? parseInt(birthYear, 10) : null,
           customer_type: customerType,
           assigned_staff_id: staffId || null,
+          visit_count_offset: newOffset,
+          visit_count: trackedVisits + newOffset,
           hair_type: hairType.trim() || null,
           allergy_tag: allergyTag.trim() || null,
           allergy_note: allergyNote.trim() || null,
@@ -115,6 +120,19 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
                 <option value="">未割当</option>
                 {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
+            </div>
+          </div>
+          <div className="f-row">
+            <label className="f-label">来店回数の調整（任意）</label>
+            <input
+              className="f-input"
+              type="number"
+              min="0"
+              value={visitCountOffset}
+              onChange={(e) => setVisitCountOffset(e.target.value)}
+            />
+            <div style={{ fontSize: 11, color: 'var(--ink-l)', marginTop: 4 }}>
+              agio導入前など、システムに記録されていない来店実績がある場合はここに数を入れてください。施術記録の件数に加算されて「来店回数」に反映されます（現在の来店回数: {c.visit_count}回）。
             </div>
           </div>
           <div className="f-row">

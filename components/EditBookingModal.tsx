@@ -79,6 +79,12 @@ export default function EditBookingModal({ open, onClose, booking, staff }: Prop
         setSaving(false);
         return;
       }
+      if (booking.customer_id) {
+        await sb
+          .from('customers')
+          .update({ name: customerName.trim(), customer_type: type })
+          .eq('id', booking.customer_id);
+      }
       setSaving(false);
       onClose();
       router.push(`/board?date=${date}`);

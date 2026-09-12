@@ -103,6 +103,10 @@ export default function FreelanceClient({ rows, date, view, month, initialExRate
     router.push(`/freelance?date=${toISODate(d)}`);
   };
 
+  const goToday = () => {
+    router.push(`/freelance?date=${toISODate(new Date())}`);
+  };
+
   const shiftMonth = (delta: number) => {
     const [y, m] = month.split('-').map(Number);
     const d = new Date(y, m - 1 + delta, 1);
@@ -136,6 +140,7 @@ export default function FreelanceClient({ rows, date, view, month, initialExRate
             <div className="cal-arrow" onClick={() => shiftDate(-1)}><i className="ti ti-chevron-left"></i></div>
             <div style={{ fontSize: 14, color: 'var(--ink-l)', minWidth: 150, textAlign: 'center' }}>{formatDateLong(date)}</div>
             <div className="cal-arrow" onClick={() => shiftDate(1)}><i className="ti ti-chevron-right"></i></div>
+            <button className="btn-sm" onClick={goToday}>今日</button>
           </div>
         ) : (
           <div className="cal-nav-row" style={{ marginRight: 8 }}>
