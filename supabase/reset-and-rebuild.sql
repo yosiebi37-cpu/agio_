@@ -187,6 +187,7 @@ create table if not exists menu_items (
   duration_minutes int not null default 60,
   sort_order       int not null default 0,
   is_active        boolean not null default true,
+  square_service_variation_id text,          -- Square側のサービス（メニュー）との対応付け
   created_at       timestamptz not null default now()
 );
 

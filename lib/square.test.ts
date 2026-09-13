@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import crypto from 'crypto';
-import { verifySquareSignature, utcIsoToJst, isBookingCancelled, extractBooking, type SquareWebhookEvent } from './square';
+import { verifySquareSignature, utcIsoToJst, jstToUtcIso, isBookingCancelled, extractBooking, type SquareWebhookEvent } from './square';
 
 describe('verifySquareSignature', () => {
   const key = 'test-signing-key';
@@ -34,6 +34,16 @@ describe('utcIsoToJst', () => {
 
   it('rolls over into the next JST day', () => {
     expect(utcIsoToJst('2026-09-10T20:30:00Z')).toEqual({ date: '2026-09-11', time: '05:30' });
+  });
+});
+
+describe('jstToUtcIso', () => {
+  it('converts JST date/time to a UTC ISO string', () => {
+    expect(jstToUtcIso('2026-09-10', '09:00')).toBe('2026-09-10T00:00:00.000Z');
+  });
+
+  it('rolls back into the previous UTC day', () => {
+    expect(jstToUtcIso('2026-09-11', '05:30')).toBe('2026-09-10T20:30:00.000Z');
   });
 });
 
