@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { formatDateLong } from '@/lib/format';
+import { EXPENSE_CATEGORIES } from '@/lib/constants';
 
 interface Props {
   open: boolean;
@@ -15,16 +16,13 @@ export default function NewExpenseModal({ open, onClose, date }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [itemName, setItemName] = useState('');
   const [amount, setAmount] = useState('');
 
   if (!open) return null;
 
   const submit = async () => {
-    if (!itemName.trim()) {
-      setError('項目名を入力してください。');
-      return;
-    }
     if (!amount || Number(amount) <= 0) {
       setError('金額を入力してください。');
       return;
@@ -35,7 +33,8 @@ export default function NewExpenseModal({ open, onClose, date }: Props) {
       const sb = getBrowserSupabase();
       const { error } = await sb.from('expenses').insert({
         expense_date: date,
-        item_name: itemName.trim(),
+        category,
+        item_name: itemName.trim() || null,
         amount: Number(amount),
       });
       if (error) {
@@ -67,13 +66,19 @@ export default function NewExpenseModal({ open, onClose, date }: Props) {
             <div style={{ fontSize: 14, color: 'var(--ink)' }}>{formatDateLong(date)}</div>
           </div>
           <div className="f-row">
-            <label className="f-label">項目名</label>
+            <label className="f-label">カテゴリ</label>
+            <select className="f-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+              {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className="f-row">
+            <label className="f-label">詳細メモ（任意）</label>
             <input
               className="f-input"
               type="text"
               value={itemName}
               onChange={(e) => setItemName(e.target.value)}
-              placeholder="例: 消耗品費"
+              placeholder="例: 9月分"
               autoFocus
             />
           </div>

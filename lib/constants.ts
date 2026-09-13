@@ -2,14 +2,14 @@ import type { BookingStatus, CustomerType, MenuItem, RetailProduct } from './typ
 
 // メニュー未登録時や menu_items が読み込めない場合に使う予備の一覧
 export const FALLBACK_MENUS: MenuItem[] = [
-  { id: 'fallback-1', name: 'カット', price: 5500, duration_minutes: 60, sort_order: 1, is_active: true, created_at: '' },
-  { id: 'fallback-2', name: 'カット + カラー', price: 12100, duration_minutes: 120, sort_order: 2, is_active: true, created_at: '' },
-  { id: 'fallback-3', name: 'ハイライトカラー', price: 16500, duration_minutes: 150, sort_order: 3, is_active: true, created_at: '' },
-  { id: 'fallback-4', name: 'グレイカラー', price: 8800, duration_minutes: 90, sort_order: 4, is_active: true, created_at: '' },
-  { id: 'fallback-5', name: 'フルカラー', price: 8800, duration_minutes: 90, sort_order: 5, is_active: true, created_at: '' },
-  { id: 'fallback-6', name: 'デジタルパーマ', price: 17600, duration_minutes: 150, sort_order: 6, is_active: true, created_at: '' },
-  { id: 'fallback-7', name: '縮毛矯正', price: 22000, duration_minutes: 150, sort_order: 7, is_active: true, created_at: '' },
-  { id: 'fallback-8', name: 'トリートメント', price: 4400, duration_minutes: 30, sort_order: 8, is_active: true, created_at: '' },
+  { id: 'fallback-1', name: 'カット', price: 5500, duration_minutes: 60, sort_order: 1, is_active: true, square_service_variation_id: null, created_at: '' },
+  { id: 'fallback-2', name: 'カット + カラー', price: 12100, duration_minutes: 120, sort_order: 2, is_active: true, square_service_variation_id: null, created_at: '' },
+  { id: 'fallback-3', name: 'ハイライトカラー', price: 16500, duration_minutes: 150, sort_order: 3, is_active: true, square_service_variation_id: null, created_at: '' },
+  { id: 'fallback-4', name: 'グレイカラー', price: 8800, duration_minutes: 90, sort_order: 4, is_active: true, square_service_variation_id: null, created_at: '' },
+  { id: 'fallback-5', name: 'フルカラー', price: 8800, duration_minutes: 90, sort_order: 5, is_active: true, square_service_variation_id: null, created_at: '' },
+  { id: 'fallback-6', name: 'デジタルパーマ', price: 17600, duration_minutes: 150, sort_order: 6, is_active: true, square_service_variation_id: null, created_at: '' },
+  { id: 'fallback-7', name: '縮毛矯正', price: 22000, duration_minutes: 150, sort_order: 7, is_active: true, square_service_variation_id: null, created_at: '' },
+  { id: 'fallback-8', name: 'トリートメント', price: 4400, duration_minutes: 30, sort_order: 8, is_active: true, square_service_variation_id: null, created_at: '' },
 ];
 
 // 店販商品未登録時や retail_products が読み込めない場合に使う予備の一覧
@@ -17,6 +17,24 @@ export const FALLBACK_RETAIL_PRODUCTS: RetailProduct[] = [
   { id: 'fallback-1', name: 'シャンプー', price: 3300, sort_order: 1, is_active: true, created_at: '' },
   { id: 'fallback-2', name: 'トリートメント', price: 3850, sort_order: 2, is_active: true, created_at: '' },
   { id: 'fallback-3', name: 'スタイリング剤', price: 2750, sort_order: 3, is_active: true, created_at: '' },
+];
+
+// 経費のカテゴリ（月ごとの経費集計をそろえるための固定リスト）
+export const EXPENSE_CATEGORIES: string[] = [
+  '家賃',
+  '水道',
+  '電気',
+  'ガス',
+  'シャンプー台リース',
+  '広告費',
+  '材料費',
+  '返済',
+  '通信費',
+  '報酬',
+  '消耗品',
+  '手数料',
+  '雑費',
+  'その他経費',
 ];
 
 // 予約ボードのレイアウト定数（スタッフ = 行、時刻 = 列）

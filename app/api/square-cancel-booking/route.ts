@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
-
-const SQUARE_API_BASE = 'https://connect.squareup.com/v2';
-const SQUARE_API_VERSION = '2024-01-18';
+import { cancelSquareBookingById } from '@/lib/square';
 
 export async function POST(request: Request) {
   const sb = await getServerSupabase();
@@ -31,31 +29,9 @@ export async function POST(request: Request) {
   const accessToken = process.env.SQUARE_ACCESS_TOKEN;
 
   if (squareBookingId && accessToken) {
-    const getRes = await fetch(`${SQUARE_API_BASE}/bookings/${squareBookingId}`, {
-      headers: { Authorization: `Bearer ${accessToken}`, 'Square-Version': SQUARE_API_VERSION },
-    });
-    if (getRes.ok) {
-      const getData = await getRes.json();
-      const version = getData.booking?.version;
-      const cancelRes = await fetch(`${SQUARE_API_BASE}/bookings/${squareBookingId}/cancel`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'Square-Version': SQUARE_API_VERSION,
-        },
-        body: JSON.stringify({
-          idempotency_key: `agio-cancel-${bookingId}`,
-          booking_version: version,
-        }),
-      });
-      if (!cancelRes.ok) {
-        const cancelData = await cancelRes.json().catch(() => ({}));
-        return NextResponse.json(
-          { error: `Squareでのキャンセルに失敗しました: ${JSON.stringify(cancelData)}` },
-          { status: 502 },
-        );
-      }
+    const ok = await cancelSquareBookingById(accessToken, squareBookingId);
+    if (!ok) {
+      return NextResponse.json({ error: 'Squareでのキャンセルに失敗しました' }, { status: 502 });
     }
   }
 
@@ -66,3 +42,4 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
+

@@ -145,6 +145,7 @@ export interface MenuItem {
   duration_minutes: number;
   sort_order: number;
   is_active: boolean;
+  square_service_variation_id: string | null;
   created_at: string;
 }
 
@@ -169,6 +170,7 @@ export interface RetailSale {
 export interface Expense {
   id: string;
   expense_date: string;
+  category: string;
   item_name: string;
   amount: number;
   created_at: string;

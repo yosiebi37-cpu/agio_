@@ -137,6 +137,12 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
     router.refresh();
   };
 
+  const updateMenuSquareId = async (id: string, value: string) => {
+    const sb = getBrowserSupabase();
+    await sb.from('menu_items').update({ square_service_variation_id: value.trim() || null }).eq('id', id);
+    router.refresh();
+  };
+
   const addProduct = async () => {
     if (!productName.trim()) {
       setProductError('商品名を入力してください。');
@@ -306,6 +312,9 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
             </button>
           </div>
           {menuError && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{menuError}</div>}
+          <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 12 }}>
+            「Square ID」は、HotPepperの予約を自動でSquareにも登録するために使います。Square側の対応するサービスのIDを入力してください（空欄でもOK、その場合はSquareへの自動登録はされません）。
+          </div>
 
           {menuItems.length === 0 ? (
             <div className="empty-row">施術メニューがまだ登録されていません。</div>
@@ -316,6 +325,14 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
                   <div style={{ fontSize: 13, flex: 1 }}>{m.name}</div>
                   <div style={{ fontSize: 12, color: 'var(--ink-l)', minWidth: 50, textAlign: 'right' }}>{m.duration_minutes}分</div>
                   <div style={{ fontSize: 13, color: 'var(--ink-l)', minWidth: 80, textAlign: 'right' }}>{yen(m.price)}</div>
+                  <input
+                    className="f-input"
+                    style={{ width: 140, fontSize: 12 }}
+                    type="text"
+                    placeholder="Square ID（任意）"
+                    defaultValue={m.square_service_variation_id ?? ''}
+                    onBlur={(e) => updateMenuSquareId(m.id, e.target.value)}
+                  />
                   <button className="btn-sm" onClick={() => removeMenuItem(m.id)}><i className="ti ti-x"></i>削除</button>
                 </div>
               ))}

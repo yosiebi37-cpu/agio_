@@ -69,7 +69,7 @@ export default async function SalesPage({
   const month = monthParam ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const { start, end } = monthRange(month);
 
-  const [{ data: bookingsData }, { data: staffData }, { data: retailData }, { data: manualData }, { data: settingsData }] = await Promise.all([
+  const [{ data: bookingsData }, { data: staffData }, { data: retailData }, { data: manualData }, { data: settingsData }, { data: expensesData }] = await Promise.all([
     sb
       .from('bookings')
       .select('booking_date,staff_id,amount,status,customer_type')
@@ -83,6 +83,7 @@ export default async function SalesPage({
       .gte('sale_date', start)
       .lte('sale_date', end),
     sb.from('commission_settings').select('*').eq('id', 1).maybeSingle(),
+    sb.from('expenses').select('category,amount').gte('expense_date', start).lte('expense_date', end),
   ]);
 
   const bookings = (bookingsData ?? []) as { booking_date: string; staff_id: string; amount: number; status: string; customer_type: string }[];
@@ -97,6 +98,16 @@ export default async function SalesPage({
     retailByProductMap.set(r.product_name, (retailByProductMap.get(r.product_name) ?? 0) + (r.amount ?? 0));
   }
   const retailByProduct = Array.from(retailByProductMap.entries())
+    .map(([name, amount]) => ({ name, amount }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const expenses = (expensesData ?? []) as { category: string; amount: number }[];
+  const expensesTotal = expenses.reduce((s, e) => s + (e.amount ?? 0), 0);
+  const expensesByCategoryMap = new Map<string, number>();
+  for (const e of expenses) {
+    expensesByCategoryMap.set(e.category, (expensesByCategoryMap.get(e.category) ?? 0) + (e.amount ?? 0));
+  }
+  const expensesByCategory = Array.from(expensesByCategoryMap.entries())
     .map(([name, amount]) => ({ name, amount }))
     .sort((a, b) => b.amount - a.amount);
 
@@ -129,6 +140,8 @@ export default async function SalesPage({
       staff={staff}
       retailTotal={retailTotal}
       retailByProduct={retailByProduct}
+      expensesTotal={expensesTotal}
+      expensesByCategory={expensesByCategory}
       commissionTotal={commissionTotal}
     />
   );

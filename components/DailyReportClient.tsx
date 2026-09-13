@@ -223,7 +223,8 @@ export default function DailyReportClient({ date, bookings, staff, retailSales, 
           <table className="tbl">
             <thead>
               <tr>
-                <th>項目名</th>
+                <th>カテゴリ</th>
+                <th>詳細メモ</th>
                 <th>金額</th>
                 <th></th>
               </tr>
@@ -231,7 +232,8 @@ export default function DailyReportClient({ date, bookings, staff, retailSales, 
             <tbody>
               {expenses.map((e) => (
                 <tr key={e.id}>
-                  <td>{e.item_name}</td>
+                  <td>{e.category}</td>
+                  <td>{e.item_name ?? ''}</td>
                   <td>{yen(e.amount)}</td>
                   <td>
                     <button className="btn-cancel" style={{ padding: '2px 8px', fontSize: 12, color: 'var(--red)' }} onClick={() => deleteExpense(e.id)}>
@@ -241,7 +243,7 @@ export default function DailyReportClient({ date, bookings, staff, retailSales, 
                 </tr>
               ))}
               {expenses.length === 0 && (
-                <tr><td colSpan={3}><div className="empty-row">この日の経費はまだありません。</div></td></tr>
+                <tr><td colSpan={4}><div className="empty-row">この日の経費はまだありません。</div></td></tr>
               )}
             </tbody>
           </table>
