@@ -6,6 +6,7 @@ import { TYPE_LABEL, TYPE_TAG_CLASS } from '@/lib/constants';
 import { yenK, formatDateLong } from '@/lib/format';
 import EditCustomerModal from './EditCustomerModal';
 import NewTreatmentModal from './NewTreatmentModal';
+import EditTreatmentModal from './EditTreatmentModal';
 import NewChemicalModal from './NewChemicalModal';
 import KartePhotoTab from './KartePhotoTab';
 import type { Customer, TreatmentRecord, ChemicalRecord, Staff, KartePhoto } from '@/lib/types';
@@ -28,6 +29,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff,
   const [editOpen, setEditOpen] = useState(false);
   const [treatmentOpen, setTreatmentOpen] = useState(false);
   const [chemicalOpen, setChemicalOpen] = useState(false);
+  const [editTreatment, setEditTreatment] = useState<TreatmentWithStaff | null>(null);
 
   return (
     <div className="page-wrap">
@@ -105,7 +107,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff,
                 <div className="hist-wrap">
                   {treatments.length === 0 && <div className="empty-row">施術履歴がまだありません。</div>}
                   {treatments.map((t) => (
-                    <div className="hist-item" key={t.id}>
+                    <div className="hist-item" key={t.id} onClick={() => setEditTreatment(t)} style={{ cursor: 'pointer' }}>
                       <div className="hist-dot" style={{ background: t.dot_bg, color: t.dot_fg }}><i className={`ti ti-${t.icon}`} style={{ fontSize: 12 }}></i></div>
                       <div className="hist-body">
                         <div className="hist-date">{formatDateLong(t.performed_on)}　{t.staff?.name ?? ''}</div>
@@ -172,6 +174,9 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff,
       </div>
       <EditCustomerModal open={editOpen} onClose={() => setEditOpen(false)} customer={c} staff={staff} />
       <NewTreatmentModal open={treatmentOpen} onClose={() => setTreatmentOpen(false)} customerId={c.id} staff={staff} />
+      {editTreatment && (
+        <EditTreatmentModal open={!!editTreatment} onClose={() => setEditTreatment(null)} treatment={editTreatment} staff={staff} />
+      )}
       <NewChemicalModal open={chemicalOpen} onClose={() => setChemicalOpen(false)} customerId={c.id} />
     </div>
   );
