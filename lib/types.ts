@@ -4,6 +4,19 @@ export type EmploymentType = 'staff' | 'contract';
 export type CustomerType = 'existing' | 'new';
 export type BookingStatus = 'visited' | 'confirmed' | 'tentative';
 
+// public_staff ビュー用（未ログインのお客様向け予約ページから見える最小限のスタッフ情報）
+export interface PublicStaff {
+  id: string;
+  name: string;
+  initials: string;
+  color: string;
+  bg_color: string;
+  fg_color: string;
+  employment_type: EmploymentType;
+  is_active: boolean;
+  sort_order: number;
+}
+
 export interface Staff {
   id: string;
   name: string;

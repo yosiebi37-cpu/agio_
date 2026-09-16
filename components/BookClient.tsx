@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { yen, toISODate, addDays, toMinutes, minutesToHHMM, hhmm, formatDateLong, formatDateTiny, initialsFromName } from '@/lib/format';
-import type { MenuItem, Staff } from '@/lib/types';
+import type { MenuItem, PublicStaff } from '@/lib/types';
 
 interface Props {
   menuItems: MenuItem[];
-  staff: Staff[];
+  staff: PublicStaff[];
 }
 
 const OPEN_MIN = 9 * 60;
@@ -25,7 +25,7 @@ export default function BookClient({ menuItems, staff }: Props) {
   const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
 
   const [menu, setMenu] = useState<MenuItem | null>(null);
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<PublicStaff | null>(null);
   const [weekStart, setWeekStart] = useState(today);
   const [date, setDate] = useState(today);
   const [busy, setBusy] = useState<{ start_time: string; end_time: string }[]>([]);
