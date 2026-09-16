@@ -143,6 +143,12 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
     router.refresh();
   };
 
+  const toggleMenuLineOnly = async (id: string, value: boolean) => {
+    const sb = getBrowserSupabase();
+    await sb.from('menu_items').update({ line_only: value }).eq('id', id);
+    router.refresh();
+  };
+
   const addProduct = async () => {
     if (!productName.trim()) {
       setProductError('商品名を入力してください。');
@@ -313,7 +319,8 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
           </div>
           {menuError && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{menuError}</div>}
           <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 12 }}>
-            「Square ID」は、HotPepperの予約を自動でSquareにも登録するために使います。Square側の対応するサービスのIDを入力してください（空欄でもOK、その場合はSquareへの自動登録はされません）。
+            「Square ID」は、HotPepperの予約を自動でSquareにも登録するために使います。Square側の対応するサービスのIDを入力してください（空欄でもOK、その場合はSquareへの自動登録はされません）。<br />
+            「LINE限定」にチェックを入れると、LINE用の予約ページにだけ表示され、Googleマップなど一般のお客様には表示されなくなります（チェックしない場合は逆に一般のお客様にだけ表示されます）。
           </div>
 
           {menuItems.length === 0 ? (
@@ -325,6 +332,14 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
                   <div style={{ fontSize: 13, flex: 1 }}>{m.name}</div>
                   <div style={{ fontSize: 12, color: 'var(--ink-l)', minWidth: 50, textAlign: 'right' }}>{m.duration_minutes}分</div>
                   <div style={{ fontSize: 13, color: 'var(--ink-l)', minWidth: 80, textAlign: 'right' }}>{yen(m.price)}</div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--ink-m)', whiteSpace: 'nowrap' }}>
+                    <input
+                      type="checkbox"
+                      defaultChecked={m.line_only}
+                      onChange={(e) => toggleMenuLineOnly(m.id, e.target.checked)}
+                    />
+                    LINE限定
+                  </label>
                   <input
                     className="f-input"
                     style={{ width: 140, fontSize: 12 }}

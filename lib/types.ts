@@ -146,6 +146,7 @@ export interface MenuItem {
   sort_order: number;
   is_active: boolean;
   square_service_variation_id: string | null;
+  line_only: boolean;
   created_at: string;
 }
 

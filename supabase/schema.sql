@@ -160,6 +160,7 @@ create table if not exists menu_items (
   sort_order       int not null default 0,
   is_active        boolean not null default true,
   square_service_variation_id text,          -- Square側のサービス（メニュー）との対応付け
+  line_only        boolean not null default false, -- LINE限定メニュー（agioの予約ページの出し分けに使う）
   created_at       timestamptz not null default now()
 );
 
