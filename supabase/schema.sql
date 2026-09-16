@@ -453,3 +453,22 @@ as $$
 $$;
 
 grant execute on function public_find_customer_by_phone(text) to anon;
+
+-- insert後にRLSで読み返せず失敗するのを避けるため、insertしてidだけを返す関数を使う
+-- （customersテーブルをanonに直接SELECT許可すると、他のお客様の個人情報まで見えてしまうため）
+create or replace function public_create_customer(p_name text, p_phone text, p_initials text)
+returns uuid
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  new_id uuid;
+begin
+  insert into customers (name, phone, initials, customer_type)
+  values (p_name, p_phone, p_initials, 'new')
+  returning id into new_id;
+  return new_id;
+end;
+$$;
+
+grant execute on function public_create_customer(text, text, text) to anon;

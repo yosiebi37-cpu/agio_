@@ -1,0 +1,66 @@
+-- ============================================================================
+--  お客様向け予約ページ（未ログインの一般公開）用の設定
+--  メニュー・スタッフ・空き状況だけを安全に公開し、予約の作成だけを許可する。
+--  すでに schema.sql（または reset-and-rebuild.sql）を実行済みのプロジェクトで、
+--  この内容が反映されていない場合に、この内容だけ追加実行してください。
+--  何度実行しても安全です（すでにあるものは作り直すだけです）。
+-- ============================================================================
+
+create or replace view public_staff as
+  select id, name, initials, color, bg_color, fg_color, employment_type, is_active, sort_order
+  from staff
+  where is_active = true;
+
+create or replace view public_availability as
+  select staff_id, booking_date, start_time, end_time
+  from bookings;
+
+grant select on public_staff to anon;
+grant select on public_availability to anon;
+grant select on menu_items to anon;
+grant select on salon_settings to anon;
+grant select on holidays to anon;
+
+drop policy if exists "public_menu_items_select" on menu_items;
+create policy "public_menu_items_select" on menu_items for select to anon using (is_active = true);
+
+drop policy if exists "public_salon_settings_select" on salon_settings;
+create policy "public_salon_settings_select" on salon_settings for select to anon using (true);
+
+drop policy if exists "public_holidays_select" on holidays;
+create policy "public_holidays_select" on holidays for select to anon using (true);
+
+drop policy if exists "public_customer_insert" on customers;
+create policy "public_customer_insert" on customers for insert to anon with check (true);
+
+drop policy if exists "public_booking_insert" on bookings;
+create policy "public_booking_insert" on bookings for insert to anon with check (true);
+
+create or replace function public_find_customer_by_phone(p_phone text)
+returns table(id uuid, name text, customer_type text)
+language sql security definer
+set search_path = public
+as $$
+  select id, name, customer_type from customers where phone = p_phone limit 1;
+$$;
+
+grant execute on function public_find_customer_by_phone(text) to anon;
+
+-- insert後にRLSで読み返せず失敗するのを避けるため、insertしてidだけを返す関数を使う
+-- （customersテーブルをanonに直接SELECT許可すると、他のお客様の個人情報まで見えてしまうため）
+create or replace function public_create_customer(p_name text, p_phone text, p_initials text)
+returns uuid
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  new_id uuid;
+begin
+  insert into customers (name, phone, initials, customer_type)
+  values (p_name, p_phone, p_initials, 'new')
+  returning id into new_id;
+  return new_id;
+end;
+$$;
+
+grant execute on function public_create_customer(text, text, text) to anon;
