@@ -57,6 +57,12 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
     setNowMin(null);
   }, [date]);
 
+  // オンライン予約（LINE・HotPepper・Square）がボード表示中に入っても気づけるよう、定期的に最新の状態に更新する
+  useEffect(() => {
+    const t = setInterval(() => router.refresh(), 60000);
+    return () => clearInterval(t);
+  }, [router]);
+
   const visibleStaff = staff.filter((s) => !hidden.has(s.id));
 
   const byStaff = useMemo(() => {
