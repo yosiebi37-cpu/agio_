@@ -149,6 +149,25 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
     router.refresh();
   };
 
+  const updateMenuName = async (id: string, value: string) => {
+    if (!value.trim()) { router.refresh(); return; }
+    const sb = getBrowserSupabase();
+    await sb.from('menu_items').update({ name: value.trim() }).eq('id', id);
+    router.refresh();
+  };
+
+  const updateMenuPrice = async (id: string, value: string) => {
+    const sb = getBrowserSupabase();
+    await sb.from('menu_items').update({ price: parseInt(value, 10) || 0 }).eq('id', id);
+    router.refresh();
+  };
+
+  const updateMenuDuration = async (id: string, value: string) => {
+    const sb = getBrowserSupabase();
+    await sb.from('menu_items').update({ duration_minutes: parseInt(value, 10) || 0 }).eq('id', id);
+    router.refresh();
+  };
+
   const addProduct = async () => {
     if (!productName.trim()) {
       setProductError('商品名を入力してください。');
@@ -319,6 +338,7 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
           </div>
           {menuError && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{menuError}</div>}
           <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 12 }}>
+            メニュー名・時間・金額は、それぞれの欄を直接書き換えて、欄の外をタップすれば保存されます。<br />
             「Square ID」は、HotPepperの予約を自動でSquareにも登録するために使います。Square側の対応するサービスのIDを入力してください（空欄でもOK、その場合はSquareへの自動登録はされません）。<br />
             「LINE限定」にチェックを入れると、LINE用の予約ページにだけ表示され、Googleマップなど一般のお客様には表示されなくなります（チェックしない場合は逆に一般のお客様にだけ表示されます）。
           </div>
@@ -328,10 +348,37 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {menuItems.map((m) => (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--sand)' }}>
-                  <div style={{ fontSize: 13, flex: 1 }}>{m.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--ink-l)', minWidth: 50, textAlign: 'right' }}>{m.duration_minutes}分</div>
-                  <div style={{ fontSize: 13, color: 'var(--ink-l)', minWidth: 80, textAlign: 'right' }}>{yen(m.price)}</div>
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--sand)', flexWrap: 'wrap' }}>
+                  <input
+                    className="f-input"
+                    style={{ flex: 1, minWidth: 180, fontSize: 13 }}
+                    type="text"
+                    defaultValue={m.name}
+                    onBlur={(e) => updateMenuName(m.id, e.target.value)}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <input
+                      className="f-input"
+                      style={{ width: 60, fontSize: 12, textAlign: 'right' }}
+                      type="number"
+                      min="0"
+                      step="5"
+                      defaultValue={m.duration_minutes}
+                      onBlur={(e) => updateMenuDuration(m.id, e.target.value)}
+                    />
+                    <span style={{ fontSize: 12, color: 'var(--ink-l)' }}>分</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-l)' }}>¥</span>
+                    <input
+                      className="f-input"
+                      style={{ width: 80, fontSize: 13, textAlign: 'right' }}
+                      type="number"
+                      min="0"
+                      defaultValue={m.price}
+                      onBlur={(e) => updateMenuPrice(m.id, e.target.value)}
+                    />
+                  </div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--ink-m)', whiteSpace: 'nowrap' }}>
                     <input
                       type="checkbox"
