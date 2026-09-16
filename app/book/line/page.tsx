@@ -6,7 +6,8 @@ import type { MenuItem, Staff } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-export default async function BookPage() {
+// LINE公式アカウントに貼るリンク専用の予約ページ。LINE限定メニューだけを表示する。
+export default async function BookLinePage() {
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
   const sb = await getServerSupabase();
@@ -16,7 +17,7 @@ export default async function BookPage() {
   ]);
 
   const allMenuItems = (menuData ?? []).length ? (menuData as MenuItem[]) : FALLBACK_MENUS;
-  const menuItems = allMenuItems.filter((m) => !m.line_only);
+  const menuItems = allMenuItems.filter((m) => m.line_only);
   const staff = (staffData ?? []) as Staff[];
 
   return <BookClient menuItems={menuItems} staff={staff} />;

@@ -169,6 +169,7 @@ export default function BookClient({ menuItems, staff }: Props) {
               {m.name}（{yen(m.price)} / {m.duration_minutes}分）
             </div>
           ))}
+          {menuItems.length === 0 && <div className="empty-row">現在ご予約いただけるメニューがありません。</div>}
         </div>
 
         {menu && (
