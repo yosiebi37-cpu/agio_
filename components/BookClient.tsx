@@ -135,17 +135,17 @@ export default function BookClient({ menuItems, staff }: Props) {
         customerId = found[0].id;
         customerType = found[0].customer_type;
       } else {
-        const { data: newCustomer, error: customerError } = await sb
-          .from('customers')
-          .insert({ name, phone: phone.trim(), initials: initialsFromName(name), customer_type: 'new' })
-          .select('id')
-          .single();
-        if (customerError || !newCustomer) {
+        const { data: newCustomerId, error: customerError } = await sb.rpc('public_create_customer', {
+          p_name: name,
+          p_phone: phone.trim(),
+          p_initials: initialsFromName(name),
+        });
+        if (customerError || !newCustomerId) {
           setError(customerError?.message ?? '登録に失敗しました。');
           setSubmitting(false);
           return;
         }
-        customerId = newCustomer.id;
+        customerId = newCustomerId;
       }
       const endMin = toMinutes(slot) + menu.duration_minutes;
       const { error: bookingError } = await sb.from('bookings').insert({
