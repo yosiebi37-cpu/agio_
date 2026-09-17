@@ -30,6 +30,8 @@ export default function BookClient({ menuItems, staff }: Props) {
   const [date, setDate] = useState(today);
   const [busy, setBusy] = useState<{ start_time: string; end_time: string }[]>([]);
   const [shift, setShift] = useState<{ start_time: string; end_time: string } | null>(null);
+  const [allBookings, setAllBookings] = useState<{ start_time: string; end_time: string }[]>([]);
+  const [capacityMap, setCapacityMap] = useState<Map<number, number>>(new Map());
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
   const [searchingNext, setSearchingNext] = useState(false);
@@ -51,6 +53,10 @@ export default function BookClient({ menuItems, staff }: Props) {
     });
   }, []);
 
+  // 「フリー」は担当未定の予約を仮に割り当てるためのダミー枠で、実際に施術できる人員ではないため、
+  // 受付可能数の自動計算からは除く
+  const bookableStaffCount = useMemo(() => staff.filter((s) => s.name !== 'フリー').length, [staff]);
+
   useEffect(() => {
     if (!selectedStaff || !date) {
       setBusy([]);
@@ -70,12 +76,53 @@ export default function BookClient({ menuItems, staff }: Props) {
     });
   }, [selectedStaff, date]);
 
+  // 時間帯ごとの受付可能数（スタッフ全員分の合計）は、特定のスタイリストの空き状況とは別に、
+  // お店全体で「この時間はもう受け付けられない」という上限をチェックするために使う
+  useEffect(() => {
+    if (!date) {
+      setAllBookings([]);
+      setCapacityMap(new Map());
+      return;
+    }
+    const sb = getBrowserSupabase();
+    Promise.all([
+      sb.from('public_availability').select('start_time,end_time').eq('booking_date', date),
+      sb.from('public_hourly_capacity').select('hour,capacity').eq('capacity_date', date),
+    ]).then(([availRes, capRes]) => {
+      setAllBookings((availRes.data ?? []) as { start_time: string; end_time: string }[]);
+      const map = new Map<number, number>();
+      for (const c of (capRes.data ?? []) as { hour: number; capacity: number }[]) map.set(c.hour, c.capacity);
+      setCapacityMap(map);
+    });
+  }, [date]);
+
   const isClosed = (d: string) => closedWeekdays.has(new Date(d + 'T00:00:00').getDay()) || holidayDates.has(d);
+
+  // [t, end) の間にかかる時間帯すべてで、お店全体の受付可能数に空きがあるかを確認する
+  const hourCapacityAvailable = (
+    t: number,
+    end: number,
+    allBookingsList: { start_time: string; end_time: string }[],
+    capMap: Map<number, number>,
+  ) => {
+    const firstHour = Math.floor(t / 60);
+    const lastHour = Math.floor((end - 1) / 60);
+    for (let h = firstHour; h <= lastHour; h++) {
+      const hStart = h * 60;
+      const hEnd = hStart + 60;
+      const count = allBookingsList.filter((b) => toMinutes(b.start_time) < hEnd && toMinutes(b.end_time) > hStart).length;
+      const capacity = capMap.get(h) ?? bookableStaffCount;
+      if (count >= capacity) return false;
+    }
+    return true;
+  };
 
   // shiftWindow が null の場合は、そのスタッフがその日出勤していない（シフト未登録）ことを表す
   const computeSlots = (
     busyList: { start_time: string; end_time: string }[],
     shiftWindow: { start_time: string; end_time: string } | null,
+    allBookingsList: { start_time: string; end_time: string }[],
+    capMap: Map<number, number>,
   ) => {
     if (!menu || !shiftWindow) return [];
     const openMin = Math.max(OPEN_MIN, toMinutes(shiftWindow.start_time));
@@ -83,13 +130,17 @@ export default function BookClient({ menuItems, staff }: Props) {
     const list: { start: string; available: boolean }[] = [];
     for (let t = openMin; t + menu.duration_minutes <= closeMin; t += SLOT_STEP) {
       const end = t + menu.duration_minutes;
-      const overlaps = busyList.some((b) => toMinutes(b.start_time) < end && toMinutes(b.end_time) > t);
-      list.push({ start: minutesToHHMM(t), available: !overlaps });
+      const staffOverlaps = busyList.some((b) => toMinutes(b.start_time) < end && toMinutes(b.end_time) > t);
+      const capacityOk = hourCapacityAvailable(t, end, allBookingsList, capMap);
+      list.push({ start: minutesToHHMM(t), available: !staffOverlaps && capacityOk });
     }
     return list;
   };
 
-  const slots = useMemo(() => (date && !isClosed(date) ? computeSlots(busy, shift) : []), [menu, date, busy, shift, closedWeekdays, holidayDates]);
+  const slots = useMemo(
+    () => (date && !isClosed(date) ? computeSlots(busy, shift, allBookings, capacityMap) : []),
+    [menu, date, busy, shift, allBookings, capacityMap, closedWeekdays, holidayDates],
+  );
   const availableSlots = slots.filter((s) => s.available);
   const slotGroups = [
     { label: '午前', items: availableSlots.filter((s) => toMinutes(s.start) < 12 * 60) },
@@ -108,13 +159,18 @@ export default function BookClient({ menuItems, staff }: Props) {
     for (let i = 0; i < 60; i++) {
       d = addDays(d, 1);
       if (isClosed(d)) continue;
-      const [availRes, shiftRes] = await Promise.all([
+      const [availRes, shiftRes, allAvailRes, capRes] = await Promise.all([
         sb.from('public_availability').select('start_time,end_time').eq('staff_id', selectedStaff.id).eq('booking_date', d),
         sb.from('public_shifts').select('start_time,end_time').eq('staff_id', selectedStaff.id).eq('shift_date', d).maybeSingle(),
+        sb.from('public_availability').select('start_time,end_time').eq('booking_date', d),
+        sb.from('public_hourly_capacity').select('hour,capacity').eq('capacity_date', d),
       ]);
       const busyList = (availRes.data ?? []) as { start_time: string; end_time: string }[];
       const shiftWindow = (shiftRes.data as { start_time: string; end_time: string } | null) ?? null;
-      const found = computeSlots(busyList, shiftWindow).some((s) => s.available);
+      const allBookingsForDay = (allAvailRes.data ?? []) as { start_time: string; end_time: string }[];
+      const capMapForDay = new Map<number, number>();
+      for (const c of (capRes.data ?? []) as { hour: number; capacity: number }[]) capMapForDay.set(c.hour, c.capacity);
+      const found = computeSlots(busyList, shiftWindow, allBookingsForDay, capMapForDay).some((s) => s.available);
       if (found) {
         setWeekStart(d);
         setDate(d);

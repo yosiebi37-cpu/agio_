@@ -240,6 +240,19 @@ create table if not exists shifts (
 );
 
 -- ---------------------------------------------------------------------------
+-- 時間帯ごとの受付可能数の手動調整（予約ボードの「残り受付可能数」）
+-- 設定が無い時間帯は、出勤スタッフ数（「フリー」枠を除く）を上限として自動計算する
+-- ---------------------------------------------------------------------------
+create table if not exists hourly_capacity (
+  id             uuid primary key default gen_random_uuid(),
+  capacity_date  date not null,
+  hour           int not null check (hour between 0 and 23),
+  capacity       int not null default 0,
+  created_at     timestamptz not null default now(),
+  unique (capacity_date, hour)
+);
+
+-- ---------------------------------------------------------------------------
 -- 定休日（毎週の曜日 + 特定の休業日）
 -- ---------------------------------------------------------------------------
 create table if not exists salon_settings (
@@ -318,6 +331,7 @@ alter table expenses            enable row level security;
 alter table hotpepper_sync_log  enable row level security;
 alter table square_sync_log     enable row level security;
 alter table retail_products     enable row level security;
+alter table hourly_capacity     enable row level security;
 
 do $$
 declare t text;
@@ -326,7 +340,7 @@ begin
     'staff','customers','bookings','treatment_records',
     'chemical_records','karte_photos','commission_settings','shifts',
     'salon_settings','holidays','retail_sales','freelance_daily_sales','menu_items','expenses',
-    'hotpepper_sync_log','square_sync_log','retail_products'
+    'hotpepper_sync_log','square_sync_log','retail_products','hourly_capacity'
   ]
   loop
     execute format(
@@ -479,3 +493,10 @@ create or replace view public_shifts as
   from shifts;
 
 grant select on public_shifts to anon;
+
+-- 時間帯ごとの受付可能数（手動設定分）を公開し、上限に達した時間帯はオンライン予約できないようにする
+create or replace view public_hourly_capacity as
+  select capacity_date, hour, capacity
+  from hourly_capacity;
+
+grant select on public_hourly_capacity to anon;
