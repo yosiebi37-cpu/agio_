@@ -33,9 +33,10 @@ interface Props {
   bookings: BookingWithStaff[];
   date: string;
   closedLabel?: string | null;
+  capacityOverrides: { hour: number; capacity: number }[];
 }
 
-export default function BoardClient({ staff, bookings, date, closedLabel }: Props) {
+export default function BoardClient({ staff, bookings, date, closedLabel, capacityOverrides }: Props) {
   const router = useRouter();
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<BookingWithStaff | null>(null);
@@ -79,6 +80,12 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
   // 残り受付可能数の計算からは除く（含めると実際は満席でも1枠分の余裕があるように見えてしまう）
   const bookableStaffCount = useMemo(() => staff.filter((s) => s.name !== 'フリー').length, [staff]);
 
+  const capacityByHour = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const c of capacityOverrides) map.set(c.hour, c.capacity);
+    return map;
+  }, [capacityOverrides]);
+
   const hourlyStats = useMemo(() => {
     return HOURS.map((h) => {
       const hStart = h * 60;
@@ -86,9 +93,22 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
       const count = bookings.filter(
         (b) => toMinutes(b.start_time) < hEnd && toMinutes(b.end_time) > hStart,
       ).length;
-      return { hour: h, count, remaining: Math.max(bookableStaffCount - count, 0) };
+      const capacity = capacityByHour.get(h) ?? bookableStaffCount;
+      return { hour: h, count, capacity, remaining: Math.max(capacity - count, 0) };
     });
-  }, [bookings, bookableStaffCount]);
+  }, [bookings, bookableStaffCount, capacityByHour]);
+
+  const adjustCapacity = async (hour: number, delta: number) => {
+    const stat = hourlyStats.find((hs) => hs.hour === hour);
+    if (!stat) return;
+    const nextCapacity = Math.max(stat.count, stat.capacity + delta);
+    const sb = getBrowserSupabase();
+    await sb.from('hourly_capacity').upsert(
+      { capacity_date: date, hour, capacity: nextCapacity },
+      { onConflict: 'capacity_date,hour' },
+    );
+    router.refresh();
+  };
 
   const summary = useMemo(() => {
     const visible = bookings.filter((b) => !hidden.has(b.staff_id));
@@ -226,15 +246,23 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
               <div className="summary-cell" key={hs.hour}>{hs.count}</div>
             ))}
           </div>
-          <div className="board-summary-row" style={{ top: 86 }}>
+          <div className="board-summary-row" style={{ top: 88 }}>
             <div className="board-summary-label">残り受付可能数</div>
             {hourlyStats.map((hs) => (
-              <div
-                className="summary-cell"
-                key={hs.hour}
-                style={hs.remaining === 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined}
-              >
-                {hs.remaining}
+              <div className="summary-cell" key={hs.hour} style={{ gap: 4 }}>
+                <i
+                  className="ti ti-minus"
+                  style={{ fontSize: 13, color: 'var(--ink-l)', cursor: 'pointer', padding: 2 }}
+                  onClick={() => adjustCapacity(hs.hour, -1)}
+                ></i>
+                <span style={{ minWidth: 16, textAlign: 'center', ...(hs.remaining === 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined) }}>
+                  {hs.remaining}
+                </span>
+                <i
+                  className="ti ti-plus"
+                  style={{ fontSize: 13, color: 'var(--ink-l)', cursor: 'pointer', padding: 2 }}
+                  onClick={() => adjustCapacity(hs.hour, 1)}
+                ></i>
               </div>
             ))}
           </div>
