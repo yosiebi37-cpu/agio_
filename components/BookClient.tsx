@@ -29,6 +29,7 @@ export default function BookClient({ menuItems, staff }: Props) {
   const [weekStart, setWeekStart] = useState(today);
   const [date, setDate] = useState(today);
   const [busy, setBusy] = useState<{ start_time: string; end_time: string }[]>([]);
+  const [shift, setShift] = useState<{ start_time: string; end_time: string } | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
   const [searchingNext, setSearchingNext] = useState(false);
@@ -53,27 +54,34 @@ export default function BookClient({ menuItems, staff }: Props) {
   useEffect(() => {
     if (!selectedStaff || !date) {
       setBusy([]);
+      setShift(null);
       return;
     }
     setLoadingSlots(true);
     setSlot(null);
     const sb = getBrowserSupabase();
-    sb.from('public_availability')
-      .select('start_time,end_time')
-      .eq('staff_id', selectedStaff.id)
-      .eq('booking_date', date)
-      .then(({ data }) => {
-        setBusy((data ?? []) as { start_time: string; end_time: string }[]);
-        setLoadingSlots(false);
-      });
+    Promise.all([
+      sb.from('public_availability').select('start_time,end_time').eq('staff_id', selectedStaff.id).eq('booking_date', date),
+      sb.from('public_shifts').select('start_time,end_time').eq('staff_id', selectedStaff.id).eq('shift_date', date).maybeSingle(),
+    ]).then(([availRes, shiftRes]) => {
+      setBusy((availRes.data ?? []) as { start_time: string; end_time: string }[]);
+      setShift((shiftRes.data as { start_time: string; end_time: string } | null) ?? null);
+      setLoadingSlots(false);
+    });
   }, [selectedStaff, date]);
 
   const isClosed = (d: string) => closedWeekdays.has(new Date(d + 'T00:00:00').getDay()) || holidayDates.has(d);
 
-  const computeSlots = (busyList: { start_time: string; end_time: string }[]) => {
-    if (!menu) return [];
+  // shiftWindow が null の場合は、そのスタッフがその日出勤していない（シフト未登録）ことを表す
+  const computeSlots = (
+    busyList: { start_time: string; end_time: string }[],
+    shiftWindow: { start_time: string; end_time: string } | null,
+  ) => {
+    if (!menu || !shiftWindow) return [];
+    const openMin = Math.max(OPEN_MIN, toMinutes(shiftWindow.start_time));
+    const closeMin = Math.min(CLOSE_MIN, toMinutes(shiftWindow.end_time));
     const list: { start: string; available: boolean }[] = [];
-    for (let t = OPEN_MIN; t + menu.duration_minutes <= CLOSE_MIN; t += SLOT_STEP) {
+    for (let t = openMin; t + menu.duration_minutes <= closeMin; t += SLOT_STEP) {
       const end = t + menu.duration_minutes;
       const overlaps = busyList.some((b) => toMinutes(b.start_time) < end && toMinutes(b.end_time) > t);
       list.push({ start: minutesToHHMM(t), available: !overlaps });
@@ -81,7 +89,7 @@ export default function BookClient({ menuItems, staff }: Props) {
     return list;
   };
 
-  const slots = useMemo(() => (date && !isClosed(date) ? computeSlots(busy) : []), [menu, date, busy, closedWeekdays, holidayDates]);
+  const slots = useMemo(() => (date && !isClosed(date) ? computeSlots(busy, shift) : []), [menu, date, busy, shift, closedWeekdays, holidayDates]);
   const availableSlots = slots.filter((s) => s.available);
   const slotGroups = [
     { label: '午前', items: availableSlots.filter((s) => toMinutes(s.start) < 12 * 60) },
@@ -100,13 +108,13 @@ export default function BookClient({ menuItems, staff }: Props) {
     for (let i = 0; i < 60; i++) {
       d = addDays(d, 1);
       if (isClosed(d)) continue;
-      const { data } = await sb
-        .from('public_availability')
-        .select('start_time,end_time')
-        .eq('staff_id', selectedStaff.id)
-        .eq('booking_date', d);
-      const busyList = (data ?? []) as { start_time: string; end_time: string }[];
-      const found = computeSlots(busyList).some((s) => s.available);
+      const [availRes, shiftRes] = await Promise.all([
+        sb.from('public_availability').select('start_time,end_time').eq('staff_id', selectedStaff.id).eq('booking_date', d),
+        sb.from('public_shifts').select('start_time,end_time').eq('staff_id', selectedStaff.id).eq('shift_date', d).maybeSingle(),
+      ]);
+      const busyList = (availRes.data ?? []) as { start_time: string; end_time: string }[];
+      const shiftWindow = (shiftRes.data as { start_time: string; end_time: string } | null) ?? null;
+      const found = computeSlots(busyList, shiftWindow).some((s) => s.available);
       if (found) {
         setWeekStart(d);
         setDate(d);
@@ -324,7 +332,11 @@ export default function BookClient({ menuItems, staff }: Props) {
             )}
             {!isClosed(date) && !loadingSlots && availableSlots.length === 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div className="empty-row" style={{ marginBottom: 12 }}>{formatDateLong(date)}に予約可能な時間はありません。</div>
+                <div className="empty-row" style={{ marginBottom: 12 }}>
+                  {shift
+                    ? `${formatDateLong(date)}に予約可能な時間はありません。`
+                    : `${formatDateLong(date)}は${selectedStaff?.name}の出勤日ではありません。`}
+                </div>
                 <button className="btn-cancel" onClick={findNextAvailable} disabled={searchingNext}>
                   {searchingNext ? '検索中…' : '次の空き日をさがす'}
                 </button>
