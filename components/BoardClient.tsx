@@ -75,6 +75,10 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
     return map;
   }, [bookings]);
 
+  // 「フリー」は担当未定の予約を仮に割り当てるためのダミー枠で、実際に施術できる人員ではないため、
+  // 残り受付可能数の計算からは除く（含めると実際は満席でも1枠分の余裕があるように見えてしまう）
+  const bookableStaffCount = useMemo(() => staff.filter((s) => s.name !== 'フリー').length, [staff]);
+
   const hourlyStats = useMemo(() => {
     return HOURS.map((h) => {
       const hStart = h * 60;
@@ -82,9 +86,9 @@ export default function BoardClient({ staff, bookings, date, closedLabel }: Prop
       const count = bookings.filter(
         (b) => toMinutes(b.start_time) < hEnd && toMinutes(b.end_time) > hStart,
       ).length;
-      return { hour: h, count, remaining: Math.max(staff.length - count, 0) };
+      return { hour: h, count, remaining: Math.max(bookableStaffCount - count, 0) };
     });
-  }, [bookings, staff]);
+  }, [bookings, bookableStaffCount]);
 
   const summary = useMemo(() => {
     const visible = bookings.filter((b) => !hidden.has(b.staff_id));

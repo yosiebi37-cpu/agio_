@@ -39,7 +39,7 @@ export const EXPENSE_CATEGORIES: string[] = [
 
 // 予約ボードのレイアウト定数（スタッフ = 行、時刻 = 列）
 export const OPEN_HOUR = 9; // 開店（先頭の時刻ラベル）
-export const ROW_COUNT = 11; // 表示する時間枠の数（9:00〜20:00）
+export const ROW_COUNT = 10; // 表示する時間枠の数（9:00〜19:00、営業は基本18時までだが延長時にも対応）
 export const HOUR_W = 120; // 1時間あたりの幅(px)
 export const STAFF_COL_W = 190; // スタッフ名 列（固定表示）の幅(px)
 export const HOURS: number[] = Array.from({ length: ROW_COUNT }, (_, i) => OPEN_HOUR + i);
