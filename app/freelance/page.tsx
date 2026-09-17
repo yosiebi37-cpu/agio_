@@ -23,7 +23,7 @@ export default async function FreelancePage({
 
   const { date: dateParam, view: viewParam, month: monthParam } = await searchParams;
   const sb = await getServerSupabase();
-  if (await getCurrentStaff(sb)) redirect('/board');
+  if (await getCurrentStaff()) redirect('/board');
 
   const view: 'day' | 'month' = viewParam === 'month' ? 'month' : 'day';
 

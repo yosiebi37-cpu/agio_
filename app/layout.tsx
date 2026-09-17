@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import TopBar from '@/components/TopBar';
-import { isSupabaseConfigured, getServerSupabase, getCurrentStaff } from '@/lib/supabase/server';
+import { isSupabaseConfigured, getCurrentStaff } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
   title: 'Atelier — 予約管理',
@@ -11,8 +11,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   let isStaff = false;
   if (isSupabaseConfigured()) {
-    const sb = await getServerSupabase();
-    isStaff = !!(await getCurrentStaff(sb));
+    isStaff = !!(await getCurrentStaff());
   }
 
   return (

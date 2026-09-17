@@ -20,7 +20,7 @@ export default async function MyRewardPage({
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
   const sb = await getServerSupabase();
-  const staff = await getCurrentStaff(sb);
+  const staff = await getCurrentStaff();
 
   if (!staff) {
     return (

@@ -24,7 +24,7 @@ export default async function SalesPage({
 
   const { month: monthParam, view: viewParam, date: dateParam } = await searchParams;
   const sb = await getServerSupabase();
-  if (await getCurrentStaff(sb)) redirect('/board');
+  if (await getCurrentStaff()) redirect('/board');
 
   if (viewParam === 'day') {
     const date = dateParam ?? toISODate(new Date());
