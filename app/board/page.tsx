@@ -21,18 +21,7 @@ export default async function BoardPage({
   const view: ViewMode = viewParam === 'week' || viewParam === 'month' ? viewParam : 'day';
   const sb = await getServerSupabase();
 
-  let date: string;
-  if (dateParam) {
-    date = dateParam;
-  } else {
-    const { data: latest } = await sb
-      .from('bookings')
-      .select('booking_date')
-      .order('booking_date', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    date = (latest?.booking_date as string | null) ?? toISODate(new Date());
-  }
+  const date = dateParam ?? toISODate(new Date());
 
   if (view === 'week') {
     const start = startOfWeek(date);
