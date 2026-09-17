@@ -12,6 +12,7 @@ const ADMIN_NAV = [
   { href: '/freelance', label: '業務委託', icon: 'ti-receipt' },
   { href: '/shifts', label: 'シフト', icon: 'ti-calendar-user' },
   { href: '/sales', label: '売上', icon: 'ti-chart-bar' },
+  { href: '/analytics', label: '分析', icon: 'ti-chart-line' },
   { href: '/settings', label: '設定', icon: 'ti-settings' },
 ];
 
