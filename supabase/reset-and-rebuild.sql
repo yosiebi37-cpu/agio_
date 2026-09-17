@@ -500,3 +500,10 @@ end;
 $$;
 
 grant execute on function public_create_customer(text, text, text) to anon;
+
+-- スタッフの出勤日・出勤時間だけを公開し、休みの日には予約できないようにする
+create or replace view public_shifts as
+  select staff_id, shift_date, start_time, end_time
+  from shifts;
+
+grant select on public_shifts to anon;
