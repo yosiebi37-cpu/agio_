@@ -10,7 +10,7 @@ export default async function AnalyticsPage() {
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
   const sb = await getServerSupabase();
-  if (await getCurrentStaff(sb)) redirect('/board');
+  if (await getCurrentStaff()) redirect('/board');
 
   const [{ data: bookingsData }, { data: retailData }, { data: recordsData }] = await Promise.all([
     sb.from('bookings').select('booking_date,customer_type,status,amount'),

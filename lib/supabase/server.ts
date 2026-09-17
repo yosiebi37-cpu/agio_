@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Staff } from '@/lib/types';
 
@@ -48,12 +49,15 @@ export function getServiceSupabase(): SupabaseClient {
 /**
  * ログイン中のユーザーが「スタッフ用アカウント」に紐付いているか調べる。
  * 見つかれば、そのスタッフの閲覧範囲だけに制限する（オーナーアカウントは null になる）。
+ * レイアウトと各ページの両方から呼ばれることが多いため、同じリクエスト内では
+ * 結果をキャッシュして、Supabase への認証確認（auth.getUser）を1回にまとめている。
  */
-export async function getCurrentStaff(sb: SupabaseClient): Promise<Staff | null> {
+export const getCurrentStaff = cache(async (): Promise<Staff | null> => {
+  const sb = await getServerSupabase();
   const {
     data: { user },
   } = await sb.auth.getUser();
   if (!user) return null;
   const { data } = await sb.from('staff').select('*').eq('user_id', user.id).maybeSingle();
   return (data as Staff | null) ?? null;
-}
+});

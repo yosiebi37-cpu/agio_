@@ -10,7 +10,7 @@ export default async function SettingsPage() {
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
   const sb = await getServerSupabase();
-  if (await getCurrentStaff(sb)) redirect('/board');
+  if (await getCurrentStaff()) redirect('/board');
   const [{ data: staffData }, { data: salonSettingsData }, { data: holidaysData }, { data: menuItemsData }, { data: retailProductsData }] = await Promise.all([
     sb.from('staff').select('*').order('sort_order'),
     sb.from('salon_settings').select('*').eq('id', 1).maybeSingle(),
