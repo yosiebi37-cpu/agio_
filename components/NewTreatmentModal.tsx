@@ -14,6 +14,13 @@ interface Props {
   staff: Staff[];
 }
 
+interface LineItem {
+  name: string;
+  amount: string;
+}
+
+const emptyLine = (): LineItem => ({ name: '', amount: '' });
+
 export default function NewTreatmentModal({ open, onClose, customerId, staff }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -23,12 +30,10 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
 
   const [performedOn, setPerformedOn] = useState(() => toISODate(new Date()));
   const [staffId, setStaffId] = useState('');
-  const [menu, setMenu] = useState('');
-  const [amount, setAmount] = useState('8800');
+  const [menuLines, setMenuLines] = useState<LineItem[]>([emptyLine()]);
   const [tags, setTags] = useState('');
   const [note, setNote] = useState('');
-  const [retailProductName, setRetailProductName] = useState('');
-  const [retailAmount, setRetailAmount] = useState('');
+  const [retailLines, setRetailLines] = useState<LineItem[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -40,10 +45,12 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
       .then(({ data }) => {
         const list = (data ?? []).length ? (data as MenuItem[]) : FALLBACK_MENUS;
         setMenuItems(list);
-        if (list.length && !menu) {
-          setMenu(list[0].name);
-          setAmount(String(list[0].price));
-        }
+        setMenuLines((prev) => {
+          if (prev.length === 1 && !prev[0].name && list.length) {
+            return [{ name: list[0].name, amount: String(list[0].price) }];
+          }
+          return prev;
+        });
       });
     sb.from('retail_products')
       .select('*')
@@ -58,35 +65,41 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
 
   if (!open) return null;
 
-  const handleMenuChange = (value: string) => {
-    setMenu(value);
-    const item = menuItems.find((m) => m.name === value);
-    if (item) setAmount(String(item.price));
+  const updateMenuLine = (idx: number, name: string) => {
+    const item = menuItems.find((m) => m.name === name);
+    setMenuLines((prev) => prev.map((l, i) => (i === idx ? { name, amount: item ? String(item.price) : l.amount } : l)));
   };
 
-  const selectRetailProduct = (name: string) => {
-    setRetailProductName(name);
+  const updateMenuAmount = (idx: number, amount: string) => {
+    setMenuLines((prev) => prev.map((l, i) => (i === idx ? { ...l, amount } : l)));
+  };
+
+  const updateRetailLine = (idx: number, name: string) => {
     const match = retailProducts.find((p) => p.name === name);
-    if (match) setRetailAmount(String(match.price));
+    setRetailLines((prev) => prev.map((l, i) => (i === idx ? { name, amount: match ? String(match.price) : l.amount } : l)));
+  };
+
+  const updateRetailAmount = (idx: number, amount: string) => {
+    setRetailLines((prev) => prev.map((l, i) => (i === idx ? { ...l, amount } : l)));
   };
 
   const reset = () => {
     setPerformedOn(toISODate(new Date()));
     setStaffId('');
-    setMenu('');
-    setAmount('8800');
+    setMenuLines([menuItems.length ? { name: menuItems[0].name, amount: String(menuItems[0].price) } : emptyLine()]);
     setTags('');
     setNote('');
-    setRetailProductName('');
-    setRetailAmount('');
+    setRetailLines([]);
   };
 
   const submit = async () => {
-    if (!menu.trim()) {
+    const validMenuLines = menuLines.filter((l) => l.name.trim());
+    if (validMenuLines.length === 0) {
       setError('メニューを入力してください。');
       return;
     }
-    if (retailProductName && (!retailAmount || Number(retailAmount) <= 0)) {
+    const validRetailLines = retailLines.filter((l) => l.name.trim());
+    if (validRetailLines.some((l) => !l.amount || Number(l.amount) <= 0)) {
       setError('店販の金額を入力してください。');
       return;
     }
@@ -94,12 +107,14 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
     setError(null);
     try {
       const sb = getBrowserSupabase();
+      const combinedMenu = validMenuLines.map((l) => l.name.trim()).join('＋');
+      const totalAmount = validMenuLines.reduce((s, l) => s + (parseInt(l.amount, 10) || 0), 0);
       const { error } = await sb.from('treatment_records').insert({
         customer_id: customerId,
         staff_id: staffId || null,
         performed_on: performedOn,
-        menu: menu.trim(),
-        amount: parseInt(amount, 10) || 0,
+        menu: combinedMenu,
+        amount: totalAmount,
         tags: tags.trim() ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
         note: note.trim() || null,
       });
@@ -108,13 +123,15 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
         setSaving(false);
         return;
       }
-      if (retailProductName) {
-        const { error: retailError } = await sb.from('retail_sales').insert({
-          sale_date: performedOn,
-          staff_id: staffId || null,
-          product_name: retailProductName,
-          amount: Number(retailAmount),
-        });
+      if (validRetailLines.length) {
+        const { error: retailError } = await sb.from('retail_sales').insert(
+          validRetailLines.map((l) => ({
+            sale_date: performedOn,
+            staff_id: staffId || null,
+            product_name: l.name.trim(),
+            amount: Number(l.amount),
+          })),
+        );
         if (retailError) {
           setError(`施術記録は保存しましたが、店販の記録に失敗しました: ${retailError.message}`);
           setSaving(false);
@@ -153,57 +170,85 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
               </select>
             </div>
           </div>
+
+          <label className="f-label">メニュー</label>
+          {menuLines.map((line, idx) => (
+            <div key={idx} className="f-row2" style={{ marginBottom: 8, alignItems: 'flex-end' }}>
+              <div>
+                <input
+                  className="f-input"
+                  type="text"
+                  list="nt-menu-options"
+                  value={line.name}
+                  onChange={(e) => updateMenuLine(idx, e.target.value)}
+                  placeholder="カット"
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  className="f-input"
+                  type="number"
+                  min="0"
+                  value={line.amount}
+                  onChange={(e) => updateMenuAmount(idx, e.target.value)}
+                  placeholder="金額"
+                />
+                {menuLines.length > 1 && (
+                  <button className="btn-cancel" style={{ padding: '0 10px' }} onClick={() => setMenuLines((prev) => prev.filter((_, i) => i !== idx))}>
+                    <i className="ti ti-x"></i>
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          <datalist id="nt-menu-options">
+            {menuItems.map((m) => <option key={m.id} value={m.name} />)}
+          </datalist>
+          <button className="btn-sm" style={{ marginBottom: 14 }} onClick={() => setMenuLines((prev) => [...prev, emptyLine()])}>
+            <i className="ti ti-plus"></i>メニューを追加
+          </button>
+
           <div className="f-row">
-            <label className="f-label">メニュー</label>
-            <input
-              className="f-input"
-              type="text"
-              list="nt-menu-options"
-              value={menu}
-              onChange={(e) => handleMenuChange(e.target.value)}
-              placeholder="カット"
-            />
-            <datalist id="nt-menu-options">
-              {menuItems.map((m) => <option key={m.id} value={m.name} />)}
-            </datalist>
-          </div>
-          <div className="f-row2">
-            <div>
-              <label className="f-label">金額 (円)</label>
-              <input className="f-input" type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
-            </div>
-            <div>
-              <label className="f-label">タグ（カンマ区切り）</label>
-              <input className="f-input" type="text" placeholder="縮毛矯正, トリートメント" value={tags} onChange={(e) => setTags(e.target.value)} />
-            </div>
+            <label className="f-label">タグ（カンマ区切り）</label>
+            <input className="f-input" type="text" placeholder="縮毛矯正, トリートメント" value={tags} onChange={(e) => setTags(e.target.value)} />
           </div>
           <div className="f-row" style={{ marginBottom: 0 }}>
             <label className="f-label">メモ</label>
             <textarea className="f-input f-textarea" rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
-          <div className="f-row2" style={{ marginTop: 14, marginBottom: 0, borderTop: '1px solid var(--sand)', paddingTop: 14 }}>
-            <div>
-              <label className="f-label">店販（任意）</label>
-              <select className="f-select" value={retailProductName} onChange={(e) => selectRetailProduct(e.target.value)}>
-                <option value="">なし</option>
-                {retailProducts.map((p) => (
-                  <option key={p.id} value={p.name}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="f-label">店販の金額 (円)</label>
-              <input
-                className="f-input"
-                type="number"
-                min="0"
-                value={retailAmount}
-                onChange={(e) => setRetailAmount(e.target.value)}
-                disabled={!retailProductName}
-                placeholder="0"
-              />
-            </div>
+
+          <div style={{ marginTop: 14, borderTop: '1px solid var(--sand)', paddingTop: 14 }}>
+            <label className="f-label">店販（任意）</label>
+            {retailLines.map((line, idx) => (
+              <div key={idx} className="f-row2" style={{ marginBottom: 8, alignItems: 'flex-end' }}>
+                <div>
+                  <select className="f-select" value={line.name} onChange={(e) => updateRetailLine(idx, e.target.value)}>
+                    <option value="">選択してください</option>
+                    {retailProducts.map((p) => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    className="f-input"
+                    type="number"
+                    min="0"
+                    value={line.amount}
+                    onChange={(e) => updateRetailAmount(idx, e.target.value)}
+                    placeholder="金額"
+                  />
+                  <button className="btn-cancel" style={{ padding: '0 10px' }} onClick={() => setRetailLines((prev) => prev.filter((_, i) => i !== idx))}>
+                    <i className="ti ti-x"></i>
+                  </button>
+                </div>
+              </div>
+            ))}
+            <button className="btn-sm" onClick={() => setRetailLines((prev) => [...prev, emptyLine()])}>
+              <i className="ti ti-plus"></i>店販を追加
+            </button>
           </div>
+
           {error && (
             <div style={{ marginTop: 14, fontSize: 14, color: 'var(--red)' }}>{error}</div>
           )}
