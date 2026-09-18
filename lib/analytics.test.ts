@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { monthKey, aggregateMonthlyCustomers, aggregateMonthlyRetail, computeRepeatRates } from './analytics';
+import { monthKey, aggregateMonthlyCustomers, aggregateMonthlyRetail, computeRepeatRates, aggregateAgeBrackets } from './analytics';
 
 describe('monthKey', () => {
   it('extracts YYYY-MM from an ISO date', () => {
@@ -61,5 +61,25 @@ describe('computeRepeatRates', () => {
   it('ignores records without a customer_id', () => {
     const rows = computeRepeatRates([{ customer_id: '', performed_on: '2026-07-01' }]);
     expect(rows).toEqual([]);
+  });
+});
+
+describe('aggregateAgeBrackets', () => {
+  it('buckets customers into age brackets by birth year', () => {
+    const rows = aggregateAgeBrackets([1990, 1985, 1995, 1960, null, 2010], 2026);
+    expect(rows).toEqual([
+      { bracket: '10代', count: 1 },
+      { bracket: '20代', count: 0 },
+      { bracket: '30代', count: 2 },
+      { bracket: '40代', count: 1 },
+      { bracket: '50代', count: 0 },
+      { bracket: '60代以上', count: 1 },
+      { bracket: '不明', count: 1 },
+    ]);
+  });
+
+  it('returns all zero counts for an empty list', () => {
+    const rows = aggregateAgeBrackets([]);
+    expect(rows.every((r) => r.count === 0)).toBe(true);
   });
 });

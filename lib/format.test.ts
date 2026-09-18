@@ -17,6 +17,7 @@ import {
   hiraganaToKatakana,
   minutesToHHMM,
   containsKanji,
+  calcAge,
 } from './format';
 
 describe('yen', () => {
@@ -164,5 +165,29 @@ describe('containsKanji', () => {
     expect(containsKanji('ヤマダ')).toBe(false);
     expect(containsKanji('yamada')).toBe(false);
     expect(containsKanji('')).toBe(false);
+  });
+});
+
+describe('calcAge', () => {
+  const today = new Date('2026-09-18T00:00:00');
+
+  it('computes age from birth year alone', () => {
+    expect(calcAge(1990, null, null, today)).toBe(36);
+  });
+
+  it('has not yet had the birthday this year', () => {
+    expect(calcAge(1990, 12, 25, today)).toBe(35);
+  });
+
+  it('already had the birthday this year', () => {
+    expect(calcAge(1990, 3, 1, today)).toBe(36);
+  });
+
+  it('turns a year older on the exact birthday', () => {
+    expect(calcAge(1990, 9, 18, today)).toBe(36);
+  });
+
+  it('has not yet had the birthday today (same month, later day)', () => {
+    expect(calcAge(1990, 9, 19, today)).toBe(35);
   });
 });
