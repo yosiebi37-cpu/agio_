@@ -38,6 +38,26 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
 
   if (!open) return null;
 
+  const remove = async () => {
+    const warning = c.visit_count > 0
+      ? `${c.name} 様を削除しますか？\n施術履歴・薬剤記録・写真もすべて削除されます。この操作は取り消せません。`
+      : `${c.name} 様を削除しますか？この操作は取り消せません。`;
+    if (!window.confirm(warning)) return;
+    setSaving(true);
+    setError(null);
+    const sb = getBrowserSupabase();
+    const { error: deleteError } = await sb.from('customers').delete().eq('id', c.id);
+    if (deleteError) {
+      setError(deleteError.message);
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
+    onClose();
+    router.push('/customers');
+    router.refresh();
+  };
+
   const submit = async () => {
     if (!name.trim()) {
       setError('お客様名を入力してください。');
@@ -185,11 +205,14 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
             <div style={{ marginTop: 14, fontSize: 14, color: 'var(--red)' }}>{error}</div>
           )}
         </div>
-        <div className="modal-foot">
-          <button className="btn-cancel" onClick={onClose}>キャンセル</button>
-          <button className="btn-save" onClick={submit} disabled={saving}>
-            {saving ? '保存中…' : '保存する'}
-          </button>
+        <div className="modal-foot" style={{ justifyContent: 'space-between' }}>
+          <button className="btn-cancel" style={{ color: 'var(--red)' }} onClick={remove} disabled={saving}>削除</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-cancel" onClick={onClose}>キャンセル</button>
+            <button className="btn-save" onClick={submit} disabled={saving}>
+              {saving ? '保存中…' : '保存する'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
