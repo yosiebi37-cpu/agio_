@@ -104,3 +104,20 @@ export const hiraganaToKatakana = (s: string): string =>
 
 /** 漢字（CJK統一漢字）を含むか。IME変換候補が漢字化した後の入力を読みの更新から除外するために使用 */
 export const containsKanji = (s: string): boolean => /[一-鿿]/.test(s);
+
+/** 生まれ年（＋月日が分かればより正確に）から満年齢を計算する */
+export const calcAge = (
+  birthYear: number,
+  birthMonth?: number | null,
+  birthDay?: number | null,
+  today: Date = new Date(),
+): number => {
+  let age = today.getFullYear() - birthYear;
+  if (birthMonth) {
+    const thisMonth = today.getMonth() + 1;
+    const hadBirthdayThisYear =
+      thisMonth > birthMonth || (thisMonth === birthMonth && (!birthDay || today.getDate() >= birthDay));
+    if (!hadBirthdayThisYear) age -= 1;
+  }
+  return age;
+};

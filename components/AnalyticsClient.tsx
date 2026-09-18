@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { yen, formatMonthLong } from '@/lib/format';
-import type { MonthlyCustomerRow, MonthlyRetailRow, RepeatRow } from '@/lib/analytics';
+import type { MonthlyCustomerRow, MonthlyRetailRow, RepeatRow, AgeBracketRow } from '@/lib/analytics';
 
 interface Props {
   monthlyCustomers: MonthlyCustomerRow[];
   monthlyRetail: MonthlyRetailRow[];
   repeatRates: RepeatRow[];
+  ageBrackets: AgeBracketRow[];
 }
 
 interface MergedRow {
@@ -115,7 +116,42 @@ function GroupedBarChart({
   );
 }
 
-export default function AnalyticsClient({ monthlyCustomers, monthlyRetail, repeatRates }: Props) {
+// 単一シリーズなので凡例は不要。カテゴリが少ないため各バーに直接人数を表示する
+function AgeBracketChart({ rows }: { rows: AgeBracketRow[] }) {
+  const width = 640;
+  const height = 180;
+  const padLeft = 8;
+  const padRight = 8;
+  const padTop = 20;
+  const padBottom = 28;
+  const plotW = width - padLeft - padRight;
+  const plotH = height - padTop - padBottom;
+  const maxVal = Math.max(1, ...rows.map((r) => r.count));
+  const groupW = rows.length ? plotW / rows.length : plotW;
+  const barW = Math.min(36, groupW * 0.5);
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+      {[0, 0.5, 1].map((f) => (
+        <line key={f} x1={padLeft} x2={width - padRight} y1={padTop + plotH * (1 - f)} y2={padTop + plotH * (1 - f)} stroke="var(--sand-d)" strokeWidth={1} />
+      ))}
+      {rows.map((r, i) => {
+        const gx = padLeft + groupW * i + groupW / 2;
+        const h = maxVal > 0 ? (r.count / maxVal) * plotH : 0;
+        const yBase = padTop + plotH;
+        return (
+          <g key={r.bracket}>
+            <rect x={gx - barW / 2} y={yBase - h} width={barW} height={Math.max(h, 1)} rx={4} fill="var(--accent)" />
+            <text x={gx} y={yBase - h - 6} textAnchor="middle" fontSize={11} fill="var(--ink-m)">{r.count > 0 ? r.count : ''}</text>
+            <text x={gx} y={height - 8} textAnchor="middle" fontSize={11} fill="var(--ink-l)">{r.bracket}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+export default function AnalyticsClient({ monthlyCustomers, monthlyRetail, repeatRates, ageBrackets }: Props) {
   const rows = useMemo<MergedRow[]>(() => {
     const months = new Set<string>();
     monthlyCustomers.forEach((r) => months.add(r.month));
@@ -214,6 +250,12 @@ export default function AnalyticsClient({ monthlyCustomers, monthlyRetail, repea
                   formatValue={(n) => yen(n)}
                 />
               </div>
+            </div>
+
+            <div className="tbl-wrap" style={{ padding: 16, marginTop: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>年齢層</div>
+              <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 6 }}>顧客管理に登録されているお客様（生まれ年が未登録の方は「不明」）</div>
+              <AgeBracketChart rows={ageBrackets} />
             </div>
 
             <div className="tbl-wrap" style={{ marginTop: 16 }}>

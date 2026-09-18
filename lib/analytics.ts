@@ -101,3 +101,31 @@ export function computeRepeatRates(records: TreatmentRecordRow[]): RepeatRow[] {
     }))
     .sort((a, b) => a.month.localeCompare(b.month));
 }
+
+export interface AgeBracketRow {
+  bracket: string;
+  count: number;
+}
+
+const AGE_BRACKET_ORDER = ['10代', '20代', '30代', '40代', '50代', '60代以上', '不明'];
+
+/** 生まれ年の一覧（未入力は null）から、年齢層ごとの人数を集計する */
+export function aggregateAgeBrackets(birthYears: (number | null)[], referenceYear = new Date().getFullYear()): AgeBracketRow[] {
+  const counts = new Map<string, number>(AGE_BRACKET_ORDER.map((b) => [b, 0]));
+  for (const y of birthYears) {
+    let bracket: string;
+    if (!y) {
+      bracket = '不明';
+    } else {
+      const age = referenceYear - y;
+      if (age < 20) bracket = '10代';
+      else if (age < 30) bracket = '20代';
+      else if (age < 40) bracket = '30代';
+      else if (age < 50) bracket = '40代';
+      else if (age < 60) bracket = '50代';
+      else bracket = '60代以上';
+    }
+    counts.set(bracket, (counts.get(bracket) ?? 0) + 1);
+  }
+  return AGE_BRACKET_ORDER.map((bracket) => ({ bracket, count: counts.get(bracket) ?? 0 }));
+}

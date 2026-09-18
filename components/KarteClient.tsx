@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { TYPE_LABEL, TYPE_TAG_CLASS } from '@/lib/constants';
-import { yenK, formatDateLong } from '@/lib/format';
+import { yenK, formatDateLong, calcAge } from '@/lib/format';
 import EditCustomerModal from './EditCustomerModal';
 import NewTreatmentModal from './NewTreatmentModal';
 import EditTreatmentModal from './EditTreatmentModal';
@@ -47,6 +47,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff,
             <div className="k-meta">
               {c.phone ?? '—'}<br />
               {c.birth_year ? `${c.birth_year}年` : ''}{c.birth_month ? `${c.birth_month}月` : ''}{c.birth_day ? `${c.birth_day}日` : ''}{c.birth_year || c.birth_month ? '生まれ' : ''}
+              {c.birth_year ? `（${calcAge(c.birth_year, c.birth_month, c.birth_day)}歳）` : ''}
             </div>
             <div style={{ marginTop: 8 }}>
               <span className={`tag ${TYPE_TAG_CLASS[c.customer_type]}`}>{TYPE_LABEL[c.customer_type]}</span>
