@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { toISODate, initialsFromName } from '@/lib/format';
@@ -28,6 +28,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const { furigana, onFuriganaChange, nameCompositionHandlers, reset: resetFurigana } = useFuriganaAutofill();
   const [date, setDate] = useState(() => toISODate(new Date()));
   const [start, setStart] = useState('10:00');
@@ -165,6 +166,11 @@ export default function NewBookingModal({ open, onClose }: Props) {
   };
 
   const matchedCustomer = customers.find((c) => c.name === name.trim());
+  const searchResults = useMemo(() => {
+    const q = name.trim();
+    if (!q || matchedCustomer) return [];
+    return customers.filter((c) => c.name.includes(q) || (c.furigana ?? '').includes(q)).slice(0, 8);
+  }, [customers, name, matchedCustomer]);
 
   return (
     <div className="modal-bg open" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -190,20 +196,44 @@ export default function NewBookingModal({ open, onClose }: Props) {
               />
             )}
             <label className="f-label">お客様名</label>
-            <input
-              className="f-input"
-              type="text"
-              placeholder="山田 花子"
-              list="nb-customer-options"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              {...(matchedCustomer ? {} : nameCompositionHandlers)}
-            />
-            <datalist id="nb-customer-options">
-              {customers.map((c) => <option key={c.id} value={c.name} />)}
-            </datalist>
+            <div style={{ position: 'relative' }}>
+              <input
+                className="f-input"
+                type="text"
+                placeholder="山田 花子（検索できます）"
+                value={name}
+                onChange={(e) => { setName(e.target.value); setShowDropdown(true); }}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                {...(matchedCustomer ? {} : nameCompositionHandlers)}
+              />
+              {showDropdown && searchResults.length > 0 && (
+                <div
+                  style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, marginTop: 4,
+                    background: 'var(--cream)', border: '1px solid var(--sand-d)', borderRadius: 8,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.1)', maxHeight: 200, overflowY: 'auto',
+                  }}
+                >
+                  {searchResults.map((c) => (
+                    <div
+                      key={c.id}
+                      onMouseDown={(e) => { e.preventDefault(); setName(c.name); setShowDropdown(false); }}
+                      style={{ padding: '8px 12px', fontSize: 14, cursor: 'pointer', borderBottom: '1px solid var(--sand)' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--sand)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <div>{c.name}</div>
+                      {c.furigana && <div style={{ fontSize: 11, color: 'var(--ink-l)' }}>{c.furigana}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             {!matchedCustomer && name.trim() && (
-              <div style={{ fontSize: 12, color: 'var(--ink-l)', marginTop: 4 }}>新しいお客様として登録されます</div>
+              <div style={{ fontSize: 12, color: 'var(--ink-l)', marginTop: 4 }}>
+                {searchResults.length > 0 ? '一致するお客様がいなければ、新しいお客様として登録されます' : '新しいお客様として登録されます'}
+              </div>
             )}
           </div>
           <div className="f-row2">
