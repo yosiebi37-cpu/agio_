@@ -85,6 +85,13 @@ export default function NewBookingModal({ open, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  const matchedCustomer = customers.find((c) => c.name === name.trim());
+  const searchResults = useMemo(() => {
+    const q = name.trim();
+    if (!q || matchedCustomer) return [];
+    return customers.filter((c) => c.name.includes(q) || (c.furigana ?? '').includes(q)).slice(0, 8);
+  }, [customers, name, matchedCustomer]);
+
   if (!open) return null;
 
   const handleMenuChange = (value: string) => {
@@ -164,13 +171,6 @@ export default function NewBookingModal({ open, onClose }: Props) {
       setSaving(false);
     }
   };
-
-  const matchedCustomer = customers.find((c) => c.name === name.trim());
-  const searchResults = useMemo(() => {
-    const q = name.trim();
-    if (!q || matchedCustomer) return [];
-    return customers.filter((c) => c.name.includes(q) || (c.furigana ?? '').includes(q)).slice(0, 8);
-  }, [customers, name, matchedCustomer]);
 
   return (
     <div className="modal-bg open" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
