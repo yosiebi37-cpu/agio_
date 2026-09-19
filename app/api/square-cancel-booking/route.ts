@@ -28,11 +28,12 @@ export async function POST(request: Request) {
   const squareBookingId = booking.square_booking_id as string | null;
   const accessToken = process.env.SQUARE_ACCESS_TOKEN;
 
+  // Square側のキャンセルに失敗しても、agio側の予約は削除できるようにする
+  // （Squareのオンライン予約を停止済みのため、Square側の反映が失敗すること自体は許容する）
+  let squareCancelFailed = false;
   if (squareBookingId && accessToken) {
     const ok = await cancelSquareBookingById(accessToken, squareBookingId);
-    if (!ok) {
-      return NextResponse.json({ error: 'Squareでのキャンセルに失敗しました' }, { status: 502 });
-    }
+    if (!ok) squareCancelFailed = true;
   }
 
   const { error: deleteError } = await sb.from('bookings').delete().eq('id', bookingId);
@@ -40,6 +41,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, squareCancelFailed });
 }
 

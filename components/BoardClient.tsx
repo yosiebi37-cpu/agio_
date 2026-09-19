@@ -176,6 +176,10 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
         setBusy(false);
         return;
       }
+      const data = await res.json().catch(() => ({}));
+      if (data.squareCancelFailed) {
+        alert('agioの予約は削除しました。ただしSquare側の予約は削除できなかったため、Square側は手動で確認してください。');
+      }
     } else {
       const sb = getBrowserSupabase();
       await sb.from('bookings').delete().eq('id', b.id);
