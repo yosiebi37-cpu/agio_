@@ -2,8 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { yen, toISODate, addDays, toMinutes, minutesToHHMM, hhmm, formatDateLong, formatDateTiny, initialsFromName } from '@/lib/format';
+import { yen, toISODate, addDays, toMinutes, minutesToHHMM, hhmm, formatDateLong, formatDateTiny } from '@/lib/format';
+import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
 import type { MenuItem, PublicStaff } from '@/lib/types';
+
+/** 全角数字・記号を半角に正規化する（電話番号欄向け） */
+const toHalfWidth = (s: string): string =>
+  s.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/[－ー―]/g, '-');
 
 interface Props {
   menuItems: MenuItem[];
@@ -38,10 +43,21 @@ export default function BookClient({ menuItems, staff }: Props) {
 
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
+  const lastNameFurigana = useFuriganaAutofill();
+  const firstNameFurigana = useFuriganaAutofill();
   const [phone, setPhone] = useState('');
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const [memo, setMemo] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [idempotencyKey, setIdempotencyKey] = useState(() =>
+    typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+  );
+
+  const phoneDigits = phone.replace(/[^0-9]/g, '');
+  const phoneError = phoneTouched && phone.trim() && (phoneDigits.length < 10 || phoneDigits.length > 11)
+    ? '電話番号は10〜11桁の数字で入力してください（ハイフンはあってもなくても大丈夫です）'
+    : null;
 
   useEffect(() => {
     const sb = getBrowserSupabase();
@@ -56,6 +72,8 @@ export default function BookClient({ menuItems, staff }: Props) {
   // 「フリー」は担当未定の予約を仮に割り当てるためのダミー枠で、実際に施術できる人員ではないため、
   // 受付可能数の自動計算からは除く
   const bookableStaffCount = useMemo(() => staff.filter((s) => s.name !== 'フリー').length, [staff]);
+
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     if (!selectedStaff || !date) {
@@ -74,7 +92,7 @@ export default function BookClient({ menuItems, staff }: Props) {
       setShift((shiftRes.data as { start_time: string; end_time: string } | null) ?? null);
       setLoadingSlots(false);
     });
-  }, [selectedStaff, date]);
+  }, [selectedStaff, date, refreshTick]);
 
   // 時間帯ごとの受付可能数（スタッフ全員分の合計）は、特定のスタイリストの空き状況とは別に、
   // お店全体で「この時間はもう受け付けられない」という上限をチェックするために使う
@@ -94,7 +112,7 @@ export default function BookClient({ menuItems, staff }: Props) {
       for (const c of (capRes.data ?? []) as { hour: number; capacity: number }[]) map.set(c.hour, c.capacity);
       setCapacityMap(map);
     });
-  }, [date]);
+  }, [date, refreshTick]);
 
   const isClosed = (d: string) => closedWeekdays.has(new Date(d + 'T00:00:00').getDay()) || holidayDates.has(d);
 
@@ -188,46 +206,41 @@ export default function BookClient({ menuItems, staff }: Props) {
       setError('お名前と電話番号を入力してください。');
       return;
     }
+    if (phoneError) {
+      setError(phoneError);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      const sb = getBrowserSupabase();
-      const { data: found } = await sb.rpc('public_find_customer_by_phone', { p_phone: phone.trim() });
-      let customerId: string;
-      let customerType: 'existing' | 'new' = 'new';
-      if (found && found.length) {
-        customerId = found[0].id;
-        customerType = found[0].customer_type;
-      } else {
-        const { data: newCustomerId, error: customerError } = await sb.rpc('public_create_customer', {
-          p_name: name,
-          p_phone: phone.trim(),
-          p_initials: initialsFromName(name),
-        });
-        if (customerError || !newCustomerId) {
-          setError(customerError?.message ?? '登録に失敗しました。');
-          setSubmitting(false);
-          return;
-        }
-        customerId = newCustomerId;
-      }
-      const endMin = toMinutes(slot) + menu.duration_minutes;
-      const { error: bookingError } = await sb.from('bookings').insert({
-        customer_id: customerId,
-        customer_name: name,
-        staff_id: selectedStaff.id,
-        booking_date: date,
-        start_time: `${slot}:00`,
-        end_time: `${minutesToHHMM(endMin)}:00`,
-        menu: menu.name,
-        status: 'confirmed',
-        customer_type: customerType,
-        amount: menu.price,
-        note: memo.trim() || null,
+      const res = await fetch('/api/book-submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idempotencyKey,
+          menuName: menu.name,
+          menuDurationMinutes: menu.duration_minutes,
+          menuPrice: menu.price,
+          staffId: selectedStaff.id,
+          date,
+          startTime: slot,
+          lastName: lastName.trim(),
+          firstName: firstName.trim(),
+          furigana: `${lastNameFurigana.furigana} ${firstNameFurigana.furigana}`.trim(),
+          phone: phoneDigits,
+          memo,
+        }),
       });
-      if (bookingError) {
-        setError(bookingError.message);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? '予約に失敗しました。');
         setSubmitting(false);
+        if (res.status === 409) {
+          // 枠が埋まっていた場合は日時選択に戻し、空き状況を読み直す
+          setStep('datetime');
+          setSlot(null);
+          setRefreshTick((t) => t + 1);
+        }
         return;
       }
       setStep('done');
@@ -254,7 +267,7 @@ export default function BookClient({ menuItems, staff }: Props) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: selectedStaff || date ? 8 : 0 }}>
           <div style={{ fontSize: 14, fontWeight: 600 }}>{menu.name}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <div style={{ fontSize: 14 }}>{yen(menu.price)}</div>
+            <div style={{ fontSize: 14 }}>{yen(menu.price)}<span style={{ fontSize: 11, color: 'var(--ink-l)' }}>（税込）</span></div>
             <i className="ti ti-pencil" style={{ fontSize: 14, color: 'var(--ink-l)', cursor: 'pointer' }} onClick={() => setStep('menu')}></i>
           </div>
         </div>
@@ -301,7 +314,7 @@ export default function BookClient({ menuItems, staff }: Props) {
                     <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{m.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--ink-l)' }}>{m.duration_minutes >= 60 ? `${Math.floor(m.duration_minutes / 60)}時間${m.duration_minutes % 60 ? m.duration_minutes % 60 + '分' : ''}` : `${m.duration_minutes}分`}</div>
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 600, flexShrink: 0 }}>{yen(m.price)}</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, flexShrink: 0 }}>{yen(m.price)}<span style={{ fontSize: 11, fontWeight: 400, color: 'var(--ink-l)' }}>（税込）</span></div>
                 </div>
               ))}
               {menuItems.length === 0 && <div className="empty-row">現在ご予約いただけるメニューがありません。</div>}
@@ -435,21 +448,76 @@ export default function BookClient({ menuItems, staff }: Props) {
             <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>お客様情報</div>
             <div className="f-row2">
               <div>
+                <label className="f-label">セイ</label>
+                <input
+                  className="f-input"
+                  type="text"
+                  placeholder="ヤマダ"
+                  value={lastNameFurigana.furigana}
+                  onChange={lastNameFurigana.onFuriganaChange}
+                  style={{ fontSize: 16 }}
+                />
+              </div>
+              <div>
+                <label className="f-label">メイ</label>
+                <input
+                  className="f-input"
+                  type="text"
+                  placeholder="ハナコ"
+                  value={firstNameFurigana.furigana}
+                  onChange={firstNameFurigana.onFuriganaChange}
+                  style={{ fontSize: 16 }}
+                />
+              </div>
+            </div>
+            <div className="f-row2">
+              <div>
                 <label className="f-label">姓</label>
-                <input className="f-input" type="text" placeholder="山田" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                <input
+                  className="f-input"
+                  type="text"
+                  placeholder="山田"
+                  autoComplete="family-name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  onCompositionUpdate={lastNameFurigana.nameCompositionHandlers.onCompositionUpdate}
+                  onCompositionEnd={lastNameFurigana.nameCompositionHandlers.onCompositionEnd}
+                  style={{ fontSize: 16 }}
+                />
               </div>
               <div>
                 <label className="f-label">名</label>
-                <input className="f-input" type="text" placeholder="花子" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                <input
+                  className="f-input"
+                  type="text"
+                  placeholder="花子"
+                  autoComplete="given-name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  onCompositionUpdate={firstNameFurigana.nameCompositionHandlers.onCompositionUpdate}
+                  onCompositionEnd={firstNameFurigana.nameCompositionHandlers.onCompositionEnd}
+                  style={{ fontSize: 16 }}
+                />
               </div>
             </div>
             <div className="f-row">
               <label className="f-label">電話番号</label>
-              <input className="f-input" type="text" placeholder="090-1234-5678" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <input
+                className="f-input"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="090-1234-5678"
+                value={phone}
+                onChange={(e) => setPhone(toHalfWidth(e.target.value))}
+                onBlur={() => setPhoneTouched(true)}
+                style={{ fontSize: 16 }}
+              />
+              {phoneError && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>{phoneError}</div>}
             </div>
             <div className="f-row" style={{ marginBottom: 0 }}>
               <label className="f-label">予約に関するメモ（任意）</label>
-              <textarea className="f-input f-textarea" rows={3} value={memo} onChange={(e) => setMemo(e.target.value)} />
+              <textarea className="f-input f-textarea" rows={3} value={memo} onChange={(e) => setMemo(e.target.value)} style={{ fontSize: 16 }} />
             </div>
             {error && <div style={{ marginTop: 14, fontSize: 13, color: 'var(--red)' }}>{error}</div>}
             <button className="btn-save login-submit" style={{ marginTop: 20 }} onClick={submit} disabled={submitting}>
