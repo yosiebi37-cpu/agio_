@@ -174,7 +174,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff,
         </div>
       </div>
       <EditCustomerModal open={editOpen} onClose={() => setEditOpen(false)} customer={c} staff={staff} />
-      <NewTreatmentModal open={treatmentOpen} onClose={() => setTreatmentOpen(false)} customerId={c.id} staff={staff} />
+      <NewTreatmentModal open={treatmentOpen} onClose={() => setTreatmentOpen(false)} customerId={c.id} customerName={c.name} staff={staff} />
       {editTreatment && (
         <EditTreatmentModal open={!!editTreatment} onClose={() => setEditTreatment(null)} treatment={editTreatment} staff={staff} />
       )}
