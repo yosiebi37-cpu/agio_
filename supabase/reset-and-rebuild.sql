@@ -278,9 +278,10 @@ create table if not exists hourly_capacity (
   id             uuid primary key default gen_random_uuid(),
   capacity_date  date not null,
   hour           int not null check (hour between 0 and 23),
+  minute         int not null default 0 check (minute in (0, 30)),
   capacity       int not null default 0,
   created_at     timestamptz not null default now(),
-  unique (capacity_date, hour)
+  unique (capacity_date, hour, minute)
 );
 
 -- ---------------------------------------------------------------------------
@@ -527,7 +528,7 @@ grant select on public_shifts to anon;
 
 -- 時間帯ごとの受付可能数（手動設定分）を公開し、上限に達した時間帯はオンライン予約できないようにする
 create or replace view public_hourly_capacity as
-  select capacity_date, hour, capacity
+  select capacity_date, hour, minute, capacity
   from hourly_capacity;
 
 grant select on public_hourly_capacity to anon;

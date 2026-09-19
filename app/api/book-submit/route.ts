@@ -93,24 +93,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'この時間はすでに埋まってしまいました。別の時間をお選びください。' }, { status: 409 });
   }
 
-  // お店全体の受付可能数チェック（残り受付可能数）
+  // お店全体の受付可能数チェック（残り受付可能数、30分単位）
   const [{ data: allBookings }, { data: capacityRows }, { data: staffList }] = await Promise.all([
     sb.from('bookings').select('start_time,end_time').eq('booking_date', date),
-    sb.from('hourly_capacity').select('hour,capacity').eq('capacity_date', date),
+    sb.from('hourly_capacity').select('hour,minute,capacity').eq('capacity_date', date),
     sb.from('staff').select('id,name').eq('is_active', true),
   ]);
   const bookableStaffCount = (staffList ?? []).filter((s: { name: string }) => s.name !== 'フリー').length;
   const capacityMap = new Map<number, number>();
-  for (const c of (capacityRows ?? []) as { hour: number; capacity: number }[]) capacityMap.set(c.hour, c.capacity);
-  const firstHour = Math.floor(startMin / 60);
-  const lastHour = Math.floor((endMin - 1) / 60);
-  for (let h = firstHour; h <= lastHour; h++) {
-    const hStart = h * 60;
-    const hEnd = hStart + 60;
+  for (const c of (capacityRows ?? []) as { hour: number; minute: number; capacity: number }[]) capacityMap.set(c.hour * 60 + c.minute, c.capacity);
+  const firstBucket = Math.floor(startMin / 30) * 30;
+  const lastBucket = Math.floor((endMin - 1) / 30) * 30;
+  for (let bStart = firstBucket; bStart <= lastBucket; bStart += 30) {
+    const bEnd = bStart + 30;
     const count = (allBookings ?? []).filter(
-      (b: { start_time: string; end_time: string }) => toMinutes(b.start_time) < hEnd && toMinutes(b.end_time) > hStart,
+      (b: { start_time: string; end_time: string }) => toMinutes(b.start_time) < bEnd && toMinutes(b.end_time) > bStart,
     ).length;
-    const capacity = capacityMap.get(h) ?? bookableStaffCount;
+    const capacity = capacityMap.get(bStart) ?? bookableStaffCount;
     if (count >= capacity) {
       return NextResponse.json({ error: 'この時間帯は受付上限に達しました。別の時間をお選びください。' }, { status: 409 });
     }
