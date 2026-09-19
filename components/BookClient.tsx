@@ -105,31 +105,30 @@ export default function BookClient({ menuItems, staff }: Props) {
     const sb = getBrowserSupabase();
     Promise.all([
       sb.from('public_availability').select('start_time,end_time').eq('booking_date', date),
-      sb.from('public_hourly_capacity').select('hour,capacity').eq('capacity_date', date),
+      sb.from('public_hourly_capacity').select('hour,minute,capacity').eq('capacity_date', date),
     ]).then(([availRes, capRes]) => {
       setAllBookings((availRes.data ?? []) as { start_time: string; end_time: string }[]);
       const map = new Map<number, number>();
-      for (const c of (capRes.data ?? []) as { hour: number; capacity: number }[]) map.set(c.hour, c.capacity);
+      for (const c of (capRes.data ?? []) as { hour: number; minute: number; capacity: number }[]) map.set(c.hour * 60 + c.minute, c.capacity);
       setCapacityMap(map);
     });
   }, [date, refreshTick]);
 
   const isClosed = (d: string) => closedWeekdays.has(new Date(d + 'T00:00:00').getDay()) || holidayDates.has(d);
 
-  // [t, end) の間にかかる時間帯すべてで、お店全体の受付可能数に空きがあるかを確認する
+  // [t, end) の間にかかる30分枠すべてで、お店全体の受付可能数に空きがあるかを確認する
   const hourCapacityAvailable = (
     t: number,
     end: number,
     allBookingsList: { start_time: string; end_time: string }[],
     capMap: Map<number, number>,
   ) => {
-    const firstHour = Math.floor(t / 60);
-    const lastHour = Math.floor((end - 1) / 60);
-    for (let h = firstHour; h <= lastHour; h++) {
-      const hStart = h * 60;
-      const hEnd = hStart + 60;
-      const count = allBookingsList.filter((b) => toMinutes(b.start_time) < hEnd && toMinutes(b.end_time) > hStart).length;
-      const capacity = capMap.get(h) ?? bookableStaffCount;
+    const firstBucket = Math.floor(t / 30) * 30;
+    const lastBucket = Math.floor((end - 1) / 30) * 30;
+    for (let bStart = firstBucket; bStart <= lastBucket; bStart += 30) {
+      const bEnd = bStart + 30;
+      const count = allBookingsList.filter((b) => toMinutes(b.start_time) < bEnd && toMinutes(b.end_time) > bStart).length;
+      const capacity = capMap.get(bStart) ?? bookableStaffCount;
       if (count >= capacity) return false;
     }
     return true;
@@ -181,13 +180,13 @@ export default function BookClient({ menuItems, staff }: Props) {
         sb.from('public_availability').select('start_time,end_time').eq('staff_id', selectedStaff.id).eq('booking_date', d),
         sb.from('public_shifts').select('start_time,end_time').eq('staff_id', selectedStaff.id).eq('shift_date', d).maybeSingle(),
         sb.from('public_availability').select('start_time,end_time').eq('booking_date', d),
-        sb.from('public_hourly_capacity').select('hour,capacity').eq('capacity_date', d),
+        sb.from('public_hourly_capacity').select('hour,minute,capacity').eq('capacity_date', d),
       ]);
       const busyList = (availRes.data ?? []) as { start_time: string; end_time: string }[];
       const shiftWindow = (shiftRes.data as { start_time: string; end_time: string } | null) ?? null;
       const allBookingsForDay = (allAvailRes.data ?? []) as { start_time: string; end_time: string }[];
       const capMapForDay = new Map<number, number>();
-      for (const c of (capRes.data ?? []) as { hour: number; capacity: number }[]) capMapForDay.set(c.hour, c.capacity);
+      for (const c of (capRes.data ?? []) as { hour: number; minute: number; capacity: number }[]) capMapForDay.set(c.hour * 60 + c.minute, c.capacity);
       const found = computeSlots(busyList, shiftWindow, allBookingsForDay, capMapForDay).some((s) => s.available);
       if (found) {
         setWeekStart(d);

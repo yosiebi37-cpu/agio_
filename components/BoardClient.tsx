@@ -33,8 +33,14 @@ interface Props {
   bookings: BookingWithStaff[];
   date: string;
   closedLabel?: string | null;
-  capacityOverrides: { hour: number; capacity: number }[];
+  capacityOverrides: { hour: number; minute: number; capacity: number }[];
 }
+
+// 30分単位で「残り受付可能数」を確認・調整できるよう、営業時間を30分刻みのコマに分割する
+const HALF_SLOTS: { hour: number; minute: number }[] = HOURS.flatMap((h) => [
+  { hour: h, minute: 0 },
+  { hour: h, minute: 30 },
+]);
 
 export default function BoardClient({ staff, bookings, date, closedLabel, capacityOverrides }: Props) {
   const router = useRouter();
@@ -80,32 +86,32 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
   // 残り受付可能数の計算からは除く（含めると実際は満席でも1枠分の余裕があるように見えてしまう）
   const bookableStaffCount = useMemo(() => staff.filter((s) => s.name !== 'フリー').length, [staff]);
 
-  const capacityByHour = useMemo(() => {
+  const capacityByHalf = useMemo(() => {
     const map = new Map<number, number>();
-    for (const c of capacityOverrides) map.set(c.hour, c.capacity);
+    for (const c of capacityOverrides) map.set(c.hour * 60 + c.minute, c.capacity);
     return map;
   }, [capacityOverrides]);
 
-  const hourlyStats = useMemo(() => {
-    return HOURS.map((h) => {
-      const hStart = h * 60;
-      const hEnd = hStart + 60;
+  const halfHourStats = useMemo(() => {
+    return HALF_SLOTS.map(({ hour, minute }) => {
+      const hStart = hour * 60 + minute;
+      const hEnd = hStart + 30;
       const count = bookings.filter(
         (b) => toMinutes(b.start_time) < hEnd && toMinutes(b.end_time) > hStart,
       ).length;
-      const capacity = capacityByHour.get(h) ?? bookableStaffCount;
-      return { hour: h, count, capacity, remaining: Math.max(capacity - count, 0) };
+      const capacity = capacityByHalf.get(hStart) ?? bookableStaffCount;
+      return { hour, minute, count, capacity, remaining: Math.max(capacity - count, 0) };
     });
-  }, [bookings, bookableStaffCount, capacityByHour]);
+  }, [bookings, bookableStaffCount, capacityByHalf]);
 
-  const adjustCapacity = async (hour: number, delta: number) => {
-    const stat = hourlyStats.find((hs) => hs.hour === hour);
+  const adjustCapacity = async (hour: number, minute: number, delta: number) => {
+    const stat = halfHourStats.find((hs) => hs.hour === hour && hs.minute === minute);
     if (!stat) return;
     const nextCapacity = Math.max(stat.count, stat.capacity + delta);
     const sb = getBrowserSupabase();
     await sb.from('hourly_capacity').upsert(
-      { capacity_date: date, hour, capacity: nextCapacity },
-      { onConflict: 'capacity_date,hour' },
+      { capacity_date: date, hour, minute, capacity: nextCapacity },
+      { onConflict: 'capacity_date,hour,minute' },
     );
     router.refresh();
   };
@@ -246,26 +252,36 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
 
           <div className="board-summary-row" style={{ top: 56 }}>
             <div className="board-summary-label">予約数</div>
-            {hourlyStats.map((hs) => (
-              <div className="summary-cell" key={hs.hour}>{hs.count}</div>
+            {halfHourStats.map((hs) => (
+              <div
+                className="summary-cell"
+                key={`${hs.hour}-${hs.minute}`}
+                style={{ width: 'calc(var(--hourw) / 2)', background: hs.minute === 30 ? 'rgba(245,240,232,0.4)' : undefined }}
+              >
+                {hs.count}
+              </div>
             ))}
           </div>
           <div className="board-summary-row" style={{ top: 88 }}>
             <div className="board-summary-label">残り受付可能数</div>
-            {hourlyStats.map((hs) => (
-              <div className="summary-cell" key={hs.hour} style={{ gap: 4 }}>
+            {halfHourStats.map((hs) => (
+              <div
+                className="summary-cell"
+                key={`${hs.hour}-${hs.minute}`}
+                style={{ width: 'calc(var(--hourw) / 2)', gap: 2, fontSize: 12, background: hs.minute === 30 ? 'rgba(245,240,232,0.4)' : undefined }}
+              >
                 <i
                   className="ti ti-minus"
-                  style={{ fontSize: 13, color: 'var(--ink-l)', cursor: 'pointer', padding: 2 }}
-                  onClick={() => adjustCapacity(hs.hour, -1)}
+                  style={{ fontSize: 11, color: 'var(--ink-l)', cursor: 'pointer', padding: 2 }}
+                  onClick={() => adjustCapacity(hs.hour, hs.minute, -1)}
                 ></i>
-                <span style={{ minWidth: 16, textAlign: 'center', ...(hs.remaining === 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined) }}>
+                <span style={{ minWidth: 14, textAlign: 'center', ...(hs.remaining === 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined) }}>
                   {hs.remaining}
                 </span>
                 <i
                   className="ti ti-plus"
-                  style={{ fontSize: 13, color: 'var(--ink-l)', cursor: 'pointer', padding: 2 }}
-                  onClick={() => adjustCapacity(hs.hour, 1)}
+                  style={{ fontSize: 11, color: 'var(--ink-l)', cursor: 'pointer', padding: 2 }}
+                  onClick={() => adjustCapacity(hs.hour, hs.minute, 1)}
                 ></i>
               </div>
             ))}

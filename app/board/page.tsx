@@ -73,7 +73,7 @@ export default async function BoardPage({
       .order('start_time'),
     sb.from('salon_settings').select('*').eq('id', 1).maybeSingle(),
     sb.from('holidays').select('holiday_date,note').eq('holiday_date', date).maybeSingle(),
-    sb.from('hourly_capacity').select('hour,capacity').eq('capacity_date', date),
+    sb.from('hourly_capacity').select('hour,minute,capacity').eq('capacity_date', date),
   ]);
 
   const staff = (staffData ?? []) as Staff[];
@@ -82,7 +82,7 @@ export default async function BoardPage({
   const isWeeklyClosed = salonSettings.closed_weekdays.includes(new Date(date + 'T00:00:00').getDay());
   const holidayNote = holidayRow ? ((holidayRow as { note: string | null }).note ?? '休業日') : null;
   const closedLabel = holidayNote ?? (isWeeklyClosed ? '定休日' : null);
-  const capacityOverrides = (capacityData ?? []) as { hour: number; capacity: number }[];
+  const capacityOverrides = (capacityData ?? []) as { hour: number; minute: number; capacity: number }[];
 
   return <BoardClient staff={staff} bookings={bookings} date={date} closedLabel={closedLabel} capacityOverrides={capacityOverrides} />;
 }
