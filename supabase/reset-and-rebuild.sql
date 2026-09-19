@@ -123,6 +123,9 @@ alter table bookings add column if not exists square_booking_id text unique;
 alter table bookings add column if not exists source text not null default 'manual'
   check (source in ('manual', 'hotpepper', 'square'));
 
+-- お客様向け予約ページ（/book, /book/line）の二重送信・二重予約防止用
+alter table bookings add column if not exists idempotency_key text unique;
+
 -- ---------------------------------------------------------------------------
 -- 施術履歴（カルテ）
 -- ---------------------------------------------------------------------------
