@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { toISODate } from '@/lib/format';
+import { toISODate, toMinutes, minutesToHHMM } from '@/lib/format';
 import { FALLBACK_MENUS, FALLBACK_RETAIL_PRODUCTS } from '@/lib/constants';
 import type { Staff, MenuItem, RetailProduct } from '@/lib/types';
 
@@ -11,8 +11,16 @@ interface Props {
   open: boolean;
   onClose: () => void;
   customerId: string;
+  customerName: string;
   staff: Staff[];
 }
+
+const DEFAULT_MENU_MINUTES = 60;
+
+const currentTimeHHMM = (): string => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
 
 interface LineItem {
   name: string;
@@ -21,7 +29,7 @@ interface LineItem {
 
 const emptyLine = (): LineItem => ({ name: '', amount: '' });
 
-export default function NewTreatmentModal({ open, onClose, customerId, staff }: Props) {
+export default function NewTreatmentModal({ open, onClose, customerId, customerName, staff }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +37,7 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
   const [retailProducts, setRetailProducts] = useState<RetailProduct[]>([]);
 
   const [performedOn, setPerformedOn] = useState(() => toISODate(new Date()));
+  const [startTime, setStartTime] = useState(() => currentTimeHHMM());
   const [staffId, setStaffId] = useState('');
   const [menuLines, setMenuLines] = useState<LineItem[]>([emptyLine()]);
   const [tags, setTags] = useState('');
@@ -85,6 +94,7 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
 
   const reset = () => {
     setPerformedOn(toISODate(new Date()));
+    setStartTime(currentTimeHHMM());
     setStaffId('');
     setMenuLines([menuItems.length ? { name: menuItems[0].name, amount: String(menuItems[0].price) } : emptyLine()]);
     setTags('');
@@ -109,9 +119,45 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
       const sb = getBrowserSupabase();
       const combinedMenu = validMenuLines.map((l) => l.name.trim()).join('＋');
       const totalAmount = validMenuLines.reduce((s, l) => s + (parseInt(l.amount, 10) || 0), 0);
+
+      // 予約ボードにも「来店済み」として反映するため、担当が未指定なら「フリー」枠を使う
+      const bookingStaffId = staffId || staff.find((s) => s.name === 'フリー')?.id || null;
+      let bookingId: string | null = null;
+      let boardWarning = '';
+      if (bookingStaffId) {
+        const totalMinutes = validMenuLines.reduce((s, l) => {
+          const matched = menuItems.find((m) => m.name === l.name.trim());
+          return s + (matched?.duration_minutes ?? DEFAULT_MENU_MINUTES);
+        }, 0) || DEFAULT_MENU_MINUTES;
+        const endTime = minutesToHHMM(toMinutes(startTime) + totalMinutes);
+        const { data: newBooking, error: bookingError } = await sb
+          .from('bookings')
+          .insert({
+            customer_id: customerId,
+            customer_name: customerName,
+            staff_id: bookingStaffId,
+            booking_date: performedOn,
+            start_time: `${startTime}:00`,
+            end_time: `${endTime}:00`,
+            menu: combinedMenu,
+            status: 'visited',
+            amount: totalAmount,
+          })
+          .select('id')
+          .single();
+        if (bookingError || !newBooking) {
+          boardWarning = ' / 予約ボードへの反映に失敗しました';
+        } else {
+          bookingId = newBooking.id;
+        }
+      } else {
+        boardWarning = ' / 担当スタイリストが未指定のため予約ボードには反映されませんでした';
+      }
+
       const { error } = await sb.from('treatment_records').insert({
         customer_id: customerId,
         staff_id: staffId || null,
+        booking_id: bookingId,
         performed_on: performedOn,
         menu: combinedMenu,
         amount: totalAmount,
@@ -119,7 +165,7 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
         note: note.trim() || null,
       });
       if (error) {
-        setError(error.message);
+        setError(error.message + boardWarning);
         setSaving(false);
         return;
       }
@@ -138,6 +184,12 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
           router.refresh();
           return;
         }
+      }
+      if (boardWarning) {
+        setError(`施術記録は保存しました${boardWarning}`);
+        setSaving(false);
+        router.refresh();
+        return;
       }
       setSaving(false);
       reset();
@@ -168,6 +220,13 @@ export default function NewTreatmentModal({ open, onClose, customerId, staff }: 
                 <option value="">未指定</option>
                 {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
+            </div>
+          </div>
+          <div className="f-row">
+            <label className="f-label">開始時間</label>
+            <input className="f-input" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+            <div style={{ fontSize: 11, color: 'var(--ink-l)', marginTop: 4 }}>
+              この記録は自動で予約ボードにも「来店済み」として反映されます。
             </div>
           </div>
 
