@@ -19,6 +19,13 @@ interface CustomerOption {
   furigana: string | null;
 }
 
+interface LineItem {
+  name: string;
+  amount: string;
+}
+
+const emptyLine = (): LineItem => ({ name: '', amount: '' });
+
 export default function NewBookingModal({ open, onClose }: Props) {
   const router = useRouter();
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -34,9 +41,8 @@ export default function NewBookingModal({ open, onClose }: Props) {
   const [start, setStart] = useState('10:00');
   const [end, setEnd] = useState('11:00');
   const [staffId, setStaffId] = useState('');
-  const [menu, setMenu] = useState('');
+  const [menuLines, setMenuLines] = useState<LineItem[]>([emptyLine()]);
   const [type, setType] = useState<'existing' | 'new'>('existing');
-  const [amount, setAmount] = useState('8800');
 
   useEffect(() => {
     if (!open) return;
@@ -63,10 +69,12 @@ export default function NewBookingModal({ open, onClose }: Props) {
         .then(({ data }) => {
           const list = (data ?? []).length ? (data as MenuItem[]) : FALLBACK_MENUS;
           setMenuItems(list);
-          if (list.length && !menu) {
-            setMenu(list[0].name);
-            setAmount(String(list[0].price));
-          }
+          setMenuLines((prev) => {
+            if (prev.length === 1 && !prev[0].name && list.length) {
+              return [{ name: list[0].name, amount: String(list[0].price) }];
+            }
+            return prev;
+          });
         });
       sb.from('customers')
         .select('id,name,furigana')
@@ -94,15 +102,23 @@ export default function NewBookingModal({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  const handleMenuChange = (value: string) => {
-    setMenu(value);
-    const item = menuItems.find((m) => m.name === value);
-    if (item) setAmount(String(item.price));
+  const updateMenuLine = (idx: number, name: string) => {
+    const item = menuItems.find((m) => m.name === name);
+    setMenuLines((prev) => prev.map((l, i) => (i === idx ? { name, amount: item ? String(item.price) : l.amount } : l)));
+  };
+
+  const updateMenuAmount = (idx: number, amount: string) => {
+    setMenuLines((prev) => prev.map((l, i) => (i === idx ? { ...l, amount } : l)));
   };
 
   const submit = async () => {
     if (!name.trim() || !staffId) {
       setError('お客様名と担当スタイリストを入力してください。');
+      return;
+    }
+    const validMenuLines = menuLines.filter((l) => l.name.trim());
+    if (validMenuLines.length === 0) {
+      setError('メニューを入力してください。');
       return;
     }
     setSaving(true);
@@ -143,6 +159,8 @@ export default function NewBookingModal({ open, onClose }: Props) {
         }
         matchedCustomer = newCustomer as CustomerOption;
       }
+      const combinedMenu = validMenuLines.map((l) => l.name.trim()).join('＋');
+      const totalAmount = validMenuLines.reduce((s, l) => s + (parseInt(l.amount, 10) || 0), 0);
       const { error } = await sb.from('bookings').insert({
         customer_id: matchedCustomer.id,
         customer_name: name.trim(),
@@ -150,10 +168,10 @@ export default function NewBookingModal({ open, onClose }: Props) {
         booking_date: date,
         start_time: start,
         end_time: end,
-        menu,
+        menu: combinedMenu,
         status: 'confirmed',
         customer_type: type,
-        amount: parseInt(amount, 10) || 0,
+        amount: totalAmount,
       });
       if (error) {
         setError(error.message);
@@ -163,6 +181,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
       setSaving(false);
       setName('');
       resetFurigana();
+      setMenuLines([menuItems.length ? { name: menuItems[0].name, amount: String(menuItems[0].price) } : emptyLine()]);
       onClose();
       router.push(`/board?date=${date}`);
       router.refresh();
@@ -262,32 +281,49 @@ export default function NewBookingModal({ open, onClose }: Props) {
               <input className="f-input" type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
             </div>
           </div>
-          <div className="f-row">
-            <label className="f-label">メニュー</label>
-            <input
-              className="f-input"
-              type="text"
-              list="nb-menu-options"
-              value={menu}
-              onChange={(e) => handleMenuChange(e.target.value)}
-              placeholder="カット"
-            />
-            <datalist id="nb-menu-options">
-              {menuItems.map((m) => <option key={m.id} value={m.name} />)}
-            </datalist>
-          </div>
-          <div className="f-row2" style={{ marginBottom: 0 }}>
-            <div>
-              <label className="f-label">区分</label>
-              <select className="f-select" value={type} onChange={(e) => setType(e.target.value as 'existing' | 'new')}>
-                <option value="existing">既存客</option>
-                <option value="new">新規客（店舗）</option>
-              </select>
+          <label className="f-label">メニュー</label>
+          {menuLines.map((line, idx) => (
+            <div key={idx} className="f-row2" style={{ marginBottom: 8, alignItems: 'flex-end' }}>
+              <div>
+                <input
+                  className="f-input"
+                  type="text"
+                  list="nb-menu-options"
+                  value={line.name}
+                  onChange={(e) => updateMenuLine(idx, e.target.value)}
+                  placeholder="カット"
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  className="f-input"
+                  type="number"
+                  min="0"
+                  value={line.amount}
+                  onChange={(e) => updateMenuAmount(idx, e.target.value)}
+                  placeholder="金額"
+                />
+                {menuLines.length > 1 && (
+                  <button className="btn-cancel" style={{ padding: '0 10px' }} onClick={() => setMenuLines((prev) => prev.filter((_, i) => i !== idx))}>
+                    <i className="ti ti-x"></i>
+                  </button>
+                )}
+              </div>
             </div>
-            <div>
-              <label className="f-label">金額 (円)</label>
-              <input className="f-input" type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
-            </div>
+          ))}
+          <datalist id="nb-menu-options">
+            {menuItems.map((m) => <option key={m.id} value={m.name} />)}
+          </datalist>
+          <button className="btn-sm" style={{ marginBottom: 14 }} onClick={() => setMenuLines((prev) => [...prev, emptyLine()])}>
+            <i className="ti ti-plus"></i>メニューを追加
+          </button>
+
+          <div className="f-row" style={{ marginBottom: 0 }}>
+            <label className="f-label">区分</label>
+            <select className="f-select" value={type} onChange={(e) => setType(e.target.value as 'existing' | 'new')}>
+              <option value="existing">既存客</option>
+              <option value="new">新規客（店舗）</option>
+            </select>
           </div>
           {error && (
             <div style={{ marginTop: 14, fontSize: 14, color: 'var(--red)' }}>{error}</div>

@@ -174,6 +174,8 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
           validRetailLines.map((l) => ({
             sale_date: performedOn,
             staff_id: staffId || null,
+            customer_id: customerId,
+            booking_id: bookingId,
             product_name: l.name.trim(),
             amount: Number(l.amount),
           })),

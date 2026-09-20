@@ -211,6 +211,8 @@ create table if not exists retail_sales (
   id           uuid primary key default gen_random_uuid(),
   sale_date    date not null,
   staff_id     uuid references staff(id) on delete set null,
+  customer_id  uuid references customers(id) on delete set null,
+  booking_id   uuid references bookings(id) on delete set null,
   product_name text not null,
   amount       int not null default 0,
   created_at   timestamptz not null default now()
