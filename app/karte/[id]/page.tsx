@@ -8,10 +8,17 @@ export const dynamic = 'force-dynamic';
 type CustomerWithStaff = Customer & { staff?: { name: string } | null };
 type TreatmentWithStaff = TreatmentRecord & { staff?: { name: string } | null };
 
-export default async function KartePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function KartePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ date?: string }>;
+}) {
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
   const { id } = await params;
+  const { date: dateParam } = await searchParams;
   const sb = await getServerSupabase();
 
   const { data: customer } = await sb
@@ -62,6 +69,7 @@ export default async function KartePage({ params }: { params: Promise<{ id: stri
       staff={(staffData ?? []) as Staff[]}
       photos={(photos ?? []) as KartePhoto[]}
       retailSales={(retailSales ?? []) as RetailSale[]}
+      defaultTreatmentDate={dateParam}
     />
   );
 }
