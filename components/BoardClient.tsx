@@ -438,7 +438,7 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
                 disabled={!selected.customer_id}
                 title={selected.customer_id ? '' : 'カルテ未登録'}
                 style={!selected.customer_id ? { opacity: 0.5, cursor: 'default' } : undefined}
-                onClick={() => selected.customer_id && router.push(`/karte/${selected.customer_id}`)}
+                onClick={() => selected.customer_id && router.push(`/karte/${selected.customer_id}?date=${selected.booking_date}&time=${selected.start_time.slice(0, 5)}`)}
               >
                 <i className="ti ti-id-badge"></i>カルテを開く
               </button>
