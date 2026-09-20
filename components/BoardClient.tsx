@@ -85,7 +85,6 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
 
   // 「フリー」は担当未定の予約を仮に割り当てるためのダミー枠で、実際に施術できる人員ではないため、
   // 残り受付可能数の計算からは除く（含めると実際は満席でも1枠分の余裕があるように見えてしまう）
-  const bookableStaffCount = useMemo(() => staff.filter((s) => s.name !== 'フリー').length, [staff]);
   const freeStaffIds = useMemo(() => new Set(staff.filter((s) => s.name === 'フリー').map((s) => s.id)), [staff]);
 
   const capacityByHalf = useMemo(() => {
@@ -94,8 +93,8 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
     return map;
   }, [capacityOverrides]);
 
-  // 手動設定が無い時間帯は、その30分にシフトが入っているスタッフの人数を上限として自動計算する
-  // （シフトが1件も登録されていない日は、判断材料が無いため在籍スタッフ全員を上限として扱う）
+  // 手動設定が無い時間帯は、その30分に実際にシフトが入っているスタッフの人数を上限として自動計算する
+  // （誰もシフトに入っていない時間は、受付可能数も0になる）
   const shiftCountByHalf = useMemo(() => {
     const map = new Map<number, number>();
     for (const { hour, minute } of HALF_SLOTS) {
@@ -118,11 +117,10 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
       const count = bookings.filter(
         (b) => toMinutes(b.start_time) < hEnd && toMinutes(b.end_time) > hStart,
       ).length;
-      const autoCapacity = shifts.length ? (shiftCountByHalf.get(hStart) ?? 0) : bookableStaffCount;
-      const capacity = capacityByHalf.get(hStart) ?? autoCapacity;
+      const capacity = capacityByHalf.get(hStart) ?? shiftCountByHalf.get(hStart) ?? 0;
       return { hour, minute, count, capacity, remaining: Math.max(capacity - count, 0) };
     });
-  }, [bookings, bookableStaffCount, capacityByHalf, shiftCountByHalf, shifts]);
+  }, [bookings, capacityByHalf, shiftCountByHalf]);
 
   const adjustCapacity = async (hour: number, minute: number, delta: number) => {
     const stat = halfHourStats.find((hs) => hs.hour === hour && hs.minute === minute);

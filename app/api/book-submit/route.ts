@@ -101,11 +101,10 @@ export async function POST(request: Request) {
     sb.from('shifts').select('staff_id,start_time,end_time').eq('shift_date', date),
   ]);
   const freeStaffIds = new Set((staffList ?? []).filter((s: { name: string }) => s.name === 'フリー').map((s: { id: string }) => s.id));
-  const bookableStaffCount = (staffList ?? []).filter((s: { name: string }) => s.name !== 'フリー').length;
   const shifts = (shiftRows ?? []) as { staff_id: string; start_time: string; end_time: string }[];
   const capacityMap = new Map<number, number>();
   for (const c of (capacityRows ?? []) as { hour: number; minute: number; capacity: number }[]) capacityMap.set(c.hour * 60 + c.minute, c.capacity);
-  // シフトが1件も登録されていない日は、判断材料が無いため在籍スタッフ全員を上限として扱う
+  // 誰もシフトに入っていない時間は0になる（＝その時間はどのスタッフも選べず、実際に予約もできない）
   const shiftBookableCount = (bStart: number, bEnd: number) => {
     const workingIds = new Set(
       shifts
@@ -121,7 +120,7 @@ export async function POST(request: Request) {
     const count = (allBookings ?? []).filter(
       (b: { start_time: string; end_time: string }) => toMinutes(b.start_time) < bEnd && toMinutes(b.end_time) > bStart,
     ).length;
-    const capacity = capacityMap.get(bStart) ?? (shifts.length ? shiftBookableCount(bStart, bEnd) : bookableStaffCount);
+    const capacity = capacityMap.get(bStart) ?? shiftBookableCount(bStart, bEnd);
     if (count >= capacity) {
       return NextResponse.json({ error: 'この時間帯は受付上限に達しました。別の時間をお選びください。' }, { status: 409 });
     }
