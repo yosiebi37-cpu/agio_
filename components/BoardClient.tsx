@@ -34,6 +34,7 @@ interface Props {
   date: string;
   closedLabel?: string | null;
   capacityOverrides: { hour: number; minute: number; capacity: number }[];
+  shifts: { staff_id: string; start_time: string; end_time: string }[];
 }
 
 // 30分単位で「残り受付可能数」を確認・調整できるよう、営業時間を30分刻みのコマに分割する
@@ -42,7 +43,7 @@ const HALF_SLOTS: { hour: number; minute: number }[] = HOURS.flatMap((h) => [
   { hour: h, minute: 30 },
 ]);
 
-export default function BoardClient({ staff, bookings, date, closedLabel, capacityOverrides }: Props) {
+export default function BoardClient({ staff, bookings, date, closedLabel, capacityOverrides, shifts }: Props) {
   const router = useRouter();
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<BookingWithStaff | null>(null);
@@ -85,12 +86,30 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
   // 「フリー」は担当未定の予約を仮に割り当てるためのダミー枠で、実際に施術できる人員ではないため、
   // 残り受付可能数の計算からは除く（含めると実際は満席でも1枠分の余裕があるように見えてしまう）
   const bookableStaffCount = useMemo(() => staff.filter((s) => s.name !== 'フリー').length, [staff]);
+  const freeStaffIds = useMemo(() => new Set(staff.filter((s) => s.name === 'フリー').map((s) => s.id)), [staff]);
 
   const capacityByHalf = useMemo(() => {
     const map = new Map<number, number>();
     for (const c of capacityOverrides) map.set(c.hour * 60 + c.minute, c.capacity);
     return map;
   }, [capacityOverrides]);
+
+  // 手動設定が無い時間帯は、その30分にシフトが入っているスタッフの人数を上限として自動計算する
+  // （シフトが1件も登録されていない日は、判断材料が無いため在籍スタッフ全員を上限として扱う）
+  const shiftCountByHalf = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const { hour, minute } of HALF_SLOTS) {
+      const hStart = hour * 60 + minute;
+      const hEnd = hStart + 30;
+      const workingIds = new Set(
+        shifts
+          .filter((sh) => !freeStaffIds.has(sh.staff_id) && toMinutes(sh.start_time) <= hStart && toMinutes(sh.end_time) >= hEnd)
+          .map((sh) => sh.staff_id),
+      );
+      map.set(hStart, workingIds.size);
+    }
+    return map;
+  }, [shifts, freeStaffIds]);
 
   const halfHourStats = useMemo(() => {
     return HALF_SLOTS.map(({ hour, minute }) => {
@@ -99,20 +118,25 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
       const count = bookings.filter(
         (b) => toMinutes(b.start_time) < hEnd && toMinutes(b.end_time) > hStart,
       ).length;
-      const capacity = capacityByHalf.get(hStart) ?? bookableStaffCount;
+      const autoCapacity = shifts.length ? (shiftCountByHalf.get(hStart) ?? 0) : bookableStaffCount;
+      const capacity = capacityByHalf.get(hStart) ?? autoCapacity;
       return { hour, minute, count, capacity, remaining: Math.max(capacity - count, 0) };
     });
-  }, [bookings, bookableStaffCount, capacityByHalf]);
+  }, [bookings, bookableStaffCount, capacityByHalf, shiftCountByHalf, shifts]);
 
   const adjustCapacity = async (hour: number, minute: number, delta: number) => {
     const stat = halfHourStats.find((hs) => hs.hour === hour && hs.minute === minute);
     if (!stat) return;
     const nextCapacity = Math.max(stat.count, stat.capacity + delta);
     const sb = getBrowserSupabase();
-    await sb.from('hourly_capacity').upsert(
+    const { error } = await sb.from('hourly_capacity').upsert(
       { capacity_date: date, hour, minute, capacity: nextCapacity },
       { onConflict: 'capacity_date,hour,minute' },
     );
+    if (error) {
+      alert('受付可能数の変更に失敗しました。データベースの更新（30分刻み対応）がまだの場合があります。管理者に確認してください。\n\n' + error.message);
+      return;
+    }
     router.refresh();
   };
 
