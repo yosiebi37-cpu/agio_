@@ -72,11 +72,10 @@ export default function BookClient({ menuItems, staff }: Props) {
 
   // 「フリー」は担当未定の予約を仮に割り当てるためのダミー枠で、実際に施術できる人員ではないため、
   // 受付可能数の自動計算からは除く
-  const bookableStaffCount = useMemo(() => staff.filter((s) => s.name !== 'フリー').length, [staff]);
   const freeStaffIds = useMemo(() => new Set(staff.filter((s) => s.name === 'フリー').map((s) => s.id)), [staff]);
 
   // [bStart, bEnd) の30分枠に実際にシフトが入っているスタッフの人数（「フリー」を除く）を数える。
-  // シフトが1件も登録されていない日は、判断材料が無いため在籍スタッフ全員を上限として扱う。
+  // 誰もシフトに入っていない時間は0になる（＝その時間はどのスタッフも選べず、実際に予約もできない）。
   const shiftBookableCount = (
     bStart: number,
     bEnd: number,
@@ -149,7 +148,7 @@ export default function BookClient({ menuItems, staff }: Props) {
     for (let bStart = firstBucket; bStart <= lastBucket; bStart += 30) {
       const bEnd = bStart + 30;
       const count = allBookingsList.filter((b) => toMinutes(b.start_time) < bEnd && toMinutes(b.end_time) > bStart).length;
-      const capacity = capMap.get(bStart) ?? (shiftsList.length ? shiftBookableCount(bStart, bEnd, shiftsList) : bookableStaffCount);
+      const capacity = capMap.get(bStart) ?? shiftBookableCount(bStart, bEnd, shiftsList);
       if (count >= capacity) return false;
     }
     return true;
