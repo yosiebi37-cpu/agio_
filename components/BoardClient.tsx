@@ -67,10 +67,14 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
   }, [date]);
 
   // オンライン予約（LINE・HotPepper・Square）がボード表示中に入っても気づけるよう、定期的に最新の状態に更新する
+  // （過去・未来の日付を表示している時にまで自動更新すると、データ入力中に画面がちらついて
+  // 　操作しづらくなるため、「今日」を見ている時だけ自動更新する）
   useEffect(() => {
+    const todayISO = toISODate(new Date());
+    if (todayISO !== date) return;
     const t = setInterval(() => router.refresh(), 60000);
     return () => clearInterval(t);
-  }, [router]);
+  }, [router, date]);
 
   const visibleStaff = staff.filter((s) => !hidden.has(s.id));
 
