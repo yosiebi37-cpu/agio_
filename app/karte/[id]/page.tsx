@@ -13,12 +13,12 @@ export default async function KartePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; time?: string }>;
 }) {
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
   const { id } = await params;
-  const { date: dateParam } = await searchParams;
+  const { date: dateParam, time: timeParam } = await searchParams;
   const sb = await getServerSupabase();
 
   const { data: customer } = await sb
@@ -70,6 +70,7 @@ export default async function KartePage({
       photos={(photos ?? []) as KartePhoto[]}
       retailSales={(retailSales ?? []) as RetailSale[]}
       defaultTreatmentDate={dateParam}
+      defaultTreatmentTime={timeParam}
     />
   );
 }

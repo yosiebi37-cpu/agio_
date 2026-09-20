@@ -22,11 +22,12 @@ interface Props {
   photos: KartePhoto[];
   retailSales: RetailSale[];
   defaultTreatmentDate?: string;
+  defaultTreatmentTime?: string;
 }
 
 type Tab = 'hist' | 'drug' | 'photo' | 'next';
 
-export default function KarteClient({ customer: c, treatments, chemicals, staff, photos, retailSales, defaultTreatmentDate }: Props) {
+export default function KarteClient({ customer: c, treatments, chemicals, staff, photos, retailSales, defaultTreatmentDate, defaultTreatmentTime }: Props) {
   const [tab, setTab] = useState<Tab>('hist');
   const [editOpen, setEditOpen] = useState(false);
   const [treatmentOpen, setTreatmentOpen] = useState(false);
@@ -194,6 +195,7 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff,
         customerName={c.name}
         staff={staff}
         defaultDate={defaultTreatmentDate}
+        defaultTime={defaultTreatmentTime}
       />
       {editTreatment && (
         <EditTreatmentModal open={!!editTreatment} onClose={() => setEditTreatment(null)} treatment={editTreatment} staff={staff} />

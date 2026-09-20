@@ -14,6 +14,7 @@ interface Props {
   customerName: string;
   staff: Staff[];
   defaultDate?: string;
+  defaultTime?: string;
 }
 
 const DEFAULT_MENU_MINUTES = 60;
@@ -30,7 +31,7 @@ interface LineItem {
 
 const emptyLine = (): LineItem => ({ name: '', amount: '' });
 
-export default function NewTreatmentModal({ open, onClose, customerId, customerName, staff, defaultDate }: Props) {
+export default function NewTreatmentModal({ open, onClose, customerId, customerName, staff, defaultDate, defaultTime }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
   const [retailProducts, setRetailProducts] = useState<RetailProduct[]>([]);
 
   const [performedOn, setPerformedOn] = useState(() => defaultDate ?? toISODate(new Date()));
-  const [startTime, setStartTime] = useState(() => currentTimeHHMM());
+  const [startTime, setStartTime] = useState(() => defaultTime ?? currentTimeHHMM());
   const [staffId, setStaffId] = useState('');
   const [menuLines, setMenuLines] = useState<LineItem[]>([emptyLine()]);
   const [tags, setTags] = useState('');
@@ -95,7 +96,7 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
 
   const reset = () => {
     setPerformedOn(defaultDate ?? toISODate(new Date()));
-    setStartTime(currentTimeHHMM());
+    setStartTime(defaultTime ?? currentTimeHHMM());
     setStaffId('');
     setMenuLines([menuItems.length ? { name: menuItems[0].name, amount: String(menuItems[0].price) } : emptyLine()]);
     setTags('');
