@@ -26,6 +26,8 @@ interface LineItem {
 
 const emptyLine = (): LineItem => ({ name: '', amount: '' });
 
+const DISCOUNT_TYPES = ['ホットペッパーポイント', '紹介割引'];
+
 export default function NewBookingModal({ open, onClose }: Props) {
   const router = useRouter();
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -42,6 +44,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
   const [end, setEnd] = useState('11:00');
   const [staffId, setStaffId] = useState('');
   const [menuLines, setMenuLines] = useState<LineItem[]>([emptyLine()]);
+  const [discountLines, setDiscountLines] = useState<LineItem[]>([]);
   const [type, setType] = useState<'existing' | 'new'>('existing');
 
   useEffect(() => {
@@ -111,6 +114,14 @@ export default function NewBookingModal({ open, onClose }: Props) {
     setMenuLines((prev) => prev.map((l, i) => (i === idx ? { ...l, amount } : l)));
   };
 
+  const updateDiscountLine = (idx: number, name: string) => {
+    setDiscountLines((prev) => prev.map((l, i) => (i === idx ? { ...l, name } : l)));
+  };
+
+  const updateDiscountAmount = (idx: number, amount: string) => {
+    setDiscountLines((prev) => prev.map((l, i) => (i === idx ? { ...l, amount } : l)));
+  };
+
   const submit = async () => {
     if (!name.trim() || !staffId) {
       setError('お客様名と担当スタイリストを入力してください。');
@@ -160,7 +171,13 @@ export default function NewBookingModal({ open, onClose }: Props) {
         matchedCustomer = newCustomer as CustomerOption;
       }
       const combinedMenu = validMenuLines.map((l) => l.name.trim()).join('＋');
-      const totalAmount = validMenuLines.reduce((s, l) => s + (parseInt(l.amount, 10) || 0), 0);
+      const menuTotal = validMenuLines.reduce((s, l) => s + (parseInt(l.amount, 10) || 0), 0);
+      const validDiscountLines = discountLines.filter((l) => l.name.trim() && (parseInt(l.amount, 10) || 0) > 0);
+      const discountTotal = validDiscountLines.reduce((s, l) => s + (parseInt(l.amount, 10) || 0), 0);
+      const totalAmount = Math.max(0, menuTotal - discountTotal);
+      const discountNote = validDiscountLines.length
+        ? `割引：${validDiscountLines.map((l) => `${l.name.trim()} -¥${(parseInt(l.amount, 10) || 0).toLocaleString('ja-JP')}`).join('、')}`
+        : null;
       const { error } = await sb.from('bookings').insert({
         customer_id: matchedCustomer.id,
         customer_name: name.trim(),
@@ -172,6 +189,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
         status: 'confirmed',
         customer_type: type,
         amount: totalAmount,
+        note: discountNote,
       });
       if (error) {
         setError(error.message);
@@ -182,6 +200,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
       setName('');
       resetFurigana();
       setMenuLines([menuItems.length ? { name: menuItems[0].name, amount: String(menuItems[0].price) } : emptyLine()]);
+      setDiscountLines([]);
       onClose();
       router.push(`/board?date=${date}`);
       router.refresh();
@@ -318,7 +337,44 @@ export default function NewBookingModal({ open, onClose }: Props) {
             <i className="ti ti-plus"></i>メニューを追加
           </button>
 
-          <div className="f-row" style={{ marginBottom: 0 }}>
+          <div style={{ marginTop: 4, borderTop: '1px solid var(--sand)', paddingTop: 14 }}>
+            <label className="f-label">割引（任意）</label>
+            {discountLines.map((line, idx) => (
+              <div key={idx} className="f-row2" style={{ marginBottom: 8, alignItems: 'flex-end' }}>
+                <div>
+                  <input
+                    className="f-input"
+                    type="text"
+                    list="nb-discount-options"
+                    value={line.name}
+                    onChange={(e) => updateDiscountLine(idx, e.target.value)}
+                    placeholder="ホットペッパーポイント"
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    className="f-input"
+                    type="number"
+                    min="0"
+                    value={line.amount}
+                    onChange={(e) => updateDiscountAmount(idx, e.target.value)}
+                    placeholder="割引額"
+                  />
+                  <button className="btn-cancel" style={{ padding: '0 10px' }} onClick={() => setDiscountLines((prev) => prev.filter((_, i) => i !== idx))}>
+                    <i className="ti ti-x"></i>
+                  </button>
+                </div>
+              </div>
+            ))}
+            <datalist id="nb-discount-options">
+              {DISCOUNT_TYPES.map((d) => <option key={d} value={d} />)}
+            </datalist>
+            <button className="btn-sm" onClick={() => setDiscountLines((prev) => [...prev, emptyLine()])}>
+              <i className="ti ti-plus"></i>割引を追加
+            </button>
+          </div>
+
+          <div className="f-row" style={{ marginBottom: 0, marginTop: 14 }}>
             <label className="f-label">区分</label>
             <select className="f-select" value={type} onChange={(e) => setType(e.target.value as 'existing' | 'new')}>
               <option value="existing">既存客</option>
