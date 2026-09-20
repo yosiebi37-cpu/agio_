@@ -63,6 +63,16 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
       setError('お客様名を入力してください。');
       return;
     }
+    const monthNum = birthMonth ? parseInt(birthMonth, 10) : null;
+    if (monthNum !== null && (isNaN(monthNum) || monthNum < 1 || monthNum > 12)) {
+      setError('誕生月は1〜12の数字で入力してください。');
+      return;
+    }
+    const dayNum = birthDay ? parseInt(birthDay, 10) : null;
+    if (dayNum !== null && (isNaN(dayNum) || dayNum < 1 || dayNum > 31)) {
+      setError('誕生日は1〜31の数字で入力してください。');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -77,8 +87,8 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
           initials: initialsFromName(name),
           phone: phone.trim() || null,
           birth_year: birthYear ? parseInt(birthYear, 10) : null,
-          birth_month: birthMonth ? parseInt(birthMonth, 10) : null,
-          birth_day: birthDay ? parseInt(birthDay, 10) : null,
+          birth_month: monthNum,
+          birth_day: dayNum,
           customer_type: customerType,
           assigned_staff_id: staffId || null,
           visit_count_offset: newOffset,
