@@ -176,6 +176,8 @@ export interface RetailSale {
   id: string;
   sale_date: string;
   staff_id: string | null;
+  customer_id: string | null;
+  booking_id: string | null;
   product_name: string;
   amount: number;
   created_at: string;

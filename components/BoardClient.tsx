@@ -17,7 +17,7 @@ import {
 } from '@/lib/constants';
 import { hhmm, toMinutes, yenK, formatDateShort, toISODate } from '@/lib/format';
 import EditBookingModal from './EditBookingModal';
-import type { Staff, BookingWithStaff } from '@/lib/types';
+import type { Staff, BookingWithStaff, RetailSale } from '@/lib/types';
 
 function textOn(bg: string): string {
   const c = bg.replace('#', '');
@@ -35,6 +35,7 @@ interface Props {
   closedLabel?: string | null;
   capacityOverrides: { hour: number; minute: number; capacity: number }[];
   shifts: { staff_id: string; start_time: string; end_time: string }[];
+  retailSales: RetailSale[];
 }
 
 // 30分単位で「残り受付可能数」を確認・調整できるよう、営業時間を30分刻みのコマに分割する
@@ -43,7 +44,7 @@ const HALF_SLOTS: { hour: number; minute: number }[] = HOURS.flatMap((h) => [
   { hour: h, minute: 30 },
 ]);
 
-export default function BoardClient({ staff, bookings, date, closedLabel, capacityOverrides, shifts }: Props) {
+export default function BoardClient({ staff, bookings, date, closedLabel, capacityOverrides, shifts, retailSales }: Props) {
   const router = useRouter();
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<BookingWithStaff | null>(null);
@@ -82,6 +83,17 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
     }
     return map;
   }, [bookings]);
+
+  const retailByBooking = useMemo(() => {
+    const map = new Map<string, RetailSale[]>();
+    for (const r of retailSales) {
+      if (!r.booking_id) continue;
+      const arr = map.get(r.booking_id) ?? [];
+      arr.push(r);
+      map.set(r.booking_id, arr);
+    }
+    return map;
+  }, [retailSales]);
 
   // 「フリー」は担当未定の予約を仮に割り当てるためのダミー枠で、実際に施術できる人員ではないため、
   // 残り受付可能数の計算からは除く（含めると実際は満席でも1枠分の余裕があるように見えてしまう）
@@ -335,6 +347,7 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
                       const fg = textOn(bg);
                       const left = ((toMinutes(b.start_time) - OPEN_HOUR * 60) / 60) * HOUR_W;
                       const width = ((toMinutes(b.end_time) - toMinutes(b.start_time)) / 60) * HOUR_W;
+                      const hasRetail = (retailByBooking.get(b.id) ?? []).length > 0;
                       return (
                         <div
                           key={b.id}
@@ -345,6 +358,9 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
                           <div className="bb-time">{hhmm(b.start_time)} — {hhmm(b.end_time)}</div>
                           <div className="bb-name">{b.customer_name}</div>
                           <div className="bb-menu">{b.menu}</div>
+                          {hasRetail && (
+                            <i className="ti ti-shopping-bag" title="店販あり" style={{ position: 'absolute', top: 5, left: 5, fontSize: 11 }}></i>
+                          )}
                           <div className="bb-status" style={{ background: STATUS_DOT[b.status] }}></div>
                         </div>
                       );
@@ -382,6 +398,17 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
                 <div className="drawer-icon" style={{ background: 'var(--gold-l)', color: 'var(--gold-d)' }}><i className="ti ti-scissors"></i></div>
                 <div><div className="drawer-label">メニュー</div><div className="drawer-val">{selected.menu}</div></div>
               </div>
+              {(retailByBooking.get(selected.id) ?? []).length > 0 && (
+                <div className="drawer-row">
+                  <div className="drawer-icon" style={{ background: 'var(--sand)', color: 'var(--ink-m)' }}><i className="ti ti-shopping-bag"></i></div>
+                  <div>
+                    <div className="drawer-label">店販</div>
+                    <div className="drawer-val">
+                      {(retailByBooking.get(selected.id) ?? []).map((r) => `${r.product_name}（¥${r.amount.toLocaleString('ja-JP')}）`).join('、')}
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="drawer-row">
                 <div className="drawer-icon" style={{ background: 'var(--sand)', color: 'var(--ink-m)' }}><i className="ti ti-user"></i></div>
                 <div><div className="drawer-label">担当スタイリスト</div><div className="drawer-val">{selected.staff?.name ?? '—'}</div></div>

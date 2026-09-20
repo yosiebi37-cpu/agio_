@@ -9,7 +9,7 @@ import NewTreatmentModal from './NewTreatmentModal';
 import EditTreatmentModal from './EditTreatmentModal';
 import NewChemicalModal from './NewChemicalModal';
 import KartePhotoTab from './KartePhotoTab';
-import type { Customer, TreatmentRecord, ChemicalRecord, Staff, KartePhoto } from '@/lib/types';
+import type { Customer, TreatmentRecord, ChemicalRecord, Staff, KartePhoto, RetailSale } from '@/lib/types';
 
 type CustomerWithStaff = Customer & { staff?: { name: string } | null };
 type TreatmentWithStaff = TreatmentRecord & { staff?: { name: string } | null };
@@ -20,11 +20,12 @@ interface Props {
   chemicals: ChemicalRecord[];
   staff: Staff[];
   photos: KartePhoto[];
+  retailSales: RetailSale[];
 }
 
 type Tab = 'hist' | 'drug' | 'photo' | 'next';
 
-export default function KarteClient({ customer: c, treatments, chemicals, staff, photos }: Props) {
+export default function KarteClient({ customer: c, treatments, chemicals, staff, photos, retailSales }: Props) {
   const [tab, setTab] = useState<Tab>('hist');
   const [editOpen, setEditOpen] = useState(false);
   const [treatmentOpen, setTreatmentOpen] = useState(false);
@@ -107,22 +108,33 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff,
                 <div className="kcard-head"><div className="kcard-title">施術履歴</div><button className="btn-sm" onClick={() => setTreatmentOpen(true)}><i className="ti ti-plus"></i>新規記録</button></div>
                 <div className="hist-wrap">
                   {treatments.length === 0 && <div className="empty-row">施術履歴がまだありません。</div>}
-                  {treatments.map((t) => (
-                    <div className="hist-item" key={t.id} onClick={() => setEditTreatment(t)} style={{ cursor: 'pointer' }}>
-                      <div className="hist-dot" style={{ background: t.dot_bg, color: t.dot_fg }}><i className={`ti ti-${t.icon}`} style={{ fontSize: 12 }}></i></div>
-                      <div className="hist-body">
-                        <div className="hist-date">{formatDateLong(t.performed_on)}　{t.staff?.name ?? ''}</div>
-                        <div className="hist-menu">{t.menu}</div>
-                        <div className="hist-amount">{'¥' + (t.amount ?? 0).toLocaleString('ja-JP')}</div>
-                        {t.tags.length > 0 && (
-                          <div className="hist-tags">
-                            {t.tags.map((tg, i) => <span className="tag tag-ok" key={i}>{tg}</span>)}
-                          </div>
-                        )}
-                        {t.note && <div className="hist-note">{t.note}</div>}
+                  {treatments.map((t) => {
+                    const retailForThisVisit = t.booking_id
+                      ? retailSales.filter((r) => r.booking_id === t.booking_id)
+                      : [];
+                    return (
+                      <div className="hist-item" key={t.id} onClick={() => setEditTreatment(t)} style={{ cursor: 'pointer' }}>
+                        <div className="hist-dot" style={{ background: t.dot_bg, color: t.dot_fg }}><i className={`ti ti-${t.icon}`} style={{ fontSize: 12 }}></i></div>
+                        <div className="hist-body">
+                          <div className="hist-date">{formatDateLong(t.performed_on)}　{t.staff?.name ?? ''}</div>
+                          <div className="hist-menu">{t.menu}</div>
+                          <div className="hist-amount">{'¥' + (t.amount ?? 0).toLocaleString('ja-JP')}</div>
+                          {retailForThisVisit.length > 0 && (
+                            <div className="hist-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <i className="ti ti-shopping-bag" style={{ fontSize: 13 }}></i>
+                              店販：{retailForThisVisit.map((r) => `${r.product_name}（¥${r.amount.toLocaleString('ja-JP')}）`).join('、')}
+                            </div>
+                          )}
+                          {t.tags.length > 0 && (
+                            <div className="hist-tags">
+                              {t.tags.map((tg, i) => <span className="tag tag-ok" key={i}>{tg}</span>)}
+                            </div>
+                          )}
+                          {t.note && <div className="hist-note">{t.note}</div>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
