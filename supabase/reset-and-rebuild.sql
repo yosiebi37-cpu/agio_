@@ -145,7 +145,9 @@ create table if not exists treatment_records (
   created_at   timestamptz not null default now()
 );
 create index if not exists treatment_customer_idx on treatment_records (customer_id, performed_on desc);
-create unique index if not exists treatment_records_booking_id_idx on treatment_records (booking_id) where booking_id is not null;
+-- 部分インデックスだと upsert の on_conflict:'booking_id' が一致するインデックスを
+-- 見つけられず、来店処理のカルテ反映が失敗するため、通常の一意インデックスにする
+create unique index if not exists treatment_records_booking_id_idx on treatment_records (booking_id);
 
 -- ---------------------------------------------------------------------------
 -- 薬剤・カラー記録
