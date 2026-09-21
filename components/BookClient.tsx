@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { yen, toISODate, addDays, toMinutes, minutesToHHMM, hhmm, formatDateLong, formatDateTiny } from '@/lib/format';
 import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
+import { MENU_CATEGORIES, OTHER_MENU_CATEGORY } from '@/lib/constants';
 import type { MenuItem, PublicStaff } from '@/lib/types';
 
 /** 全角数字・記号を半角に正規化する（電話番号欄向け） */
@@ -30,6 +31,17 @@ export default function BookClient({ menuItems, staff }: Props) {
   const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
 
   const [menu, setMenu] = useState<MenuItem | null>(null);
+  const menuCategories = useMemo(() => {
+    const present = new Set(menuItems.map((m) => m.category ?? OTHER_MENU_CATEGORY));
+    const ordered = MENU_CATEGORIES.filter((c) => present.has(c));
+    if (present.has(OTHER_MENU_CATEGORY)) ordered.push(OTHER_MENU_CATEGORY);
+    return ordered;
+  }, [menuItems]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const activeCategory = selectedCategory ?? menuCategories[0] ?? null;
+  const visibleMenuItems = activeCategory
+    ? menuItems.filter((m) => (m.category ?? OTHER_MENU_CATEGORY) === activeCategory)
+    : menuItems;
   const [selectedStaff, setSelectedStaff] = useState<PublicStaff | null>(null);
   const [weekStart, setWeekStart] = useState(today);
   const [date, setDate] = useState(today);
@@ -325,8 +337,40 @@ export default function BookClient({ menuItems, staff }: Props) {
         {step === 'menu' && (
           <>
             <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>メニューを選択</div>
+            {menuCategories.length > 1 && (
+              <div
+                role="tablist"
+                aria-label="メニューのカテゴリ"
+                style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 16, paddingBottom: 4 }}
+              >
+                {menuCategories.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeCategory === c}
+                    onClick={() => setSelectedCategory(c)}
+                    style={{
+                      flexShrink: 0,
+                      padding: '8px 16px',
+                      minHeight: 40,
+                      borderRadius: 20,
+                      border: '1px solid var(--sand-d)',
+                      background: activeCategory === c ? 'var(--accent)' : 'var(--cream)',
+                      color: activeCategory === c ? '#fff' : 'var(--ink)',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {menuItems.map((m) => (
+              {visibleMenuItems.map((m) => (
                 <div
                   key={m.id}
                   onClick={() => { setMenu(m); setSlot(null); setStep('staff'); }}
@@ -339,7 +383,7 @@ export default function BookClient({ menuItems, staff }: Props) {
                   <div style={{ fontSize: 15, fontWeight: 600, flexShrink: 0 }}>{yen(m.price)}<span style={{ fontSize: 11, fontWeight: 400, color: 'var(--ink-l)' }}>（税込）</span></div>
                 </div>
               ))}
-              {menuItems.length === 0 && <div className="empty-row">現在ご予約いただけるメニューがありません。</div>}
+              {visibleMenuItems.length === 0 && <div className="empty-row">現在ご予約いただけるメニューがありません。</div>}
             </div>
           </>
         )}
