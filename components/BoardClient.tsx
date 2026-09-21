@@ -187,7 +187,7 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
     const sb = getBrowserSupabase();
     await sb.from('bookings').update({ status: 'visited' }).eq('id', b.id);
     if (b.customer_id) {
-      await sb.from('treatment_records').upsert(
+      const { error: treatmentError } = await sb.from('treatment_records').upsert(
         {
           booking_id: b.id,
           customer_id: b.customer_id,
@@ -199,6 +199,9 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
         },
         { onConflict: 'booking_id' },
       );
+      if (treatmentError) {
+        alert('予約は「来店済み」にしましたが、カルテへの反映に失敗しました。\n\n' + treatmentError.message);
+      }
     }
     setBusy(false);
     setSelected(null);

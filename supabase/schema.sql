@@ -117,7 +117,13 @@ create table if not exists treatment_records (
   created_at   timestamptz not null default now()
 );
 create index if not exists treatment_customer_idx on treatment_records (customer_id, performed_on desc);
-create unique index if not exists treatment_records_booking_id_idx on treatment_records (booking_id) where booking_id is not null;
+-- booking_id が同じ施術記録を作らないための一意制約（nullは複数行あってもよい。
+-- postgresのunique indexはnull同士を別物として扱うため）
+-- ※ 以前は「where booking_id is not null」の部分インデックスにしていたが、
+-- 　部分インデックスだと upsert の on_conflict:'booking_id' が一致するインデックスを
+-- 　見つけられず、来店処理のカルテ反映（施術記録のupsert）が毎回失敗していたため、
+-- 　通常の（部分的でない）一意インデックスに変更した。
+create unique index if not exists treatment_records_booking_id_idx on treatment_records (booking_id);
 
 -- ---------------------------------------------------------------------------
 -- 薬剤・カラー記録

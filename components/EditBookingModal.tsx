@@ -119,7 +119,7 @@ export default function EditBookingModal({ open, onClose, booking, staff }: Prop
           .update({ name: customerName.trim(), customer_type: type })
           .eq('id', booking.customer_id);
         if (booking.status === 'visited') {
-          await sb.from('treatment_records').upsert(
+          const { error: treatmentError } = await sb.from('treatment_records').upsert(
             {
               booking_id: booking.id,
               customer_id: booking.customer_id,
@@ -131,6 +131,12 @@ export default function EditBookingModal({ open, onClose, booking, staff }: Prop
             },
             { onConflict: 'booking_id' },
           );
+          if (treatmentError) {
+            setError(`予約の変更は保存しましたが、カルテへの反映に失敗しました: ${treatmentError.message}`);
+            setSaving(false);
+            router.refresh();
+            return;
+          }
         }
       }
       setSaving(false);
