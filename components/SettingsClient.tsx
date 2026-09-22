@@ -7,6 +7,7 @@ import { formatDateLong } from '@/lib/format';
 import NewStaffModal from './NewStaffModal';
 import EditStaffModal from './EditStaffModal';
 import { yen } from '@/lib/format';
+import { MENU_CATEGORIES } from '@/lib/constants';
 import type { Staff, SalonSettings, Holiday, MenuItem, RetailProduct } from '@/lib/types';
 
 interface Props {
@@ -165,6 +166,12 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
   const updateMenuDuration = async (id: string, value: string) => {
     const sb = getBrowserSupabase();
     await sb.from('menu_items').update({ duration_minutes: parseInt(value, 10) || 0 }).eq('id', id);
+    router.refresh();
+  };
+
+  const updateMenuCategory = async (id: string, value: string) => {
+    const sb = getBrowserSupabase();
+    await sb.from('menu_items').update({ category: value || null }).eq('id', id);
     router.refresh();
   };
 
@@ -339,6 +346,7 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
           {menuError && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{menuError}</div>}
           <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 12 }}>
             メニュー名・時間・金額は、それぞれの欄を直接書き換えて、欄の外をタップすれば保存されます。<br />
+            「カテゴリ」は、予約ページでメニューをタブ分けして表示するために使います。未設定のメニューは「その他」タブに表示されます。<br />
             「Square ID」は、HotPepperの予約を自動でSquareにも登録するために使います。Square側の対応するサービスのIDを入力してください（空欄でもOK、その場合はSquareへの自動登録はされません）。<br />
             「LINE限定」にチェックを入れると、LINE用の予約ページにだけ表示され、Googleマップなど一般のお客様には表示されなくなります（チェックしない場合は逆に一般のお客様にだけ表示されます）。
           </div>
@@ -379,6 +387,15 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
                       onBlur={(e) => updateMenuPrice(m.id, e.target.value)}
                     />
                   </div>
+                  <select
+                    className="f-select"
+                    style={{ width: 150, fontSize: 12 }}
+                    defaultValue={m.category ?? ''}
+                    onChange={(e) => updateMenuCategory(m.id, e.target.value)}
+                  >
+                    <option value="">カテゴリ未設定</option>
+                    {MENU_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--ink-m)', whiteSpace: 'nowrap' }}>
                     <input
                       type="checkbox"

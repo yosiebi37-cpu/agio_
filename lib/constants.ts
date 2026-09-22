@@ -1,15 +1,20 @@
 import type { BookingStatus, CustomerType, MenuItem, RetailProduct } from './types';
 
+// 予約ページのメニュー選択で使うカテゴリタブ（この順番で表示）
+export const MENU_CATEGORIES: string[] = ['カット', 'カラー', 'パーマ・ストレート', 'ヘッドスパ・頭皮ケア', 'トリートメント', '追加メニュー'];
+// カテゴリ未設定のメニューをまとめるタブ名
+export const OTHER_MENU_CATEGORY = 'その他';
+
 // メニュー未登録時や menu_items が読み込めない場合に使う予備の一覧
 export const FALLBACK_MENUS: MenuItem[] = [
-  { id: 'fallback-1', name: 'カット', price: 5500, duration_minutes: 60, sort_order: 1, is_active: true, square_service_variation_id: null, line_only: false, created_at: '' },
-  { id: 'fallback-2', name: 'カット + カラー', price: 12100, duration_minutes: 120, sort_order: 2, is_active: true, square_service_variation_id: null, line_only: false, created_at: '' },
-  { id: 'fallback-3', name: 'ハイライトカラー', price: 16500, duration_minutes: 150, sort_order: 3, is_active: true, square_service_variation_id: null, line_only: false, created_at: '' },
-  { id: 'fallback-4', name: 'グレイカラー', price: 8800, duration_minutes: 90, sort_order: 4, is_active: true, square_service_variation_id: null, line_only: false, created_at: '' },
-  { id: 'fallback-5', name: 'フルカラー', price: 8800, duration_minutes: 90, sort_order: 5, is_active: true, square_service_variation_id: null, line_only: false, created_at: '' },
-  { id: 'fallback-6', name: 'デジタルパーマ', price: 17600, duration_minutes: 150, sort_order: 6, is_active: true, square_service_variation_id: null, line_only: false, created_at: '' },
-  { id: 'fallback-7', name: '縮毛矯正', price: 22000, duration_minutes: 150, sort_order: 7, is_active: true, square_service_variation_id: null, line_only: false, created_at: '' },
-  { id: 'fallback-8', name: 'トリートメント', price: 4400, duration_minutes: 30, sort_order: 8, is_active: true, square_service_variation_id: null, line_only: false, created_at: '' },
+  { id: 'fallback-1', name: 'カット', price: 5500, duration_minutes: 60, sort_order: 1, is_active: true, square_service_variation_id: null, line_only: false, category: 'カット', created_at: '' },
+  { id: 'fallback-2', name: 'カット + カラー', price: 12100, duration_minutes: 120, sort_order: 2, is_active: true, square_service_variation_id: null, line_only: false, category: 'カラー', created_at: '' },
+  { id: 'fallback-3', name: 'ハイライトカラー', price: 16500, duration_minutes: 150, sort_order: 3, is_active: true, square_service_variation_id: null, line_only: false, category: 'カラー', created_at: '' },
+  { id: 'fallback-4', name: 'グレイカラー', price: 8800, duration_minutes: 90, sort_order: 4, is_active: true, square_service_variation_id: null, line_only: false, category: 'カラー', created_at: '' },
+  { id: 'fallback-5', name: 'フルカラー', price: 8800, duration_minutes: 90, sort_order: 5, is_active: true, square_service_variation_id: null, line_only: false, category: 'カラー', created_at: '' },
+  { id: 'fallback-6', name: 'デジタルパーマ', price: 17600, duration_minutes: 150, sort_order: 6, is_active: true, square_service_variation_id: null, line_only: false, category: 'パーマ・ストレート', created_at: '' },
+  { id: 'fallback-7', name: '縮毛矯正', price: 22000, duration_minutes: 150, sort_order: 7, is_active: true, square_service_variation_id: null, line_only: false, category: 'パーマ・ストレート', created_at: '' },
+  { id: 'fallback-8', name: 'トリートメント', price: 4400, duration_minutes: 30, sort_order: 8, is_active: true, square_service_variation_id: null, line_only: false, category: 'トリートメント', created_at: '' },
 ];
 
 // 店販商品未登録時や retail_products が読み込めない場合に使う予備の一覧

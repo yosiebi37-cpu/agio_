@@ -170,6 +170,7 @@ create table if not exists menu_items (
   is_active        boolean not null default true,
   square_service_variation_id text,          -- Square側のサービス（メニュー）との対応付け
   line_only        boolean not null default false, -- LINE限定メニュー（agioの予約ページの出し分けに使う）
+  category         text,                     -- 予約ページのカテゴリタブ分け用（カット・カラー等、未設定ならタブ「その他」）
   created_at       timestamptz not null default now()
 );
 
@@ -507,7 +508,9 @@ create or replace view public_shifts as
 grant select on public_shifts to anon;
 
 -- 時間帯ごとの受付可能数（手動設定分）を公開し、上限に達した時間帯はオンライン予約できないようにする
-create or replace view public_hourly_capacity as
+-- （列構成が変わっているため create or replace ではなく作り直す）
+drop view if exists public_hourly_capacity;
+create view public_hourly_capacity as
   select capacity_date, hour, minute, capacity
   from hourly_capacity;
 

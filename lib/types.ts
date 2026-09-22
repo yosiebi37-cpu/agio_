@@ -160,6 +160,7 @@ export interface MenuItem {
   is_active: boolean;
   square_service_variation_id: string | null;
   line_only: boolean;
+  category: string | null;
   created_at: string;
 }
 
