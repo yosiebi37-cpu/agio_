@@ -18,6 +18,7 @@ drop function if exists recalc_customer_stats() cascade;
 
 drop table if exists square_sync_log cascade;
 drop table if exists hotpepper_sync_log cascade;
+drop table if exists hourly_capacity cascade;
 drop table if exists holidays cascade;
 drop table if exists salon_settings cascade;
 drop table if exists shifts cascade;
@@ -532,7 +533,9 @@ create or replace view public_shifts as
 grant select on public_shifts to anon;
 
 -- 時間帯ごとの受付可能数（手動設定分）を公開し、上限に達した時間帯はオンライン予約できないようにする
-create or replace view public_hourly_capacity as
+-- （列構成が変わっているため create or replace ではなく作り直す）
+drop view if exists public_hourly_capacity;
+create view public_hourly_capacity as
   select capacity_date, hour, minute, capacity
   from hourly_capacity;
 
