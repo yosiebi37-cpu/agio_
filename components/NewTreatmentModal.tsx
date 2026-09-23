@@ -24,6 +24,28 @@ const currentTimeHHMM = (): string => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
+// 過去分をまとめて入力する時、別のお客様のカルテに移動しても直前の施術日・時間が
+// 引き継がれるように、ブラウザに保存しておく（お客様ごとの指定（URLのdate/time）があれば
+// そちらを優先する）
+const LAST_DATE_KEY = 'agio_last_treatment_date';
+const LAST_TIME_KEY = 'agio_last_treatment_time';
+
+const readStored = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const writeStored = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // プライベートモード等で使えない場合は諦める
+  }
+};
+
 interface LineItem {
   name: string;
   amount: string;
@@ -38,8 +60,8 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [retailProducts, setRetailProducts] = useState<RetailProduct[]>([]);
 
-  const [performedOn, setPerformedOn] = useState(() => defaultDate ?? toISODate(new Date()));
-  const [startTime, setStartTime] = useState(() => defaultTime ?? currentTimeHHMM());
+  const [performedOn, setPerformedOn] = useState(() => defaultDate ?? readStored(LAST_DATE_KEY) ?? toISODate(new Date()));
+  const [startTime, setStartTime] = useState(() => defaultTime ?? readStored(LAST_TIME_KEY) ?? currentTimeHHMM());
   const [staffId, setStaffId] = useState('');
   const [menuLines, setMenuLines] = useState<LineItem[]>([emptyLine()]);
   const [tags, setTags] = useState('');
@@ -216,7 +238,12 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
           <div className="f-row2">
             <div>
               <label className="f-label">施術日</label>
-              <input className="f-input" type="date" value={performedOn} onChange={(e) => setPerformedOn(e.target.value)} />
+              <input
+                className="f-input"
+                type="date"
+                value={performedOn}
+                onChange={(e) => { setPerformedOn(e.target.value); writeStored(LAST_DATE_KEY, e.target.value); }}
+              />
             </div>
             <div>
               <label className="f-label">担当スタイリスト</label>
@@ -228,7 +255,12 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
           </div>
           <div className="f-row">
             <label className="f-label">開始時間</label>
-            <input className="f-input" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+            <input
+              className="f-input"
+              type="time"
+              value={startTime}
+              onChange={(e) => { setStartTime(e.target.value); writeStored(LAST_TIME_KEY, e.target.value); }}
+            />
             <div style={{ fontSize: 11, color: 'var(--ink-l)', marginTop: 4 }}>
               この記録は自動で予約ボードにも「来店済み」として反映されます。
             </div>
