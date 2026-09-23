@@ -17,6 +17,7 @@ import {
 } from '@/lib/constants';
 import { hhmm, toMinutes, yenK, formatDateShort, toISODate } from '@/lib/format';
 import EditBookingModal from './EditBookingModal';
+import AddRetailToBookingModal from './AddRetailToBookingModal';
 import type { Staff, BookingWithStaff, RetailSale } from '@/lib/types';
 
 function textOn(bg: string): string {
@@ -49,6 +50,7 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<BookingWithStaff | null>(null);
   const [editing, setEditing] = useState<BookingWithStaff | null>(null);
+  const [retailAddOpen, setRetailAddOpen] = useState(false);
   const [nowMin, setNowMin] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -405,17 +407,22 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
                 <div className="drawer-icon" style={{ background: 'var(--gold-l)', color: 'var(--gold-d)' }}><i className="ti ti-scissors"></i></div>
                 <div><div className="drawer-label">メニュー</div><div className="drawer-val">{selected.menu}</div></div>
               </div>
-              {(retailByBooking.get(selected.id) ?? []).length > 0 && (
-                <div className="drawer-row">
-                  <div className="drawer-icon" style={{ background: 'var(--sand)', color: 'var(--ink-m)' }}><i className="ti ti-shopping-bag"></i></div>
-                  <div>
-                    <div className="drawer-label">店販</div>
-                    <div className="drawer-val">
-                      {(retailByBooking.get(selected.id) ?? []).map((r) => `${r.product_name}（¥${r.amount.toLocaleString('ja-JP')}）`).join('、')}
-                    </div>
+              <div className="drawer-row">
+                <div className="drawer-icon" style={{ background: 'var(--sand)', color: 'var(--ink-m)' }}><i className="ti ti-shopping-bag"></i></div>
+                <div style={{ flex: 1 }}>
+                  <div className="drawer-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    店販
+                    <button className="btn-sm" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => setRetailAddOpen(true)}>
+                      <i className="ti ti-plus"></i>追加
+                    </button>
+                  </div>
+                  <div className="drawer-val">
+                    {(retailByBooking.get(selected.id) ?? []).length > 0
+                      ? (retailByBooking.get(selected.id) ?? []).map((r) => `${r.product_name}（¥${r.amount.toLocaleString('ja-JP')}）`).join('、')
+                      : '—'}
                   </div>
                 </div>
-              )}
+              </div>
               <div className="drawer-row">
                 <div className="drawer-icon" style={{ background: 'var(--sand)', color: 'var(--ink-m)' }}><i className="ti ti-user"></i></div>
                 <div><div className="drawer-label">担当スタイリスト</div><div className="drawer-val">{selected.staff?.name ?? '—'}</div></div>
@@ -463,6 +470,17 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
           onClose={() => { setEditing(null); setSelected(null); }}
           booking={editing}
           staff={staff}
+        />
+      )}
+
+      {selected && retailAddOpen && (
+        <AddRetailToBookingModal
+          open={retailAddOpen}
+          onClose={() => setRetailAddOpen(false)}
+          bookingId={selected.id}
+          customerId={selected.customer_id}
+          staffId={selected.staff_id}
+          saleDate={selected.booking_date}
         />
       )}
     </div>
