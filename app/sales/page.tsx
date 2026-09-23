@@ -76,7 +76,7 @@ export default async function SalesPage({
       .gte('booking_date', start)
       .lte('booking_date', end),
     sb.from('staff').select('*').order('sort_order'),
-    sb.from('retail_sales').select('staff_id,amount,product_name').gte('sale_date', start).lte('sale_date', end),
+    sb.from('retail_sales').select('sale_date,staff_id,amount,product_name').gte('sale_date', start).lte('sale_date', end),
     sb
       .from('freelance_daily_sales')
       .select('staff_id,existing_amount,new_amount')
@@ -88,7 +88,7 @@ export default async function SalesPage({
 
   const bookings = (bookingsData ?? []) as { booking_date: string; staff_id: string; amount: number; status: string; customer_type: string }[];
   const staff = (staffData ?? []) as Staff[];
-  const retail = (retailData ?? []) as { staff_id: string | null; amount: number; product_name: string }[];
+  const retail = (retailData ?? []) as { sale_date: string; staff_id: string | null; amount: number; product_name: string }[];
   const manual = (manualData ?? []) as { staff_id: string; existing_amount: number; new_amount: number }[];
 
   const retailTotal = retail.reduce((s, r) => s + (r.amount ?? 0), 0);
@@ -138,6 +138,7 @@ export default async function SalesPage({
       month={month}
       bookings={bookings}
       staff={staff}
+      retailSales={retail}
       retailTotal={retailTotal}
       retailByProduct={retailByProduct}
       expensesTotal={expensesTotal}

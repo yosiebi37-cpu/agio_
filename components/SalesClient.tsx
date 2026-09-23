@@ -19,6 +19,11 @@ interface RetailByProduct {
   amount: number;
 }
 
+interface RetailSaleRow {
+  sale_date: string;
+  amount: number;
+}
+
 interface ExpenseByCategory {
   name: string;
   amount: number;
@@ -28,6 +33,7 @@ interface Props {
   month: string;
   bookings: BookingRow[];
   staff: Staff[];
+  retailSales: RetailSaleRow[];
   retailTotal: number;
   retailByProduct: RetailByProduct[];
   expensesTotal: number;
@@ -35,7 +41,7 @@ interface Props {
   commissionTotal: number;
 }
 
-export default function SalesClient({ month, bookings, staff, retailTotal, retailByProduct, expensesTotal, expensesByCategory, commissionTotal }: Props) {
+export default function SalesClient({ month, bookings, staff, retailSales, retailTotal, retailByProduct, expensesTotal, expensesByCategory, commissionTotal }: Props) {
   const router = useRouter();
 
   const shiftMonth = (delta: number) => {
@@ -57,8 +63,18 @@ export default function SalesClient({ month, bookings, staff, retailTotal, retai
       cur.sales += b.amount ?? 0;
       byDayMap.set(b.booking_date, cur);
     }
-    const byDay = Array.from(byDayMap.entries())
-      .map(([date, v]) => ({ date, ...v }))
+    // レジ（Square等）との突き合わせ用に、施術売上と店販売上を日付ごとに合算する
+    const retailByDayMap = new Map<string, number>();
+    for (const r of retailSales) {
+      retailByDayMap.set(r.sale_date, (retailByDayMap.get(r.sale_date) ?? 0) + (r.amount ?? 0));
+    }
+    const allDayDates = new Set([...byDayMap.keys(), ...retailByDayMap.keys()]);
+    const byDay = Array.from(allDayDates)
+      .map((date) => {
+        const b = byDayMap.get(date) ?? { count: 0, sales: 0 };
+        const retail = retailByDayMap.get(date) ?? 0;
+        return { date, count: b.count, treatmentSales: b.sales, retailSales: retail, sales: b.sales + retail };
+      })
       .sort((a, b) => a.date.localeCompare(b.date));
 
     const byStaffMap = new Map<string, { count: number; sales: number }>();
@@ -74,7 +90,7 @@ export default function SalesClient({ month, bookings, staff, retailTotal, retai
       .sort((a, b) => b.sales - a.sales);
 
     return { realized, projected, visitedCount: visited.length, avgTicket, byDay, byStaff };
-  }, [bookings, staff]);
+  }, [bookings, staff, retailSales]);
 
   return (
     <div className="page-wrap">
@@ -108,52 +124,52 @@ export default function SalesClient({ month, bookings, staff, retailTotal, retai
           <div className="kpi"><div className="kpi-label">利益</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{yen(stats.realized + retailTotal - expensesTotal)}</div><div className="kpi-sub">売上－経費</div></div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div className="tbl-wrap">
-            <table className="tbl">
-              <thead><tr><th>日付</th><th>来店数</th><th>売上</th></tr></thead>
-              <tbody>
-                {stats.byDay.map((r) => (
-                  <tr key={r.date}>
-                    <td>{formatDateTiny(r.date)}</td>
-                    <td>{r.count}件</td>
-                    <td>{yen(r.sales)}</td>
-                  </tr>
-                ))}
-                {stats.byDay.length === 0 && (
-                  <tr><td colSpan={3}><div className="empty-row">この月の来店済み予約はまだありません。</div></td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="tbl-wrap">
-            <table className="tbl">
-              <thead><tr><th>スタッフ</th><th>来店数</th><th>売上</th></tr></thead>
-              <tbody>
-                {stats.byStaff.map((r) => (
-                  <tr key={r.staff.id}>
-                    <td>
-                      <div className="name-link" style={{ color: 'var(--ink)', cursor: 'default' }}>
-                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: r.staff.bg_color, color: r.staff.fg_color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, flexShrink: 0 }}>
-                          {r.staff.initials}
-                        </div>
-                        {r.staff.name}
-                      </div>
-                    </td>
-                    <td>{r.count}件</td>
-                    <td>{yen(r.sales)}</td>
-                  </tr>
-                ))}
-                {stats.byStaff.length === 0 && (
-                  <tr><td colSpan={3}><div className="empty-row">この月の来店済み予約はまだありません。</div></td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div className="tbl-wrap" style={{ marginBottom: 16 }}>
+          <table className="tbl">
+            <thead><tr><th>日付</th><th>来店数</th><th>施術売上</th><th>店販売上</th><th>合計（レジ突合用）</th></tr></thead>
+            <tbody>
+              {stats.byDay.map((r) => (
+                <tr key={r.date}>
+                  <td>{formatDateTiny(r.date)}</td>
+                  <td>{r.count}件</td>
+                  <td>{yen(r.treatmentSales)}</td>
+                  <td>{yen(r.retailSales)}</td>
+                  <td style={{ fontWeight: 600 }}>{yen(r.sales)}</td>
+                </tr>
+              ))}
+              {stats.byDay.length === 0 && (
+                <tr><td colSpan={5}><div className="empty-row">この月の来店済み予約・店販はまだありません。</div></td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+        <div className="tbl-wrap" style={{ marginBottom: 16 }}>
+          <table className="tbl">
+            <thead><tr><th>スタッフ</th><th>来店数</th><th>売上</th></tr></thead>
+            <tbody>
+              {stats.byStaff.map((r) => (
+                <tr key={r.staff.id}>
+                  <td>
+                    <div className="name-link" style={{ color: 'var(--ink)', cursor: 'default' }}>
+                      <div style={{ width: 24, height: 24, borderRadius: '50%', background: r.staff.bg_color, color: r.staff.fg_color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, flexShrink: 0 }}>
+                        {r.staff.initials}
+                      </div>
+                      {r.staff.name}
+                    </div>
+                  </td>
+                  <td>{r.count}件</td>
+                  <td>{yen(r.sales)}</td>
+                </tr>
+              ))}
+              {stats.byStaff.length === 0 && (
+                <tr><td colSpan={3}><div className="empty-row">この月の来店済み予約はまだありません。</div></td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div className="tbl-wrap">
             <table className="tbl">
               <thead><tr><th>店販 商品別売上</th><th>売上</th></tr></thead>
