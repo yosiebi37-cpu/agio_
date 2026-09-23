@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/server';
 import { toMinutes, minutesToHHMM, initialsFromName } from '@/lib/format';
+import { sendLinePushMessage } from '@/lib/line';
 
 const OPEN_MIN = 9 * 60;
 const CLOSE_MIN = 20 * 60;
@@ -180,6 +181,20 @@ export async function POST(request: Request) {
       if (retry) return NextResponse.json({ ok: true, bookingId: retry.id, alreadyExists: true });
     }
     return NextResponse.json({ error: bookingError?.message ?? '予約の登録に失敗しました。' }, { status: 500 });
+  }
+
+  // 新しい予約が入ったことをオーナーのLINEに通知する（未設定の場合は何もしない。
+  // 通知に失敗しても、お客様への予約完了レスポンスには影響させない）
+  const ownerLineUserId = process.env.OWNER_LINE_USER_ID;
+  const lineAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (ownerLineUserId && lineAccessToken) {
+    const staffName = (staffList ?? []).find((s: { id: string; name: string }) => s.id === staffId)?.name ?? '';
+    const notifyText = `【新しい予約】\n${name} 様\n${date} ${startTime}〜\n${menuName}\n担当：${staffName}`;
+    try {
+      await sendLinePushMessage(ownerLineUserId, notifyText, lineAccessToken);
+    } catch {
+      // 通知の失敗は無視する（予約自体は成立している）
+    }
   }
 
   return NextResponse.json({ ok: true, bookingId: booking.id });

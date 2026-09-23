@@ -95,8 +95,8 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
   };
 
   const reset = () => {
-    setPerformedOn(defaultDate ?? toISODate(new Date()));
-    setStartTime(defaultTime ?? currentTimeHHMM());
+    // 施術日・開始時間はリセットしない（過去分をまとめて入力する時、
+    // 1件ごとに今日の日付へ戻ってしまうと入力しづらいため、直前の値のまま残す）
     setStaffId('');
     setMenuLines([menuItems.length ? { name: menuItems[0].name, amount: String(menuItems[0].price) } : emptyLine()]);
     setTags('');
