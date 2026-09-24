@@ -101,6 +101,13 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
     return map;
   }, [retailSales]);
 
+  const deleteRetailSale = async (r: RetailSale) => {
+    if (!window.confirm(`「${r.product_name}」（¥${r.amount.toLocaleString('ja-JP')}）を削除しますか？`)) return;
+    const sb = getBrowserSupabase();
+    await sb.from('retail_sales').delete().eq('id', r.id);
+    router.refresh();
+  };
+
   // 「フリー」は担当未定の予約を仮に割り当てるためのダミー枠で、実際に施術できる人員ではないため、
   // 残り受付可能数の計算からは除く（含めると実際は満席でも1枠分の余裕があるように見えてしまう）
   const freeStaffIds = useMemo(() => new Set(staff.filter((s) => s.name === 'フリー').map((s) => s.id)), [staff]);
@@ -417,9 +424,21 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
                     </button>
                   </div>
                   <div className="drawer-val">
-                    {(retailByBooking.get(selected.id) ?? []).length > 0
-                      ? (retailByBooking.get(selected.id) ?? []).map((r) => `${r.product_name}（¥${r.amount.toLocaleString('ja-JP')}）`).join('、')
-                      : '—'}
+                    {(retailByBooking.get(selected.id) ?? []).length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {(retailByBooking.get(selected.id) ?? []).map((r) => (
+                          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span>{r.product_name}（¥{r.amount.toLocaleString('ja-JP')}）</span>
+                            <i
+                              className="ti ti-x"
+                              style={{ fontSize: 13, color: 'var(--ink-l)', cursor: 'pointer' }}
+                              onClick={() => deleteRetailSale(r)}
+                              title="この店販を削除"
+                            ></i>
+                          </div>
+                        ))}
+                      </div>
+                    ) : '—'}
                   </div>
                 </div>
               </div>
