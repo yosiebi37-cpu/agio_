@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { monthKey, aggregateMonthlyCustomers, aggregateMonthlyRetail, computeRepeatRates, aggregateAgeBrackets } from './analytics';
+import { monthKey, aggregateMonthlyCustomers, aggregateMonthlyRetail, computeRepeatRates, aggregateAgeBrackets, listNewCustomerNamesByMonth } from './analytics';
 
 describe('monthKey', () => {
   it('extracts YYYY-MM from an ISO date', () => {
@@ -61,6 +61,21 @@ describe('computeRepeatRates', () => {
   it('ignores records without a customer_id', () => {
     const rows = computeRepeatRates([{ customer_id: '', performed_on: '2026-07-01' }]);
     expect(rows).toEqual([]);
+  });
+});
+
+describe('listNewCustomerNamesByMonth', () => {
+  it('lists names of visited new-customer bookings per month', () => {
+    const rows = listNewCustomerNamesByMonth([
+      { booking_date: '2026-08-01', customer_type: 'new', status: 'visited', amount: 5000, customer_name: '山田花子' },
+      { booking_date: '2026-08-15', customer_type: 'existing', status: 'visited', amount: 8000, customer_name: '田中太郎' },
+      { booking_date: '2026-09-01', customer_type: 'new', status: 'visited', amount: 6000, customer_name: '佐藤次郎' },
+      { booking_date: '2026-09-02', customer_type: 'new', status: 'confirmed', amount: 6000, customer_name: '鈴木一郎' },
+    ]);
+    expect(rows).toEqual([
+      { month: '2026-08', names: ['山田花子'] },
+      { month: '2026-09', names: ['佐藤次郎'] },
+    ]);
   });
 });
 

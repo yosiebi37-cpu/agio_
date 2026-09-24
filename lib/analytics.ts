@@ -102,6 +102,30 @@ export function computeRepeatRates(records: TreatmentRecordRow[]): RepeatRow[] {
     .sort((a, b) => a.month.localeCompare(b.month));
 }
 
+export interface NewCustomerNameRow {
+  month: string;
+  names: string[];
+}
+
+/**
+ * 来店済み・新規客の予約を月ごとにまとめ、お客様名の一覧を出す。
+ * aggregateMonthlyCustomers の newCount と同じ数え方（予約1件＝1人分。
+ * 同じ人が同じ月に複数回「新規客」として記録されている場合はそのまま複数件表示される）。
+ */
+export function listNewCustomerNamesByMonth(bookings: (BookingRow & { customer_name: string })[]): NewCustomerNameRow[] {
+  const map = new Map<string, string[]>();
+  for (const b of bookings) {
+    if (b.status !== 'visited' || b.customer_type !== 'new') continue;
+    const month = monthKey(b.booking_date);
+    const list = map.get(month) ?? [];
+    list.push(b.customer_name);
+    map.set(month, list);
+  }
+  return Array.from(map.entries())
+    .map(([month, names]) => ({ month, names }))
+    .sort((a, b) => a.month.localeCompare(b.month));
+}
+
 export interface AgeBracketRow {
   bracket: string;
   count: number;

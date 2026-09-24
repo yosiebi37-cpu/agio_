@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { yen, formatMonthLong } from '@/lib/format';
-import type { MonthlyCustomerRow, MonthlyRetailRow, RepeatRow, AgeBracketRow } from '@/lib/analytics';
+import type { MonthlyCustomerRow, MonthlyRetailRow, RepeatRow, AgeBracketRow, NewCustomerNameRow } from '@/lib/analytics';
 
 interface Props {
   monthlyCustomers: MonthlyCustomerRow[];
   monthlyRetail: MonthlyRetailRow[];
   repeatRates: RepeatRow[];
   ageBrackets: AgeBracketRow[];
+  newCustomerNames: NewCustomerNameRow[];
 }
 
 interface MergedRow {
@@ -151,7 +152,7 @@ function AgeBracketChart({ rows }: { rows: AgeBracketRow[] }) {
   );
 }
 
-export default function AnalyticsClient({ monthlyCustomers, monthlyRetail, repeatRates, ageBrackets }: Props) {
+export default function AnalyticsClient({ monthlyCustomers, monthlyRetail, repeatRates, ageBrackets, newCustomerNames }: Props) {
   const rows = useMemo<MergedRow[]>(() => {
     const months = new Set<string>();
     monthlyCustomers.forEach((r) => months.add(r.month));
@@ -184,6 +185,9 @@ export default function AnalyticsClient({ monthlyCustomers, monthlyRetail, repea
   const avgRepeatRate = matureRepeatRows.length
     ? matureRepeatRows.reduce((s, r) => s + (r.repeatRate ?? 0), 0) / matureRepeatRows.length
     : null;
+
+  const [nameMonth, setNameMonth] = useState<string>(() => newCustomerNames[newCustomerNames.length - 1]?.month ?? '');
+  const selectedNames = newCustomerNames.find((r) => r.month === nameMonth)?.names ?? [];
 
   return (
     <div className="page-wrap">
@@ -291,6 +295,29 @@ export default function AnalyticsClient({ monthlyCustomers, monthlyRetail, repea
                   })}
                 </tbody>
               </table>
+            </div>
+
+            <div className="tbl-wrap" style={{ padding: 16, marginTop: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>新規のお客様一覧</div>
+                <select className="f-select" style={{ width: 140 }} value={nameMonth} onChange={(e) => setNameMonth(e.target.value)}>
+                  {[...newCustomerNames].reverse().map((r) => (
+                    <option key={r.month} value={r.month}>{formatMonthLong(r.month)}</option>
+                  ))}
+                </select>
+              </div>
+              {selectedNames.length === 0 ? (
+                <div className="empty-row">この月の新規客はいません。</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {selectedNames.map((name, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 10, padding: '4px 0', borderBottom: '1px solid var(--sand)', fontSize: 13 }}>
+                      <span style={{ color: 'var(--ink-l)', minWidth: 24 }}>{i + 1}</span>
+                      <span>{name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div style={{ fontSize: 12, color: 'var(--ink-l)', marginTop: 12, lineHeight: 1.7 }}>
