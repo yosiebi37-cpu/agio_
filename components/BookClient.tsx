@@ -14,6 +14,8 @@ const toHalfWidth = (s: string): string =>
 interface Props {
   menuItems: MenuItem[];
   staff: PublicStaff[];
+  /** LINE内（/book/line）で開かれた場合はtrue。予約前日リマインダー用に、LINEのユーザーIDを裏側で取得する。 */
+  useLiff?: boolean;
 }
 
 const OPEN_MIN = 9 * 60;
@@ -23,8 +25,9 @@ const WEEKDAY = ['日', '月', '火', '水', '木', '金', '土'];
 
 type Step = 'menu' | 'staff' | 'datetime' | 'contact' | 'done';
 
-export default function BookClient({ menuItems, staff }: Props) {
+export default function BookClient({ menuItems, staff, useLiff }: Props) {
   const today = toISODate(new Date());
+  const [lineUserId, setLineUserId] = useState<string | null>(null);
 
   const [step, setStep] = useState<Step>('menu');
   const [closedWeekdays, setClosedWeekdays] = useState<Set<number>>(new Set());
@@ -81,6 +84,25 @@ export default function BookClient({ menuItems, staff }: Props) {
       setHolidayDates(new Set((data ?? []).map((h: { holiday_date: string }) => h.holiday_date)));
     });
   }, []);
+
+  // LINE内で開かれた場合、画面には何も表示せず裏側でLINEユーザーIDだけ取得する（予約前日リマインダー用）
+  useEffect(() => {
+    if (!useLiff) return;
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+    if (!liffId) return;
+    (async () => {
+      try {
+        const liff = (await import('@line/liff')).default;
+        await liff.init({ liffId });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          setLineUserId(profile.userId);
+        }
+      } catch {
+        // LIFFの初期化・ログインに失敗しても予約自体は通常通り続行する
+      }
+    })();
+  }, [useLiff]);
 
   // 「フリー」は担当未定の予約を仮に割り当てるためのダミー枠で、実際に施術できる人員ではないため、
   // 受付可能数の自動計算からは除く
@@ -263,6 +285,7 @@ export default function BookClient({ menuItems, staff }: Props) {
           furigana: `${lastNameFurigana.furigana} ${firstNameFurigana.furigana}`.trim(),
           phone: phoneDigits,
           memo,
+          lineUserId,
         }),
       });
       const data = await res.json().catch(() => ({}));

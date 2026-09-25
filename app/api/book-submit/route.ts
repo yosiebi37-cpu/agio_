@@ -19,6 +19,7 @@ interface BookSubmitBody {
   furigana: string;
   phone: string;
   memo: string;
+  lineUserId?: string | null;
 }
 
 /**
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
   if (!body) {
     return NextResponse.json({ error: 'リクエストの形式が正しくありません。' }, { status: 400 });
   }
-  const { idempotencyKey, menuName, menuDurationMinutes, menuPrice, staffId, date, startTime, lastName, firstName, furigana, phone, memo } = body;
+  const { idempotencyKey, menuName, menuDurationMinutes, menuPrice, staffId, date, startTime, lastName, firstName, furigana, phone, memo, lineUserId } = body;
 
   const name = `${(lastName ?? '').trim()} ${(firstName ?? '').trim()}`.trim();
   if (!idempotencyKey || !menuName || !staffId || !date || !startTime || !name || !phone?.trim()) {
@@ -132,12 +133,16 @@ export async function POST(request: Request) {
   let customerType: 'existing' | 'new' = 'new';
   const { data: foundCustomer } = await sb
     .from('customers')
-    .select('id,customer_type')
+    .select('id,customer_type,line_user_id')
     .eq('phone', phone.trim())
     .maybeSingle();
   if (foundCustomer) {
     customerId = foundCustomer.id;
     customerType = foundCustomer.customer_type;
+    // LINE予約でLINEユーザーIDが取れた場合、前日リマインダー送信のために保存しておく
+    if (lineUserId && foundCustomer.line_user_id !== lineUserId) {
+      await sb.from('customers').update({ line_user_id: lineUserId }).eq('id', customerId);
+    }
   } else {
     const { data: newCustomer, error: customerError } = await sb
       .from('customers')
@@ -147,6 +152,7 @@ export async function POST(request: Request) {
         phone: phone.trim(),
         initials: initialsFromName(name),
         customer_type: 'new',
+        line_user_id: lineUserId || null,
       })
       .select('id')
       .single();

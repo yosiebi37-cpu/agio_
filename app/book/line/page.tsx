@@ -33,5 +33,5 @@ export default async function BookLinePage() {
   const menuItems = allMenuItems.filter((m) => m.line_only);
   const staff = (staffData ?? []) as PublicStaff[];
 
-  return <BookClient menuItems={menuItems} staff={staff} />;
+  return <BookClient menuItems={menuItems} staff={staff} useLiff />;
 }

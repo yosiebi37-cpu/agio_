@@ -127,6 +127,12 @@ alter table bookings add column if not exists source text not null default 'manu
 -- お客様向け予約ページ（/book, /book/line）の二重送信・二重予約防止用
 alter table bookings add column if not exists idempotency_key text unique;
 
+-- 予約前日リマインダー（LINE通知）の送信済みフラグ
+alter table bookings add column if not exists reminder_sent_at timestamptz;
+
+-- LINEで予約したお客様のLINEユーザーID（前日リマインダー送信に使う。LIFFログインで取得）
+alter table customers add column if not exists line_user_id text;
+
 -- ---------------------------------------------------------------------------
 -- 施術履歴（カルテ）
 -- ---------------------------------------------------------------------------
