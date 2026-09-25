@@ -185,8 +185,8 @@ export async function POST(request: Request) {
 
   // 新しい予約が入ったことをオーナーのLINEに通知する（未設定の場合は何もしない。
   // 通知に失敗しても、お客様への予約完了レスポンスには影響させない）
-  const ownerLineUserId = process.env.OWNER_LINE_USER_ID;
-  const lineAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  const ownerLineUserId = process.env.OWNER_LINE_USER_ID?.trim();
+  const lineAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
   if (ownerLineUserId && lineAccessToken) {
     const staffName = (staffList ?? []).find((s: { id: string; name: string }) => s.id === staffId)?.name ?? '';
     const notifyText = `【新しい予約】\n${name} 様\n${date} ${startTime}〜\n${menuName}\n担当：${staffName}`;

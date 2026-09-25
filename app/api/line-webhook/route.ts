@@ -15,8 +15,8 @@ interface LineEvent {
  * 設定するための、最初の一回だけの下準備）。
  */
 export async function POST(request: Request) {
-  const channelSecret = process.env.LINE_CHANNEL_SECRET;
-  const accessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  const channelSecret = process.env.LINE_CHANNEL_SECRET?.trim();
+  const accessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
   const rawBody = await request.text();
 
   if (!channelSecret || !accessToken) {
