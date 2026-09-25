@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/reset-password', '/book', '/api/hotpepper-webhook', '/api/square-webhook', '/api/book-submit', '/api/line-webhook'];
+const PUBLIC_PATHS = ['/login', '/reset-password', '/book', '/api/hotpepper-webhook', '/api/square-webhook', '/api/book-submit', '/api/line-webhook', '/api/line-reminder-cron'];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
