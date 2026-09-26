@@ -21,15 +21,16 @@ button{font-family:inherit}
 
 /* ── TOP HEADER ── */
 .topbar{height:var(--h);background:var(--ink);display:flex;align-items:center;padding:0 16px;gap:0;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.08)}
-.logo{display:flex;flex-direction:column;justify-content:center;white-space:nowrap;padding-right:20px;border-right:1px solid rgba(255,255,255,0.1);line-height:1.15}
+.logo{display:flex;flex-direction:column;justify-content:center;white-space:nowrap;padding-right:20px;border-right:1px solid rgba(255,255,255,0.1);line-height:1.15;flex-shrink:0}
 .logo-mark{font-family:'DM Sans',sans-serif;font-weight:300;font-size:21px;letter-spacing:0.12em;color:#F6F3EC}
 .logo-sub{font-family:'Cormorant Garamond',serif;font-size:9.5px;letter-spacing:0.24em;color:rgba(246,243,236,0.5);margin-top:3px}
-.top-nav{display:flex;align-items:center;gap:2px;padding:0 12px}
-.tnav{display:flex;align-items:center;gap:6px;padding:7px 14px;font-size:14px;color:rgba(255,255,255,0.5);cursor:pointer;border-radius:6px;transition:all 0.15s;white-space:nowrap}
+.top-nav{display:flex;align-items:center;gap:2px;padding:0 12px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+.top-nav::-webkit-scrollbar{display:none}
+.tnav{display:flex;align-items:center;gap:6px;padding:7px 14px;font-size:14px;color:rgba(255,255,255,0.5);cursor:pointer;border-radius:6px;transition:all 0.15s;white-space:nowrap;flex-shrink:0}
 .tnav i{font-size:17px}
 .tnav:hover{color:rgba(255,255,255,0.85);background:rgba(255,255,255,0.06)}
 .tnav.active{color:#F6F3EC;background:rgba(183,164,125,0.18)}
-.top-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
 .date-badge{font-size:13px;color:rgba(255,255,255,0.45);padding:0 14px;border-right:1px solid rgba(255,255,255,0.1);white-space:nowrap}
 .tbtn{width:32px;height:32px;border:1px solid rgba(255,255,255,0.12);background:none;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(255,255,255,0.5)}
 .tbtn:hover{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85)}
@@ -326,3 +327,24 @@ TAGS & SHARED
 .login-form .f-row:last-of-type{margin-bottom:16px}
 .login-error{font-size:14px;color:var(--red);margin-bottom:14px}
 .login-submit{width:100%;padding:10px 0;font-size:15px}
+
+/* ══════════════════════════════════════
+スマホ幅（縦持ち想定）: 予約ボード・シフト表を画面に収まるよう縮小
+══════════════════════════════════════ */
+@media (max-width: 640px) {
+  :root{--col:78px;--hourw:62px;--staffrow:74px}
+  .date-badge{display:none}
+  .logo{padding-right:10px}
+  .board-corner{font-size:9px;padding:0 6px}
+  .time-col-head{font-size:12px}
+  .board-controls{height:auto;min-height:56px;flex-wrap:wrap;padding:8px 10px}
+  .sh-avatar{width:30px;height:30px;font-size:12px}
+  .staff-row-head{padding:0 6px;gap:5px}
+  .sh-name{font-size:12px}
+  .sh-count{font-size:10px}
+  .booking-block{padding:3px 5px}
+  .bb-time{font-size:9px;margin-top:0}
+  .bb-name{font-size:11px}
+  .bb-menu{font-size:9px}
+  .bb-status{width:10px;height:10px;top:3px;right:3px}
+}
