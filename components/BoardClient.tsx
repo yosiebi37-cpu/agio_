@@ -8,6 +8,9 @@ import {
   OPEN_HOUR,
   HOUR_W,
   STAFF_COL_W,
+  MOBILE_BREAKPOINT,
+  MOBILE_HOUR_W,
+  MOBILE_STAFF_COL_W,
   HOURS,
   STATUS_DOT,
   STATUS_LABEL,
@@ -53,6 +56,19 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
   const [retailAddOpen, setRetailAddOpen] = useState(false);
   const [nowMin, setNowMin] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // スマホ幅ではCSS側（globals.css）で列の幅を縮小しているため、
+  // 予約ブロックの位置計算（px指定）もそれに合わせて切り替える
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  const hourW = isMobile ? MOBILE_HOUR_W : HOUR_W;
+  const staffColW = isMobile ? MOBILE_STAFF_COL_W : STAFF_COL_W;
 
   useEffect(() => {
     const todayISO = toISODate(new Date());
@@ -246,7 +262,7 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
   };
 
   const rowBodyWidth = `calc(var(--hourw) * ${HOURS.length})`;
-  const nowLeft = nowMin !== null ? STAFF_COL_W + ((nowMin - OPEN_HOUR * 60) / 60) * HOUR_W : 0;
+  const nowLeft = nowMin !== null ? staffColW + ((nowMin - OPEN_HOUR * 60) / 60) * hourW : 0;
   const nowVisible =
     nowMin !== null && nowMin >= OPEN_HOUR * 60 && nowMin <= (OPEN_HOUR + HOURS.length) * 60;
 
@@ -361,8 +377,8 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
                     {list.map((b) => {
                       const bg = b.staff?.color ?? s.color;
                       const fg = textOn(bg);
-                      const left = ((toMinutes(b.start_time) - OPEN_HOUR * 60) / 60) * HOUR_W;
-                      const width = ((toMinutes(b.end_time) - toMinutes(b.start_time)) / 60) * HOUR_W;
+                      const left = ((toMinutes(b.start_time) - OPEN_HOUR * 60) / 60) * hourW;
+                      const width = ((toMinutes(b.end_time) - toMinutes(b.start_time)) / 60) * hourW;
                       const hasRetail = (retailByBooking.get(b.id) ?? []).length > 0;
                       return (
                         <div

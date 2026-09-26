@@ -47,6 +47,10 @@ export const OPEN_HOUR = 9; // 開店（先頭の時刻ラベル）
 export const ROW_COUNT = 10; // 表示する時間枠の数（9:00〜19:00、営業は基本18時までだが延長時にも対応）
 export const HOUR_W = 150; // 1時間あたりの幅(px)
 export const STAFF_COL_W = 210; // スタッフ名 列（固定表示）の幅(px)
+// スマホ幅（globals.cssの `@media (max-width: 640px)` と同じ値・同じブレークポイントにすること）
+export const MOBILE_BREAKPOINT = 640;
+export const MOBILE_HOUR_W = 62;
+export const MOBILE_STAFF_COL_W = 78;
 export const HOURS: number[] = Array.from({ length: ROW_COUNT }, (_, i) => OPEN_HOUR + i);
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {
