@@ -57,9 +57,9 @@ export const STATUS_LABEL: Record<BookingStatus, string> = {
 
 // 予約ブロック右上のステータスドット色
 export const STATUS_DOT: Record<BookingStatus, string> = {
-  visited: '#a8e6c4',
-  confirmed: '#FFD580',
-  tentative: 'rgba(255,255,255,0.4)',
+  visited: '#2C7A4E',
+  confirmed: '#E8A33D',
+  tentative: 'rgba(255,255,255,0.5)',
 };
 
 // タグ用クラス
