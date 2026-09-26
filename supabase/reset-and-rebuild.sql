@@ -382,7 +382,7 @@ declare t text;
 begin
   foreach t in array array[
     'staff','customers','bookings','treatment_records',
-    'chemical_records','karte_photos','commission_settings','shifts',
+    'chemical_records','karte_photos','commission_settings',
     'salon_settings','holidays','retail_sales','freelance_daily_sales','menu_items','expenses',
     'hotpepper_sync_log','square_sync_log','retail_products','hourly_capacity'
   ]
@@ -429,6 +429,17 @@ begin
     execute format('create policy "%1$s_admin_insert" on %1$I for insert to authenticated with check (is_admin());', t);
     execute format('create policy "%1$s_admin_update" on %1$I for update to authenticated using (is_admin()) with check (is_admin());', t);
     execute format('create policy "%1$s_admin_delete" on %1$I for delete to authenticated using (is_admin());', t);
+  end loop;
+
+  -- シフトは全員分が見えるが（予約ボードの受付可能数計算に使うため）、
+  -- 書き込みはオーナー（is_admin）か、本人のシフトのみに限定する
+  foreach t in array array['shifts']
+  loop
+    execute format('drop policy if exists "staff_authenticated_all" on %I;', t);
+    execute format('create policy "%1$s_select_all" on %1$I for select to authenticated using (true);', t);
+    execute format('create policy "%1$s_self_insert" on %1$I for insert to authenticated with check (is_admin() or staff_id = current_staff_id());', t);
+    execute format('create policy "%1$s_self_update" on %1$I for update to authenticated using (is_admin() or staff_id = current_staff_id()) with check (is_admin() or staff_id = current_staff_id());', t);
+    execute format('create policy "%1$s_self_delete" on %1$I for delete to authenticated using (is_admin() or staff_id = current_staff_id());', t);
   end loop;
 end $$;
 

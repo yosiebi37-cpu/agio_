@@ -1,4 +1,5 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import './globals.css';
 import TopBar from '@/components/TopBar';
 import { isSupabaseConfigured, getCurrentStaff } from '@/lib/supabase/server';
@@ -6,6 +7,15 @@ import { isSupabaseConfigured, getCurrentStaff } from '@/lib/supabase/server';
 export const metadata: Metadata = {
   title: 'Atelier — 予約管理',
   description: '美容室向けの予約・顧客・カルテ・業務委託管理ダッシュボード',
+  appleWebApp: {
+    capable: true,
+    title: 'agio',
+    statusBarStyle: 'default',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#2A2724',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -31,6 +41,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <TopBar isStaff={isStaff} />
         <main className="app-main">{children}</main>
+        <Script id="sw-register" strategy="afterInteractive">
+          {`if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js')); }`}
+        </Script>
       </body>
     </html>
   );
