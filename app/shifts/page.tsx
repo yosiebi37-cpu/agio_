@@ -1,4 +1,4 @@
-import { isSupabaseConfigured, getServerSupabase } from '@/lib/supabase/server';
+import { isSupabaseConfigured, getServerSupabase, getCurrentStaff } from '@/lib/supabase/server';
 import SetupNotice from '@/components/SetupNotice';
 import ShiftClient from '@/components/ShiftClient';
 import ShiftMonthView from '@/components/ShiftMonthView';
@@ -17,6 +17,7 @@ export default async function ShiftsPage({
   const { date: dateParam, view: viewParam } = await searchParams;
   const date = dateParam ?? toISODate(new Date());
   const sb = await getServerSupabase();
+  const currentStaff = await getCurrentStaff();
 
   if (viewParam === 'month') {
     const [y, m] = date.split('-').map(Number);
@@ -26,9 +27,10 @@ export default async function ShiftsPage({
       sb.from('staff').select('*').eq('is_active', true).order('sort_order'),
       sb.from('shifts').select('*').gte('shift_date', start).lte('shift_date', end),
     ]);
+    const staffList = (staffData ?? []) as Staff[];
     return (
       <ShiftMonthView
-        staff={(staffData ?? []) as Staff[]}
+        staff={currentStaff ? staffList.filter((s) => s.id === currentStaff.id) : staffList}
         shifts={(shiftData ?? []) as Shift[]}
         date={date}
       />
@@ -45,10 +47,11 @@ export default async function ShiftsPage({
       .gte('shift_date', weekStart)
       .lte('shift_date', weekEnd),
   ]);
+  const staffList = (staffData ?? []) as Staff[];
 
   return (
     <ShiftClient
-      staff={(staffData ?? []) as Staff[]}
+      staff={currentStaff ? staffList.filter((s) => s.id === currentStaff.id) : staffList}
       shifts={(shiftData ?? []) as Shift[]}
       weekStart={weekStart}
     />
