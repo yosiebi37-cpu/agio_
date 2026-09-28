@@ -12,6 +12,7 @@ export default function LoginForm({ redirectTo }: Props) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
@@ -104,14 +105,25 @@ export default function LoginForm({ redirectTo }: Props) {
       </div>
       <div className="f-row">
         <label className="f-label">パスワード</label>
-        <input
-          className="f-input"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            className="f-input"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{ paddingRight: 36 }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
+            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-l)', display: 'flex' }}
+          >
+            <i className={`ti ${showPassword ? 'ti-eye-off' : 'ti-eye'}`}></i>
+          </button>
+        </div>
       </div>
       {error && <div className="login-error">{error}</div>}
       <button className="btn-save login-submit" type="submit" disabled={busy}>
