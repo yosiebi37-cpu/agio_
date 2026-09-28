@@ -9,6 +9,7 @@ export default function ResetPasswordForm() {
   const [ready, setReady] = useState(false);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -70,25 +71,47 @@ export default function ResetPasswordForm() {
     <form className="login-form" onSubmit={handleSubmit}>
       <div className="f-row">
         <label className="f-label">新しいパスワード</label>
-        <input
-          className="f-input"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            className="f-input"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{ paddingRight: 36 }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
+            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-l)', display: 'flex' }}
+          >
+            <i className={`ti ${showPassword ? 'ti-eye-off' : 'ti-eye'}`}></i>
+          </button>
+        </div>
       </div>
       <div className="f-row">
         <label className="f-label">新しいパスワード（確認）</label>
-        <input
-          className="f-input"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            className="f-input"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            required
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            style={{ paddingRight: 36 }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
+            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-l)', display: 'flex' }}
+          >
+            <i className={`ti ${showPassword ? 'ti-eye-off' : 'ti-eye'}`}></i>
+          </button>
+        </div>
       </div>
       {error && <div className="login-error">{error}</div>}
       <button className="btn-save login-submit" type="submit" disabled={busy}>
