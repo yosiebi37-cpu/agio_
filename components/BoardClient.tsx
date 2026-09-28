@@ -207,6 +207,18 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
     router.push(`/board?date=${toISODate(new Date())}`);
   };
 
+  // 前日・翌日・今日はよくクリックされるので、あらかじめ裏で読み込んでおき、
+  // 実際にクリックした時の切り替えを速くする
+  useEffect(() => {
+    const prev = new Date(date + 'T00:00:00');
+    prev.setDate(prev.getDate() - 1);
+    const next = new Date(date + 'T00:00:00');
+    next.setDate(next.getDate() + 1);
+    router.prefetch(`/board?date=${toISODate(prev)}`);
+    router.prefetch(`/board?date=${toISODate(next)}`);
+    router.prefetch(`/board?date=${toISODate(new Date())}`);
+  }, [date, router]);
+
   const markVisited = async (b: BookingWithStaff) => {
     setBusy(true);
     const sb = getBrowserSupabase();
