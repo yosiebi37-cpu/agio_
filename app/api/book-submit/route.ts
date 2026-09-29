@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/server';
 import { toMinutes, minutesToHHMM, initialsFromName } from '@/lib/format';
 import { sendLinePushMessage } from '@/lib/line';
+import { syncBookingToSquare } from '@/lib/square-sync';
 
 const OPEN_MIN = 9 * 60;
 const CLOSE_MIN = 20 * 60;
@@ -201,6 +202,14 @@ export async function POST(request: Request) {
     } catch {
       // 通知の失敗は無視する（予約自体は成立している）
     }
+  }
+
+  // Squareにも登録できる場合は登録する（未対応メニュー・担当者の場合は何もしない。
+  // 失敗しても、お客様への予約完了レスポンスには影響させない）
+  try {
+    await syncBookingToSquare(sb, booking.id);
+  } catch {
+    // Square連携の失敗は無視する（予約自体は成立している）
   }
 
   return NextResponse.json({ ok: true, bookingId: booking.id });
