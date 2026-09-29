@@ -178,23 +178,36 @@ export default function NewBookingModal({ open, onClose }: Props) {
       const discountNote = validDiscountLines.length
         ? `割引：${validDiscountLines.map((l) => `${l.name.trim()} -¥${(parseInt(l.amount, 10) || 0).toLocaleString('ja-JP')}`).join('、')}`
         : null;
-      const { error } = await sb.from('bookings').insert({
-        customer_id: matchedCustomer.id,
-        customer_name: name.trim(),
-        staff_id: staffId,
-        booking_date: date,
-        start_time: start,
-        end_time: end,
-        menu: combinedMenu,
-        status: 'confirmed',
-        customer_type: type,
-        amount: totalAmount,
-        note: discountNote,
-      });
+      const { data: newBooking, error } = await sb
+        .from('bookings')
+        .insert({
+          customer_id: matchedCustomer.id,
+          customer_name: name.trim(),
+          staff_id: staffId,
+          booking_date: date,
+          start_time: start,
+          end_time: end,
+          menu: combinedMenu,
+          status: 'confirmed',
+          customer_type: type,
+          amount: totalAmount,
+          note: discountNote,
+        })
+        .select('id')
+        .single();
       if (error) {
         setError(error.message);
         setSaving(false);
         return;
+      }
+      if (newBooking) {
+        fetch('/api/square-sync-booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: newBooking.id }),
+        }).catch(() => {
+          // Square連携の失敗は無視する（予約自体は成立している）
+        });
       }
       setSaving(false);
       setName('');
