@@ -263,7 +263,7 @@ create table if not exists expenses (
   id           uuid primary key default gen_random_uuid(),
   expense_date date not null,
   category     text not null default 'その他経費'
-                 check (category in ('家賃','水道','電気','ガス','シャンプー台リース','広告費','材料費','返済','通信費','報酬','消耗品','手数料','雑費','その他経費')),
+                 check (category in ('家賃','水道','電気','ガス','通信費','ホットペッパー','コンサル費','融資','返済','TID','JIKSHIN美容','コタ','絹－ジョ','材料費','コインランドリー','シャンプー台リース','広告費','報酬','消耗品','手数料','雑費','その他経費')),
   item_name    text,
   amount       int not null default 0,
   created_at   timestamptz not null default now()
