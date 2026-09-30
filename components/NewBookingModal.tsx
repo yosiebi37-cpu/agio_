@@ -213,6 +213,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
           status: 'confirmed',
           customer_type: type,
           amount: totalAmount,
+          discount_amount: discountTotal,
           note: discountNote,
         })
         .select('id')

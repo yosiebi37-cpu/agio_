@@ -104,6 +104,10 @@ alter table bookings add column if not exists reminder_sent_at timestamptz;
 -- LINEで予約したお客様のLINEユーザーID（前日リマインダー送信に使う。LIFFログインで取得）
 alter table customers add column if not exists line_user_id text;
 
+-- 予約時の割引額（ホットペッパーポイント・紹介割引など）。amountは割引後の金額なので、
+-- 月ごとの割引合計を集計できるよう、割引額そのものも別途記録する
+alter table bookings add column if not exists discount_amount int not null default 0;
+
 -- ---------------------------------------------------------------------------
 -- 施術履歴（カルテ）
 -- ---------------------------------------------------------------------------
