@@ -133,6 +133,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  const { date, time } = utcIsoToJst(booking.start_at);
+  const durationMinutes = segment.duration_minutes ?? 60;
+  const endTime = minutesToHHMM(toMinutes(time) + durationMinutes);
+
+  // agioで作った直後の予約は、Square側への登録が完了する前にこのWebhookが届くことがある
+  // （square_booking_idがまだ入っていない）。その場合は新規登録せず、該当の予約に
+  // square_booking_idを紐付けるだけにして、二重登録を防ぐ
+  const { data: pendingMatch } = await sb
+    .from('bookings')
+    .select('id')
+    .eq('staff_id', staffId)
+    .eq('booking_date', date)
+    .eq('start_time', `${time}:00`)
+    .is('square_booking_id', null)
+    .neq('source', 'square')
+    .maybeSingle();
+  if (pendingMatch) {
+    const { error: linkError } = await sb.from('bookings').update({ square_booking_id: booking.id }).eq('id', pendingMatch.id);
+    await sb.from('square_sync_log').insert({
+      event_type: payload.type,
+      raw_body: rawBody,
+      result: linkError ? 'error' : 'skipped',
+      message: linkError ? linkError.message : `予約 ${booking.id} はagioで作成中の予約と一致したため、紐付けのみ行いました`,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
   let customerName = 'Square予約(要確認)';
   let phone: string | null = null;
   if (booking.customer_id) {
@@ -152,10 +179,6 @@ export async function POST(request: Request) {
       price = variation.price;
     }
   }
-
-  const { date, time } = utcIsoToJst(booking.start_at);
-  const durationMinutes = segment.duration_minutes ?? 60;
-  const endTime = minutesToHHMM(toMinutes(time) + durationMinutes);
 
   const { error } = await sb.from('bookings').upsert(
     {
