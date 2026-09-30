@@ -18,7 +18,7 @@ import {
   TYPE_LABEL,
   TYPE_TAG_CLASS,
 } from '@/lib/constants';
-import { hhmm, toMinutes, yenK, formatDateShort, toISODate } from '@/lib/format';
+import { hhmm, toMinutes, yenK, formatDateShort, toISODate, initialsFromName } from '@/lib/format';
 import EditBookingModal from './EditBookingModal';
 import AddRetailToBookingModal from './AddRetailToBookingModal';
 import type { Staff, BookingWithStaff, RetailSale } from '@/lib/types';
@@ -219,15 +219,55 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
     router.prefetch(`/board?date=${toISODate(new Date())}`);
   }, [date, router]);
 
+  // HotPepper・Square経由の予約はお客様情報(customer_id)が紐付いていないことがある。
+  // その場合、名前で既存のお客様を探し、見つからなければ新規作成してからこの予約に紐付ける
+  const ensureCustomerLinked = async (b: BookingWithStaff): Promise<string | null> => {
+    if (b.customer_id) return b.customer_id;
+    const sb = getBrowserSupabase();
+    const { data: existing } = await sb.from('customers').select('id').eq('name', b.customer_name).maybeSingle();
+    let customerId = existing?.id as string | undefined;
+    if (!customerId) {
+      const { data: created, error: createError } = await sb
+        .from('customers')
+        .insert({
+          name: b.customer_name,
+          initials: initialsFromName(b.customer_name),
+          customer_type: b.customer_type,
+        })
+        .select('id')
+        .single();
+      if (createError || !created) {
+        alert('お客様情報の作成に失敗しました。\n\n' + (createError?.message ?? ''));
+        return null;
+      }
+      customerId = created.id;
+    }
+    const { error: linkError } = await sb.from('bookings').update({ customer_id: customerId }).eq('id', b.id);
+    if (linkError) {
+      alert('予約とお客様情報の紐付けに失敗しました。\n\n' + linkError.message);
+      return null;
+    }
+    return customerId ?? null;
+  };
+
+  const openKarte = async (b: BookingWithStaff) => {
+    setBusy(true);
+    const customerId = await ensureCustomerLinked(b);
+    setBusy(false);
+    if (!customerId) return;
+    router.push(`/karte/${customerId}?date=${b.booking_date}&time=${b.start_time.slice(0, 5)}`);
+  };
+
   const markVisited = async (b: BookingWithStaff) => {
     setBusy(true);
     const sb = getBrowserSupabase();
     await sb.from('bookings').update({ status: 'visited' }).eq('id', b.id);
-    if (b.customer_id) {
+    const customerId = await ensureCustomerLinked(b);
+    if (customerId) {
       const { error: treatmentError } = await sb.from('treatment_records').upsert(
         {
           booking_id: b.id,
-          customer_id: b.customer_id,
+          customer_id: customerId,
           staff_id: b.staff_id,
           performed_on: b.booking_date,
           menu: b.menu,
@@ -496,10 +536,8 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
             <div className="drawer-actions">
               <button
                 className="daction daction-karte"
-                disabled={!selected.customer_id}
-                title={selected.customer_id ? '' : 'カルテ未登録'}
-                style={!selected.customer_id ? { opacity: 0.5, cursor: 'default' } : undefined}
-                onClick={() => selected.customer_id && router.push(`/karte/${selected.customer_id}?date=${selected.booking_date}&time=${selected.start_time.slice(0, 5)}`)}
+                disabled={busy}
+                onClick={() => openKarte(selected)}
               >
                 <i className="ti ti-id-badge"></i>カルテを開く
               </button>
