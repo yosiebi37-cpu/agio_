@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { yen, formatDateLong, formatMonthLong, toISODate } from '@/lib/format';
+import { yen, formatDateTiny, formatDateLong, formatMonthLong, toISODate } from '@/lib/format';
 
 export interface FreelanceRow {
   id: string;
@@ -20,8 +20,21 @@ export interface FreelanceRow {
   retailSales: number;
 }
 
+export interface FreelanceDailyRow {
+  date: string;
+  staffId: string;
+  staffName: string;
+  count: number;
+  bookingEx: number;
+  bookingNw: number;
+  manualEx: number;
+  manualNw: number;
+  retailSales: number;
+}
+
 interface Props {
   rows: FreelanceRow[];
+  dailyRows?: FreelanceDailyRow[];
   date: string;
   view: 'day' | 'month';
   month: string;
@@ -30,7 +43,7 @@ interface Props {
   initialRetailRate: number;
 }
 
-export default function FreelanceClient({ rows, date, view, month, initialExRate, initialNwRate, initialRetailRate }: Props) {
+export default function FreelanceClient({ rows, dailyRows = [], date, view, month, initialExRate, initialNwRate, initialRetailRate }: Props) {
   const router = useRouter();
   const [rex, setRex] = useState(initialExRate);
   const [rnw, setRnw] = useState(initialNwRate);
@@ -222,6 +235,42 @@ export default function FreelanceClient({ rows, date, view, month, initialExRate
           })}
           {totals.length === 0 && <div className="empty-row">業務委託スタッフが登録されていません。</div>}
         </div>
+
+        {view === 'month' && (
+          <div className="tbl-wrap" style={{ marginBottom: 16 }}>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>日付</th>
+                  <th>スタッフ</th>
+                  <th>予約数</th>
+                  <th>既存予約分</th>
+                  <th>既存手入力</th>
+                  <th>新規予約分</th>
+                  <th>新規手入力</th>
+                  <th>店販</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailyRows.map((r) => (
+                  <tr key={`${r.staffId}|${r.date}`}>
+                    <td>{formatDateTiny(r.date)}</td>
+                    <td>{r.staffName}</td>
+                    <td>{r.count}件</td>
+                    <td>{yen(r.bookingEx)}</td>
+                    <td style={r.manualEx > 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined}>{yen(r.manualEx)}</td>
+                    <td>{yen(r.bookingNw)}</td>
+                    <td style={r.manualNw > 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined}>{yen(r.manualNw)}</td>
+                    <td>{yen(r.retailSales)}</td>
+                  </tr>
+                ))}
+                {dailyRows.length === 0 && (
+                  <tr><td colSpan={8}><div className="empty-row">この月の記録はまだありません。</div></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="fl-total-bar">
           <div className="ftb-item"><div className="ftb-label">売上合計</div><div className="ftb-val">{yen(calc.totalSales)}</div></div>
