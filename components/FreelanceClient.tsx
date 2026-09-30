@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { yen, formatDateLong, formatMonthLong, toISODate } from '@/lib/format';
+import { yen, formatDateTiny, formatDateLong, formatMonthLong, toISODate } from '@/lib/format';
 
 export interface FreelanceRow {
   id: string;
@@ -20,8 +20,21 @@ export interface FreelanceRow {
   retailSales: number;
 }
 
+export interface FreelanceDailyRow {
+  date: string;
+  staffId: string;
+  staffName: string;
+  count: number;
+  bookingEx: number;
+  bookingNw: number;
+  manualEx: number;
+  manualNw: number;
+  retailSales: number;
+}
+
 interface Props {
   rows: FreelanceRow[];
+  dailyRows?: FreelanceDailyRow[];
   date: string;
   view: 'day' | 'month';
   month: string;
@@ -30,7 +43,7 @@ interface Props {
   initialRetailRate: number;
 }
 
-export default function FreelanceClient({ rows, date, view, month, initialExRate, initialNwRate, initialRetailRate }: Props) {
+export default function FreelanceClient({ rows, dailyRows = [], date, view, month, initialExRate, initialNwRate, initialRetailRate }: Props) {
   const router = useRouter();
   const [rex, setRex] = useState(initialExRate);
   const [rnw, setRnw] = useState(initialNwRate);
@@ -73,27 +86,6 @@ export default function FreelanceClient({ rows, date, view, month, initialExRate
       await sb.from('commission_settings').upsert({ id: 1, existing_rate: ex, new_rate: nw, retail_rate: retail, updated_at: new Date().toISOString() });
     } catch {
       /* 設定の保存に失敗しても画面の計算は継続する */
-    }
-  };
-
-  const updateManual = (staffId: string, field: 'ex' | 'nw', value: number) => {
-    setLocalRows((prev) =>
-      prev.map((r) => (r.id === staffId ? { ...r, manualEx: field === 'ex' ? value : r.manualEx, manualNw: field === 'nw' ? value : r.manualNw } : r)),
-    );
-  };
-
-  const persistManual = async (staffId: string) => {
-    const row = localRows.find((r) => r.id === staffId);
-    if (!row) return;
-    try {
-      const sb = getBrowserSupabase();
-      await sb.from('freelance_daily_sales').upsert(
-        { staff_id: staffId, sale_date: date, existing_amount: row.manualEx, new_amount: row.manualNw },
-        { onConflict: 'staff_id,sale_date' },
-      );
-      router.refresh();
-    } catch {
-      /* 保存に失敗しても画面の入力値は維持する */
     }
   };
 
@@ -199,9 +191,7 @@ export default function FreelanceClient({ rows, date, view, month, initialExRate
 
       <div className="fl-body">
         <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 12 }}>
-          {view === 'day'
-            ? '「既存客手入力」「新規客手入力」欄に金額を入れると、予約ボードの売上に上乗せして計算されます。入力欄を押して数字を入れ、他の場所を押すと自動で保存されます。'
-            : 'この月の合計です。金額の入力・変更は「日」表示から行ってください。'}
+          {view === 'day' ? '予約ボードの売上と店販の記録から自動で計算しています。' : 'この月の合計です。'}
         </div>
         <div className="fl-kpis">
           <div className="kpi"><div className="kpi-label">委託売上合計</div><div className="kpi-val">{yen(calc.totalSales)}</div><div className="kpi-sub">{totals.length}名 / {calc.count}件</div></div>
@@ -226,39 +216,13 @@ export default function FreelanceClient({ rows, date, view, month, initialExRate
                 </div>
                 <div className="flc-breakdown">
                   <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客売上（予約分）</span><span className="flc-val">{yen(r.bookingEx)}</span></div>
-                  <div className="flc-row">
-                    <span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客 手入力</span>
-                    {view === 'day' ? (
-                      <input
-                        className="rate-input"
-                        style={{ width: 90, textAlign: 'right' }}
-                        type="number"
-                        min={0}
-                        value={r.manualEx}
-                        onChange={(e) => updateManual(r.id, 'ex', parseInt(e.target.value, 10) || 0)}
-                        onBlur={() => persistManual(r.id)}
-                      />
-                    ) : (
-                      <span className="flc-val">{yen(r.manualEx)}</span>
-                    )}
-                  </div>
+                  {r.manualEx > 0 && (
+                    <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客 手入力（過去分）</span><span className="flc-val">{yen(r.manualEx)}</span></div>
+                  )}
                   <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客売上（予約分）</span><span className="flc-val">{yen(r.bookingNw)}</span></div>
-                  <div className="flc-row">
-                    <span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客 手入力</span>
-                    {view === 'day' ? (
-                      <input
-                        className="rate-input"
-                        style={{ width: 90, textAlign: 'right' }}
-                        type="number"
-                        min={0}
-                        value={r.manualNw}
-                        onChange={(e) => updateManual(r.id, 'nw', parseInt(e.target.value, 10) || 0)}
-                        onBlur={() => persistManual(r.id)}
-                      />
-                    ) : (
-                      <span className="flc-val">{yen(r.manualNw)}</span>
-                    )}
-                  </div>
+                  {r.manualNw > 0 && (
+                    <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客 手入力（過去分）</span><span className="flc-val">{yen(r.manualNw)}</span></div>
+                  )}
                   <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--ink-l)' }}></div>店販売上</span><span className="flc-val">{yen(r.retailSales)}</span></div>
                   <div className="flc-row"><span className="flc-key">合計売上</span><span className="flc-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17 }}>{yen(r.exSales + r.nwSales + r.retailSales)}</span></div>
                   <div className="flc-row"><span className="flc-key">既存報酬({rex}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(exR)}</span></div>
@@ -271,6 +235,42 @@ export default function FreelanceClient({ rows, date, view, month, initialExRate
           })}
           {totals.length === 0 && <div className="empty-row">業務委託スタッフが登録されていません。</div>}
         </div>
+
+        {view === 'month' && (
+          <div className="tbl-wrap" style={{ marginBottom: 16 }}>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>日付</th>
+                  <th>スタッフ</th>
+                  <th>予約数</th>
+                  <th>既存予約分</th>
+                  <th>既存手入力</th>
+                  <th>新規予約分</th>
+                  <th>新規手入力</th>
+                  <th>店販</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailyRows.map((r) => (
+                  <tr key={`${r.staffId}|${r.date}`}>
+                    <td>{formatDateTiny(r.date)}</td>
+                    <td>{r.staffName}</td>
+                    <td>{r.count}件</td>
+                    <td>{yen(r.bookingEx)}</td>
+                    <td style={r.manualEx > 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined}>{yen(r.manualEx)}</td>
+                    <td>{yen(r.bookingNw)}</td>
+                    <td style={r.manualNw > 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined}>{yen(r.manualNw)}</td>
+                    <td>{yen(r.retailSales)}</td>
+                  </tr>
+                ))}
+                {dailyRows.length === 0 && (
+                  <tr><td colSpan={8}><div className="empty-row">この月の記録はまだありません。</div></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="fl-total-bar">
           <div className="ftb-item"><div className="ftb-label">売上合計</div><div className="ftb-val">{yen(calc.totalSales)}</div></div>
