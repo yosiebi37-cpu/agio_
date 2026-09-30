@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TYPE_LABEL, TYPE_TAG_CLASS } from '@/lib/constants';
-import { formatDateSlash } from '@/lib/format';
+import { formatDateSlash, hiraganaToKatakana } from '@/lib/format';
 import NewCustomerModal from './NewCustomerModal';
 import type { Staff, CustomerWithStaff } from '@/lib/types';
 
@@ -21,10 +21,12 @@ export default function CustomersClient({ customers, staff }: Props) {
 
   const filtered = useMemo(() => {
     const kw = q.trim();
+    // フリガナはカタカナで保存されているため、ひらがなで検索しても見つかるように変換して比較する
+    const kwKatakana = hiraganaToKatakana(kw);
     return customers.filter((c) => {
       if (type !== 'all' && c.customer_type !== type) return false;
       if (stylist !== 'all' && (c.staff?.name ?? '') !== stylist) return false;
-      if (kw && !(c.name.includes(kw) || (c.furigana ?? '').includes(kw) || (c.phone ?? '').includes(kw))) return false;
+      if (kw && !(c.name.includes(kw) || (c.furigana ?? '').includes(kwKatakana) || (c.phone ?? '').includes(kw))) return false;
       return true;
     });
   }, [customers, q, type, stylist]);

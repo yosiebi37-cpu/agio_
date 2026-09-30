@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { toISODate, initialsFromName } from '@/lib/format';
+import { toISODate, initialsFromName, hiraganaToKatakana, toMinutes } from '@/lib/format';
 import { FALLBACK_MENUS } from '@/lib/constants';
 import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
 import type { Staff, MenuItem } from '@/lib/types';
@@ -100,7 +100,9 @@ export default function NewBookingModal({ open, onClose }: Props) {
   const searchResults = useMemo(() => {
     const q = name.trim();
     if (!q || matchedCustomer) return [];
-    return customers.filter((c) => c.name.includes(q) || (c.furigana ?? '').includes(q)).slice(0, 8);
+    // フリガナはカタカナで保存されているため、ひらがなで検索しても見つかるように変換して比較する
+    const qKatakana = hiraganaToKatakana(q);
+    return customers.filter((c) => c.name.includes(q) || (c.furigana ?? '').includes(qKatakana)).slice(0, 8);
   }, [customers, name, matchedCustomer]);
 
   if (!open) return null;
@@ -136,6 +138,26 @@ export default function NewBookingModal({ open, onClose }: Props) {
     setError(null);
     try {
       const sb = getBrowserSupabase();
+      const { data: sameSlot } = await sb
+        .from('bookings')
+        .select('customer_name,start_time,end_time')
+        .eq('staff_id', staffId)
+        .eq('booking_date', date);
+      const startMin = toMinutes(start);
+      const endMin = toMinutes(end);
+      const overlapping = (sameSlot ?? []).find(
+        (b: { customer_name: string; start_time: string; end_time: string }) =>
+          toMinutes(b.start_time) < endMin && toMinutes(b.end_time) > startMin,
+      );
+      if (overlapping) {
+        const proceed = window.confirm(
+          `この時間帯には、すでに「${overlapping.customer_name} 様」の予約(${overlapping.start_time.slice(0, 5)}〜${overlapping.end_time.slice(0, 5)})があります。\n\nもし同じ予約の内容を直したい場合は、キャンセルしてから予約ボードでその予約を「編集」してください。\n\nこのまま新しく別の予約として作成しますか？`,
+        );
+        if (!proceed) {
+          setSaving(false);
+          return;
+        }
+      }
       let matchedCustomer = customers.find((c) => c.name === name.trim());
       if (!matchedCustomer) {
         let { data: newCustomer, error: customerError } = await sb
