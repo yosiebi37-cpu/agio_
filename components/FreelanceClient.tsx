@@ -76,27 +76,6 @@ export default function FreelanceClient({ rows, date, view, month, initialExRate
     }
   };
 
-  const updateManual = (staffId: string, field: 'ex' | 'nw', value: number) => {
-    setLocalRows((prev) =>
-      prev.map((r) => (r.id === staffId ? { ...r, manualEx: field === 'ex' ? value : r.manualEx, manualNw: field === 'nw' ? value : r.manualNw } : r)),
-    );
-  };
-
-  const persistManual = async (staffId: string) => {
-    const row = localRows.find((r) => r.id === staffId);
-    if (!row) return;
-    try {
-      const sb = getBrowserSupabase();
-      await sb.from('freelance_daily_sales').upsert(
-        { staff_id: staffId, sale_date: date, existing_amount: row.manualEx, new_amount: row.manualNw },
-        { onConflict: 'staff_id,sale_date' },
-      );
-      router.refresh();
-    } catch {
-      /* 保存に失敗しても画面の入力値は維持する */
-    }
-  };
-
   const shiftDate = (delta: number) => {
     const d = new Date(date + 'T00:00:00');
     d.setDate(d.getDate() + delta);
@@ -199,9 +178,7 @@ export default function FreelanceClient({ rows, date, view, month, initialExRate
 
       <div className="fl-body">
         <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 12 }}>
-          {view === 'day'
-            ? '「既存客手入力」「新規客手入力」欄に金額を入れると、予約ボードの売上に上乗せして計算されます。入力欄を押して数字を入れ、他の場所を押すと自動で保存されます。'
-            : 'この月の合計です。金額の入力・変更は「日」表示から行ってください。'}
+          {view === 'day' ? '予約ボードの売上と店販の記録から自動で計算しています。' : 'この月の合計です。'}
         </div>
         <div className="fl-kpis">
           <div className="kpi"><div className="kpi-label">委託売上合計</div><div className="kpi-val">{yen(calc.totalSales)}</div><div className="kpi-sub">{totals.length}名 / {calc.count}件</div></div>
@@ -226,39 +203,13 @@ export default function FreelanceClient({ rows, date, view, month, initialExRate
                 </div>
                 <div className="flc-breakdown">
                   <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客売上（予約分）</span><span className="flc-val">{yen(r.bookingEx)}</span></div>
-                  <div className="flc-row">
-                    <span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客 手入力</span>
-                    {view === 'day' ? (
-                      <input
-                        className="rate-input"
-                        style={{ width: 90, textAlign: 'right' }}
-                        type="number"
-                        min={0}
-                        value={r.manualEx}
-                        onChange={(e) => updateManual(r.id, 'ex', parseInt(e.target.value, 10) || 0)}
-                        onBlur={() => persistManual(r.id)}
-                      />
-                    ) : (
-                      <span className="flc-val">{yen(r.manualEx)}</span>
-                    )}
-                  </div>
+                  {r.manualEx > 0 && (
+                    <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客 手入力（過去分）</span><span className="flc-val">{yen(r.manualEx)}</span></div>
+                  )}
                   <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客売上（予約分）</span><span className="flc-val">{yen(r.bookingNw)}</span></div>
-                  <div className="flc-row">
-                    <span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客 手入力</span>
-                    {view === 'day' ? (
-                      <input
-                        className="rate-input"
-                        style={{ width: 90, textAlign: 'right' }}
-                        type="number"
-                        min={0}
-                        value={r.manualNw}
-                        onChange={(e) => updateManual(r.id, 'nw', parseInt(e.target.value, 10) || 0)}
-                        onBlur={() => persistManual(r.id)}
-                      />
-                    ) : (
-                      <span className="flc-val">{yen(r.manualNw)}</span>
-                    )}
-                  </div>
+                  {r.manualNw > 0 && (
+                    <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客 手入力（過去分）</span><span className="flc-val">{yen(r.manualNw)}</span></div>
+                  )}
                   <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--ink-l)' }}></div>店販売上</span><span className="flc-val">{yen(r.retailSales)}</span></div>
                   <div className="flc-row"><span className="flc-key">合計売上</span><span className="flc-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17 }}>{yen(r.exSales + r.nwSales + r.retailSales)}</span></div>
                   <div className="flc-row"><span className="flc-key">既存報酬({rex}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(exR)}</span></div>
