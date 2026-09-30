@@ -48,8 +48,14 @@ export function parseHotpepperBookingEmail(body: string): ParsedHotpepperBooking
   const menuMatch = body.match(/■メニュー\s*([^\n（(]+)/);
   const menuName = menuMatch ? menuMatch[1].trim() : 'HotPepper予約';
 
-  const priceMatch = body.match(/メニュー金額[：:]\s*([\d,]+)円/);
-  const price = priceMatch ? Number(priceMatch[1].replace(/,/g, '')) : 0;
+  // 予約時合計金額はポイント割引後の実際の金額のため、メニュー金額より優先して使う
+  const totalMatch = body.match(/予約時合計金額\s*([\d,]+)円/);
+  const menuPriceMatch = body.match(/メニュー金額[：:]\s*([\d,]+)円/);
+  const price = totalMatch
+    ? Number(totalMatch[1].replace(/,/g, ''))
+    : menuPriceMatch
+      ? Number(menuPriceMatch[1].replace(/,/g, ''))
+      : 0;
 
   const durationMatch = body.match(/施術時間目安[：:]\s*(?:(\d+)時間)?\s*(?:(\d+)分)?/);
   const hours = durationMatch?.[1] ? Number(durationMatch[1]) : 0;
