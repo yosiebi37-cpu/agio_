@@ -105,7 +105,6 @@ export default function EditBookingModal({ open, onClose, booking, staff }: Prop
           menu: combinedMenu,
           customer_type: type,
           amount: totalAmount,
-          discount_amount: discountTotal,
           note: finalNote || null,
         })
         .eq('id', booking.id);

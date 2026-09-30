@@ -10,7 +10,6 @@ interface BookingRow {
   booking_date: string;
   staff_id: string;
   amount: number;
-  discount_amount: number;
   status: string;
   customer_type: string;
 }
@@ -57,7 +56,6 @@ export default function SalesClient({ month, bookings, staff, retailSales, retai
     const realized = visited.reduce((s, b) => s + (b.amount ?? 0), 0);
     const projected = bookings.reduce((s, b) => s + (b.amount ?? 0), 0);
     const avgTicket = visited.length ? Math.round(realized / visited.length) : 0;
-    const discountTotal = visited.reduce((s, b) => s + (b.discount_amount ?? 0), 0);
 
     const byDayMap = new Map<string, { count: number; sales: number }>();
     for (const b of visited) {
@@ -101,7 +99,7 @@ export default function SalesClient({ month, bookings, staff, retailSales, retai
       .filter((r) => r.count > 0 || r.retailSales > 0)
       .sort((a, b) => b.sales - a.sales);
 
-    return { realized, projected, visitedCount: visited.length, avgTicket, discountTotal, byDay, byStaff };
+    return { realized, projected, visitedCount: visited.length, avgTicket, byDay, byStaff };
   }, [bookings, staff, retailSales]);
 
   return (
@@ -133,7 +131,6 @@ export default function SalesClient({ month, bookings, staff, retailSales, retai
         </div>
         <div className="fl-kpis">
           <div className="kpi"><div className="kpi-label">経費</div><div className="kpi-val" style={{ color: 'var(--red)' }}>{yen(expensesTotal)}</div><div className="kpi-sub">{formatMonthLong(month)}</div></div>
-          <div className="kpi"><div className="kpi-label">割引合計</div><div className="kpi-val" style={{ color: 'var(--red)' }}>{yen(stats.discountTotal)}</div><div className="kpi-sub">ホットペッパーポイント・紹介割引など</div></div>
           <div className="kpi"><div className="kpi-label">利益</div><div className="kpi-val" style={{ color: 'var(--accent)' }}>{yen(stats.realized + retailTotal - expensesTotal)}</div><div className="kpi-sub">売上－経費</div></div>
         </div>
 
