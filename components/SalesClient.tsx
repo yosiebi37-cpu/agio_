@@ -21,6 +21,7 @@ interface RetailByProduct {
 
 interface RetailSaleRow {
   sale_date: string;
+  staff_id: string | null;
   amount: number;
 }
 
@@ -84,9 +85,18 @@ export default function SalesClient({ month, bookings, staff, retailSales, retai
       cur.sales += b.amount ?? 0;
       byStaffMap.set(b.staff_id, cur);
     }
+    const retailByStaffMap = new Map<string, number>();
+    for (const r of retailSales) {
+      if (!r.staff_id) continue;
+      retailByStaffMap.set(r.staff_id, (retailByStaffMap.get(r.staff_id) ?? 0) + (r.amount ?? 0));
+    }
     const byStaff = staff
-      .map((s) => ({ staff: s, ...(byStaffMap.get(s.id) ?? { count: 0, sales: 0 }) }))
-      .filter((r) => r.count > 0)
+      .map((s) => {
+        const b = byStaffMap.get(s.id) ?? { count: 0, sales: 0 };
+        const retail = retailByStaffMap.get(s.id) ?? 0;
+        return { staff: s, count: b.count, treatmentSales: b.sales, retailSales: retail, sales: b.sales + retail };
+      })
+      .filter((r) => r.count > 0 || r.retailSales > 0)
       .sort((a, b) => b.sales - a.sales);
 
     return { realized, projected, visitedCount: visited.length, avgTicket, byDay, byStaff };
@@ -146,7 +156,7 @@ export default function SalesClient({ month, bookings, staff, retailSales, retai
 
         <div className="tbl-wrap" style={{ marginBottom: 16 }}>
           <table className="tbl">
-            <thead><tr><th>スタッフ</th><th>来店数</th><th>売上</th></tr></thead>
+            <thead><tr><th>スタッフ</th><th>来店数</th><th>施術売上</th><th>店販売上</th><th>合計</th></tr></thead>
             <tbody>
               {stats.byStaff.map((r) => (
                 <tr key={r.staff.id}>
@@ -159,11 +169,13 @@ export default function SalesClient({ month, bookings, staff, retailSales, retai
                     </div>
                   </td>
                   <td>{r.count}件</td>
-                  <td>{yen(r.sales)}</td>
+                  <td>{yen(r.treatmentSales)}</td>
+                  <td>{yen(r.retailSales)}</td>
+                  <td style={{ fontWeight: 600 }}>{yen(r.sales)}</td>
                 </tr>
               ))}
               {stats.byStaff.length === 0 && (
-                <tr><td colSpan={3}><div className="empty-row">この月の来店済み予約はまだありません。</div></td></tr>
+                <tr><td colSpan={5}><div className="empty-row">この月の来店済み予約・店販はまだありません。</div></td></tr>
               )}
             </tbody>
           </table>
