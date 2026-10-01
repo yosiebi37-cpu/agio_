@@ -194,11 +194,23 @@ export async function POST(request: Request) {
   // 通知に失敗しても、お客様への予約完了レスポンスには影響させない）
   const ownerLineUserId = process.env.OWNER_LINE_USER_ID?.trim();
   const lineAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
+  const staffName = (staffList ?? []).find((s: { id: string; name: string }) => s.id === staffId)?.name ?? '';
   if (ownerLineUserId && lineAccessToken) {
-    const staffName = (staffList ?? []).find((s: { id: string; name: string }) => s.id === staffId)?.name ?? '';
     const notifyText = `【新しい予約】\n${name} 様\n${date} ${startTime}〜\n${menuName}\n担当：${staffName}`;
     try {
       await sendLinePushMessage(ownerLineUserId, notifyText, lineAccessToken);
+    } catch {
+      // 通知の失敗は無視する（予約自体は成立している）
+    }
+  }
+
+  // お客様のLINEに予約確定メッセージを送る（LINEから予約し、ユーザーIDが取得できた場合のみ。
+  // 失敗しても、予約完了レスポンスには影響させない）
+  const customerLineAccessToken = process.env.LINE_CUSTOMER_CHANNEL_ACCESS_TOKEN?.trim();
+  if (lineUserId && customerLineAccessToken) {
+    const confirmText = `【ご予約を承りました】\n${name} 様\n\n${date} ${startTime}〜\nメニュー：${menuName}\n担当：${staffName}\n\nご来店を心よりお待ちしております。\n※ご都合が悪くなった場合はお早めにご連絡ください。`;
+    try {
+      await sendLinePushMessage(lineUserId, confirmText, customerLineAccessToken);
     } catch {
       // 通知の失敗は無視する（予約自体は成立している）
     }
