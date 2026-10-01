@@ -140,7 +140,7 @@ export async function POST(request: Request) {
   // agioで作った直後の予約は、Square側への登録が完了する前にこのWebhookが届くことがある
   // （square_booking_idがまだ入っていない）。その場合は新規登録せず、該当の予約に
   // square_booking_idを紐付けるだけにして、二重登録を防ぐ
-  const { data: pendingMatch } = await sb
+  const { data: staffMatch } = await sb
     .from('bookings')
     .select('id')
     .eq('staff_id', staffId)
@@ -149,6 +149,23 @@ export async function POST(request: Request) {
     .is('square_booking_id', null)
     .neq('source', 'square')
     .maybeSingle();
+  let pendingMatch = staffMatch;
+  // Square側の会計操作などで担当スタイリストの情報が正しく送られず、上の一致判定が
+  // 外れることがある。その場合でも、同じ日時に未連携の予約が1件だけなら（担当者が
+  // 違っていても）それと同じ予約とみなして紐付ける（複数ある場合は誤って紐付けない）
+  if (!pendingMatch) {
+    const { data: timeMatches } = await sb
+      .from('bookings')
+      .select('id')
+      .eq('booking_date', date)
+      .eq('start_time', `${time}:00`)
+      .is('square_booking_id', null)
+      .neq('source', 'square')
+      .limit(2);
+    if (timeMatches && timeMatches.length === 1) {
+      pendingMatch = timeMatches[0];
+    }
+  }
   if (pendingMatch) {
     const { error: linkError } = await sb.from('bookings').update({ square_booking_id: booking.id }).eq('id', pendingMatch.id);
     await sb.from('square_sync_log').insert({
