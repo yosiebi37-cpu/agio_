@@ -397,13 +397,23 @@ begin
     execute format('create policy "%1$s_admin_delete" on %1$I for delete to authenticated using (is_admin());', t);
   end loop;
 
-  foreach t in array array['freelance_daily_sales', 'retail_sales']
+  foreach t in array array['freelance_daily_sales']
   loop
     execute format('drop policy if exists "staff_authenticated_all" on %I;', t);
     execute format('create policy "%1$s_select_own" on %1$I for select to authenticated using (is_admin() or staff_id = current_staff_id());', t);
     execute format('create policy "%1$s_admin_insert" on %1$I for insert to authenticated with check (is_admin());', t);
     execute format('create policy "%1$s_admin_update" on %1$I for update to authenticated using (is_admin()) with check (is_admin());', t);
     execute format('create policy "%1$s_admin_delete" on %1$I for delete to authenticated using (is_admin());', t);
+  end loop;
+
+  -- 店販は、予約ボードからスタッフ自身が自分の担当分を登録できるようにする
+  foreach t in array array['retail_sales']
+  loop
+    execute format('drop policy if exists "staff_authenticated_all" on %I;', t);
+    execute format('create policy "%1$s_select_own" on %1$I for select to authenticated using (is_admin() or staff_id = current_staff_id());', t);
+    execute format('create policy "%1$s_self_insert" on %1$I for insert to authenticated with check (is_admin() or staff_id = current_staff_id());', t);
+    execute format('create policy "%1$s_self_update" on %1$I for update to authenticated using (is_admin() or staff_id = current_staff_id()) with check (is_admin() or staff_id = current_staff_id());', t);
+    execute format('create policy "%1$s_self_delete" on %1$I for delete to authenticated using (is_admin() or staff_id = current_staff_id());', t);
   end loop;
 
   -- シフトは全員分が見えるが（予約ボードの受付可能数計算に使うため）、
