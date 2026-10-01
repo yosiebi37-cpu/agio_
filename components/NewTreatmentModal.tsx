@@ -206,6 +206,26 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
         return;
       }
       if (validRetailLines.length) {
+        // 同じ日・同じ商品・同じ金額の店販がすでに入っていないか確認する（二重入力防止）
+        const { data: existingSales } = await sb
+          .from('retail_sales')
+          .select('product_name,amount')
+          .eq('staff_id', staffId || null)
+          .eq('sale_date', performedOn);
+        const duplicates = validRetailLines.filter((l) =>
+          (existingSales ?? []).some((e) => e.product_name === l.name.trim() && e.amount === Number(l.amount)),
+        );
+        if (duplicates.length > 0) {
+          const list = duplicates.map((l) => `「${l.name.trim()}」¥${Number(l.amount).toLocaleString('ja-JP')}`).join('、');
+          const proceed = window.confirm(
+            `${list} は、その日すでに同じ金額で登録されています。\n\n二重入力の可能性があります。このまま追加しますか？`,
+          );
+          if (!proceed) {
+            setError('施術記録は保存しましたが、店販は追加しませんでした（入力し直す場合はこのまま店販欄を編集してください）。');
+            setSaving(false);
+            return;
+          }
+        }
         const { error: retailError } = await sb.from('retail_sales').insert(
           validRetailLines.map((l) => ({
             sale_date: performedOn,
