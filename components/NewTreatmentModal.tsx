@@ -144,38 +144,50 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
       const combinedMenu = validMenuLines.map((l) => l.name.trim()).join('＋');
       const totalAmount = validMenuLines.reduce((s, l) => s + (parseInt(l.amount, 10) || 0), 0);
 
-      // 予約ボードにも「来店済み」として反映するため、担当が未指定なら「フリー」枠を使う
-      const bookingStaffId = staffId || staff.find((s) => s.name === 'フリー')?.id || null;
+      // 同じ日にすでにその方の予約がある場合は、新しく予約を作らずそちらに紐づける（重複防止）
       let bookingId: string | null = null;
       let boardWarning = '';
-      if (bookingStaffId) {
-        const totalMinutes = validMenuLines.reduce((s, l) => {
-          const matched = menuItems.find((m) => m.name === l.name.trim());
-          return s + (matched?.duration_minutes ?? DEFAULT_MENU_MINUTES);
-        }, 0) || DEFAULT_MENU_MINUTES;
-        const endTime = minutesToHHMM(toMinutes(startTime) + totalMinutes);
-        const { data: newBooking, error: bookingError } = await sb
-          .from('bookings')
-          .insert({
-            customer_id: customerId,
-            customer_name: customerName,
-            staff_id: bookingStaffId,
-            booking_date: performedOn,
-            start_time: `${startTime}:00`,
-            end_time: `${endTime}:00`,
-            menu: combinedMenu,
-            status: 'visited',
-            amount: totalAmount,
-          })
-          .select('id')
-          .single();
-        if (bookingError || !newBooking) {
-          boardWarning = ' / 予約ボードへの反映に失敗しました';
-        } else {
-          bookingId = newBooking.id;
-        }
+      const { data: existingBookings } = await sb
+        .from('bookings')
+        .select('id')
+        .eq('customer_id', customerId)
+        .eq('booking_date', performedOn)
+        .order('created_at', { ascending: true })
+        .limit(1);
+      if (existingBookings && existingBookings.length > 0) {
+        bookingId = existingBookings[0].id;
       } else {
-        boardWarning = ' / 担当スタイリストが未指定のため予約ボードには反映されませんでした';
+        // 予約ボードにも「来店済み」として反映するため、担当が未指定なら「フリー」枠を使う
+        const bookingStaffId = staffId || staff.find((s) => s.name === 'フリー')?.id || null;
+        if (bookingStaffId) {
+          const totalMinutes = validMenuLines.reduce((s, l) => {
+            const matched = menuItems.find((m) => m.name === l.name.trim());
+            return s + (matched?.duration_minutes ?? DEFAULT_MENU_MINUTES);
+          }, 0) || DEFAULT_MENU_MINUTES;
+          const endTime = minutesToHHMM(toMinutes(startTime) + totalMinutes);
+          const { data: newBooking, error: bookingError } = await sb
+            .from('bookings')
+            .insert({
+              customer_id: customerId,
+              customer_name: customerName,
+              staff_id: bookingStaffId,
+              booking_date: performedOn,
+              start_time: `${startTime}:00`,
+              end_time: `${endTime}:00`,
+              menu: combinedMenu,
+              status: 'visited',
+              amount: totalAmount,
+            })
+            .select('id')
+            .single();
+          if (bookingError || !newBooking) {
+            boardWarning = ' / 予約ボードへの反映に失敗しました';
+          } else {
+            bookingId = newBooking.id;
+          }
+        } else {
+          boardWarning = ' / 担当スタイリストが未指定のため予約ボードには反映されませんでした';
+        }
       }
 
       const { error } = await sb.from('treatment_records').insert({
@@ -194,6 +206,26 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
         return;
       }
       if (validRetailLines.length) {
+        // 同じ日・同じ商品・同じ金額の店販がすでに入っていないか確認する（二重入力防止）
+        const { data: existingSales } = await sb
+          .from('retail_sales')
+          .select('product_name,amount')
+          .eq('staff_id', staffId || null)
+          .eq('sale_date', performedOn);
+        const duplicates = validRetailLines.filter((l) =>
+          (existingSales ?? []).some((e) => e.product_name === l.name.trim() && e.amount === Number(l.amount)),
+        );
+        if (duplicates.length > 0) {
+          const list = duplicates.map((l) => `「${l.name.trim()}」¥${Number(l.amount).toLocaleString('ja-JP')}`).join('、');
+          const proceed = window.confirm(
+            `${list} は、その日すでに同じ金額で登録されています。\n\n二重入力の可能性があります。このまま追加しますか？`,
+          );
+          if (!proceed) {
+            setError('施術記録は保存しましたが、店販は追加しませんでした（入力し直す場合はこのまま店販欄を編集してください）。');
+            setSaving(false);
+            return;
+          }
+        }
         const { error: retailError } = await sb.from('retail_sales').insert(
           validRetailLines.map((l) => ({
             sale_date: performedOn,
@@ -262,7 +294,7 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
               onChange={(e) => { setStartTime(e.target.value); writeStored(LAST_TIME_KEY, e.target.value); }}
             />
             <div style={{ fontSize: 11, color: 'var(--ink-l)', marginTop: 4 }}>
-              この記録は自動で予約ボードにも「来店済み」として反映されます。
+              同じ日に予約がなければ、自動で予約ボードにも「来店済み」として追加されます。すでに予約がある日は、そちらに記録が紐づきます（予約が重複して作られることはありません）。
             </div>
           </div>
 

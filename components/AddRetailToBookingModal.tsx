@@ -67,6 +67,27 @@ export default function AddRetailToBookingModal({ open, onClose, bookingId, cust
     setError(null);
     try {
       const sb = getBrowserSupabase();
+
+      // 同じ日・同じ商品・同じ金額の店販がすでに入っていないか確認する（二重入力防止）
+      const { data: existingSales } = await sb
+        .from('retail_sales')
+        .select('product_name,amount')
+        .eq('staff_id', staffId)
+        .eq('sale_date', saleDate);
+      const duplicates = validLines.filter((l) =>
+        (existingSales ?? []).some((e) => e.product_name === l.name.trim() && e.amount === Number(l.amount)),
+      );
+      if (duplicates.length > 0) {
+        const list = duplicates.map((l) => `「${l.name.trim()}」¥${Number(l.amount).toLocaleString('ja-JP')}`).join('、');
+        const proceed = window.confirm(
+          `${list} は、本日すでに同じ金額で登録されています。\n\n二重入力の可能性があります。このまま追加しますか？`,
+        );
+        if (!proceed) {
+          setSaving(false);
+          return;
+        }
+      }
+
       const { error: retailError } = await sb.from('retail_sales').insert(
         validLines.map((l) => ({
           sale_date: saleDate,

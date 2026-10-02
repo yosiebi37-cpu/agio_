@@ -10,7 +10,7 @@ export default async function CustomersPage() {
 
   const sb = await getServerSupabase();
   const [{ data: custData }, { data: staffData }] = await Promise.all([
-    sb.from('customers').select('*, staff:assigned_staff_id(name)').order('name'),
+    sb.from('customers').select('*, staff:assigned_staff_id(name)').order('furigana', { ascending: true, nullsFirst: false }).order('name'),
     sb.from('staff').select('*').eq('is_active', true).order('sort_order'),
   ]);
 

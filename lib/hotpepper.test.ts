@@ -68,4 +68,11 @@ describe('parseHotpepperBookingEmail', () => {
   it('returns null when the reservation id is missing', () => {
     expect(parseHotpepperBookingEmail('関係のない本文')).toBeNull();
   });
+  it('uses the point-discounted total amount over the list menu price', () => {
+    const POINT_DISCOUNT_EMAIL = BOOKING_EMAIL.replace(
+      '　予約時合計金額　8,800円',
+      '　予約時合計金額　7,800円',
+    );
+    expect(parseHotpepperBookingEmail(POINT_DISCOUNT_EMAIL)?.price).toBe(7800);
+  });
 });
