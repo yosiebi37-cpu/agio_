@@ -347,4 +347,6 @@ TAGS & SHARED
   .bb-name{font-size:11px}
   .bb-menu{font-size:9px}
   .bb-status{width:10px;height:10px;top:3px;right:3px}
+  .summary-cell{gap:0 !important;font-size:10px !important}
+  .summary-cell i{padding:4px !important}
 }

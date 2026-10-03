@@ -390,15 +390,15 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
               >
                 <i
                   className="ti ti-minus"
-                  style={{ fontSize: 11, color: 'var(--ink-l)', cursor: 'pointer', padding: 2 }}
+                  style={{ fontSize: 11, color: 'var(--ink-l)', cursor: 'pointer', padding: 2, position: 'relative', zIndex: 2 }}
                   onClick={() => adjustCapacity(hs.hour, hs.minute, -1)}
                 ></i>
-                <span style={{ minWidth: 14, textAlign: 'center', ...(hs.remaining === 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined) }}>
+                <span style={{ minWidth: 14, textAlign: 'center', position: 'relative', zIndex: 2, ...(hs.remaining === 0 ? { color: 'var(--red)', fontWeight: 600 } : undefined) }}>
                   {hs.remaining}
                 </span>
                 <i
                   className="ti ti-plus"
-                  style={{ fontSize: 11, color: 'var(--ink-l)', cursor: 'pointer', padding: 2 }}
+                  style={{ fontSize: 11, color: 'var(--ink-l)', cursor: 'pointer', padding: 2, position: 'relative', zIndex: 2 }}
                   onClick={() => adjustCapacity(hs.hour, hs.minute, 1)}
                 ></i>
               </div>
