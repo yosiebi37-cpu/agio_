@@ -62,6 +62,14 @@ describe('computeRepeatRates', () => {
     const rows = computeRepeatRates([{ customer_id: '', performed_on: '2026-07-01' }]);
     expect(rows).toEqual([]);
   });
+
+  it('does not count two records on the same day as a return visit', () => {
+    const rows = computeRepeatRates([
+      { customer_id: 'a', performed_on: '2026-07-01' },
+      { customer_id: 'a', performed_on: '2026-07-01' },
+    ]);
+    expect(rows).toEqual([{ month: '2026-07', newCustomers: 1, returned: 0, repeatRate: 0 }]);
+  });
 });
 
 describe('listNewCustomerNamesByMonth', () => {
