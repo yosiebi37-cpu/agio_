@@ -85,7 +85,8 @@ export function computeRepeatRates(records: TreatmentRecordRow[]): RepeatRow[] {
   for (const dates of byCustomer.values()) {
     const sorted = [...dates].sort();
     const firstMonth = monthKey(sorted[0]);
-    const hasReturned = sorted.length > 1;
+    // 同じ日に施術記録が2件（重複入力）あっても、再来店とは数えない
+    const hasReturned = new Set(sorted).size > 1;
     const row = monthMap.get(firstMonth) ?? { newCustomers: 0, returned: 0 };
     row.newCustomers += 1;
     if (hasReturned) row.returned += 1;
