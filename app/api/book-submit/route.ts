@@ -199,20 +199,25 @@ export async function POST(request: Request) {
     const notifyText = `【新しい予約】\n${name} 様\n${date} ${startTime}〜\n${menuName}\n担当：${staffName}`;
     try {
       await sendLinePushMessage(ownerLineUserId, notifyText, lineAccessToken);
-    } catch {
-      // 通知の失敗は無視する（予約自体は成立している）
+    } catch (e) {
+      // 通知の失敗は予約には影響させない（原因調査のためログだけ残す）
+      console.error('[book-submit] owner LINE notify failed', e);
     }
   }
 
   // お客様のLINEに予約確定メッセージを送る（LINEから予約し、ユーザーIDが取得できた場合のみ。
   // 失敗しても、予約完了レスポンスには影響させない）
   const customerLineAccessToken = process.env.LINE_CUSTOMER_CHANNEL_ACCESS_TOKEN?.trim();
+  if (!lineUserId) {
+    console.warn('[book-submit] LINE user id was not provided; skipping customer confirmation message');
+  }
   if (lineUserId && customerLineAccessToken) {
     const confirmText = `【ご予約を承りました】\n${name} 様\n\n${date} ${startTime}〜\nメニュー：${menuName}\n担当：${staffName}\n\nご来店を心よりお待ちしております。\n※ご都合が悪くなった場合はお早めにご連絡ください。`;
     try {
       await sendLinePushMessage(lineUserId, confirmText, customerLineAccessToken);
-    } catch {
-      // 通知の失敗は無視する（予約自体は成立している）
+    } catch (e) {
+      // 通知の失敗は予約には影響させない（原因調査のためログだけ残す）
+      console.error('[book-submit] customer LINE confirmation failed', e);
     }
   }
 

@@ -46,8 +46,9 @@ export async function GET(request: Request) {
     try {
       await sendLinePushMessage(customer.line_user_id, text, accessToken);
       sent += 1;
-    } catch {
-      // 個別の送信失敗はスキップし、他のお客様への送信は続ける
+    } catch (e) {
+      // 個別の送信失敗はスキップし、他のお客様への送信は続ける（原因調査のためログだけ残す）
+      console.error('[line-reminder-cron] push failed', booking.id, e);
     }
     await sb.from('bookings').update({ reminder_sent_at: new Date().toISOString() }).eq('id', booking.id);
   }
