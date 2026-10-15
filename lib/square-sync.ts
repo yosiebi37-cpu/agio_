@@ -7,7 +7,7 @@ import { hhmm, toMinutes } from '@/lib/format';
  * メニュー名・担当スタッフがSquare側と紐付いている場合のみ登録できる。
  * すでにsquare_booking_idが付いている予約（Square発の予約や登録済みの予約）は対象外。
  */
-export async function syncBookingToSquare(sb: SupabaseClient, bookingId: string): Promise<void> {
+export async function syncBookingToSquare(sb: SupabaseClient, bookingId: string, idempotencySuffix = ''): Promise<void> {
   const accessToken = process.env.SQUARE_ACCESS_TOKEN;
   if (!accessToken) return;
 
@@ -39,7 +39,8 @@ export async function syncBookingToSquare(sb: SupabaseClient, bookingId: string)
     serviceVariationId,
     startAtIso: jstToUtcIso(booking.booking_date, hhmm(booking.start_time)),
     durationMinutes,
-    idempotencyKey: `agio-square-${booking.id}`,
+    // 日時変更でSquareの予約を作り直す時は、前回と同じキーだと取り消し済みの予約が返ってくるため、別のキーを渡す
+    idempotencyKey: `agio-square-${booking.id}${idempotencySuffix}`,
   });
   if (squareBookingId) {
     await sb.from('bookings').update({ square_booking_id: squareBookingId }).eq('id', booking.id);

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/server';
 import { toMinutes, minutesToHHMM, initialsFromName } from '@/lib/format';
-import { sendLinePushMessage } from '@/lib/line';
+import { sendLinePushMessage, manageBookingUrl } from '@/lib/line';
 import { syncBookingToSquare } from '@/lib/square-sync';
 
 const OPEN_MIN = 9 * 60;
@@ -212,7 +212,8 @@ export async function POST(request: Request) {
     console.warn('[book-submit] LINE user id was not provided; skipping customer confirmation message');
   }
   if (lineUserId && customerLineAccessToken) {
-    const confirmText = `【ご予約を承りました】\n${name} 様\n\n${date} ${startTime}〜\nメニュー：${menuName}\n担当：${staffName}\n\nご来店を心よりお待ちしております。\n※ご都合が悪くなった場合はお早めにご連絡ください。`;
+    const manageUrl = manageBookingUrl();
+    const confirmText = `【ご予約を承りました】\n${name} 様\n\n${date} ${startTime}〜\nメニュー：${menuName}\n担当：${staffName}\n\nご来店を心よりお待ちしております。\n※ご都合が悪くなった場合はお早めにご連絡ください。${manageUrl ? `\n\n▼ご予約の確認・日時変更・キャンセルはこちら\n${manageUrl}` : ''}`;
     try {
       await sendLinePushMessage(lineUserId, confirmText, customerLineAccessToken);
     } catch (e) {

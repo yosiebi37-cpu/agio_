@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { yen, toISODate, addDays, toMinutes, minutesToHHMM, hhmm, formatDateLong, formatDateTiny } from '@/lib/format';
 import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
@@ -346,6 +347,13 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
             {formatDateLong(date)} {hhmm(slot ?? '')}〜<br />
             {selectedStaff?.name} / {menu?.name}
           </div>
+          {useLiff && (
+            <div style={{ textAlign: 'center', marginTop: 28 }}>
+              <Link href="/book/line/manage" className="btn-cancel" style={{ display: 'inline-block', padding: '12px 20px', textDecoration: 'none' }}>
+                ご予約の確認・変更はこちら
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     );
