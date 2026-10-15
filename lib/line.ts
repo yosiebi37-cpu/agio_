@@ -12,7 +12,7 @@ export function verifyLineSignature(rawBody: string, signatureHeader: string | n
 
 /** 指定したLINEユーザーにテキストメッセージをプッシュ送信する */
 export async function sendLinePushMessage(userId: string, text: string, accessToken: string): Promise<void> {
-  await fetch('https://api.line.me/v2/bot/message/push', {
+  const res = await fetch('https://api.line.me/v2/bot/message/push', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -20,6 +20,9 @@ export async function sendLinePushMessage(userId: string, text: string, accessTo
     },
     body: JSON.stringify({ to: userId, messages: [{ type: 'text', text }] }),
   });
+  if (!res.ok) {
+    throw new Error(`LINE push failed: ${res.status} ${await res.text().catch(() => '')}`);
+  }
 }
 
 /** Webhookで受け取ったメッセージへの返信（トーク画面にそのまま表示される） */
