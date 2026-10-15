@@ -363,7 +363,14 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
     <div className="page-wrap">
       <div className="inner-page" style={{ maxWidth: 560, margin: '0 auto' }}>
         <div className="login-title" style={{ textAlign: 'center', marginTop: 24 }}>agio</div>
-        <div className="login-sub" style={{ textAlign: 'center', marginBottom: 32 }}>ご予約はこちらから</div>
+        <div className="login-sub" style={{ textAlign: 'center', marginBottom: useLiff && step === 'menu' ? 16 : 32 }}>ご予約はこちらから</div>
+        {useLiff && step === 'menu' && (
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <Link href="/book/line/manage" className="btn-cancel" style={{ display: 'inline-block', padding: '12px 20px', textDecoration: 'none', fontSize: 14 }}>
+              ご予約の確認・変更・キャンセルはこちら
+            </Link>
+          </div>
+        )}
 
         {step === 'menu' && (
           <>
