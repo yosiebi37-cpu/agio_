@@ -25,6 +25,35 @@ export async function sendLinePushMessage(userId: string, text: string, accessTo
   }
 }
 
+/**
+ * LIFFで取得したアクセストークンが、このLIFFアプリ（LINEログインチャネル）のものかを
+ * LINE側に問い合わせて確認し、本物ならLINEのユーザーIDを返す。
+ * ブラウザから送られてきたユーザーIDをそのまま信用すると、他人になりすませてしまうため、
+ * 必ずサーバー側でこの確認を通す。
+ */
+export async function verifyLiffAccessToken(accessToken: string, liffId: string): Promise<string | null> {
+  const channelId = liffId.split('-')[0];
+  if (!accessToken || !channelId) return null;
+
+  const verifyRes = await fetch(`https://api.line.me/oauth2/v2.1/verify?access_token=${encodeURIComponent(accessToken)}`);
+  if (!verifyRes.ok) return null;
+  const verified = (await verifyRes.json().catch(() => null)) as { client_id?: string; expires_in?: number } | null;
+  if (!verified || String(verified.client_id) !== channelId || !(Number(verified.expires_in) > 0)) return null;
+
+  const profileRes = await fetch('https://api.line.me/v2/profile', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!profileRes.ok) return null;
+  const profile = (await profileRes.json().catch(() => null)) as { userId?: string } | null;
+  return profile?.userId ?? null;
+}
+
+/** お客様がLINEの中で予約の確認・変更を開くためのURL（LIFFのエンドポイント配下の /manage を開く） */
+export function manageBookingUrl(): string | null {
+  const liffId = process.env.NEXT_PUBLIC_LIFF_ID?.trim();
+  return liffId ? `https://liff.line.me/${liffId}/manage` : null;
+}
+
 /** Webhookで受け取ったメッセージへの返信（トーク画面にそのまま表示される） */
 export async function sendLineReplyMessage(replyToken: string, text: string, accessToken: string): Promise<void> {
   await fetch('https://api.line.me/v2/bot/message/reply', {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/server';
 import { toISODate, addDays, hhmm } from '@/lib/format';
-import { sendLinePushMessage } from '@/lib/line';
+import { sendLinePushMessage, manageBookingUrl } from '@/lib/line';
 
 /**
  * 毎日決まった時刻にVercel Cronから呼び出され、明日の予約のお客様（LINEユーザーIDが
@@ -22,6 +22,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, sent: 0, reason: 'LINE_CUSTOMER_CHANNEL_ACCESS_TOKEN not set' });
   }
 
+  const manageUrl = manageBookingUrl();
   const sb = getServiceSupabase();
   const tomorrow = addDays(toISODate(new Date()), 1);
 
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
       .maybeSingle();
     if (!customer?.line_user_id) continue;
 
-    const text = `【ご予約のご案内】\n${booking.customer_name} 様\n\n明日 ${tomorrow} ${hhmm(booking.start_time)}〜のご予約をお待ちしております。\nメニュー：${booking.menu}\n\n※ご都合が悪くなった場合はお早めにご連絡ください。`;
+    const text = `【ご予約のご案内】\n${booking.customer_name} 様\n\n明日 ${tomorrow} ${hhmm(booking.start_time)}〜のご予約をお待ちしております。\nメニュー：${booking.menu}\n\n※ご都合が悪くなった場合はお早めにご連絡ください。${manageUrl ? `\n\n▼ご予約の確認・日時変更・キャンセルはこちら\n${manageUrl}` : ''}`;
     try {
       await sendLinePushMessage(customer.line_user_id, text, accessToken);
       sent += 1;
