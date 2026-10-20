@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { monthKey, aggregateMonthlyCustomers, aggregateMonthlyRetail, computeRepeatRates, aggregateAgeBrackets, listNewCustomerNamesByMonth } from './analytics';
+import { monthKey, aggregateMonthlyCustomers, aggregateMonthlyRetail, computeRepeatRates, aggregateAgeBrackets, listNewCustomerNamesByMonth, reclassifyVisitTypes, computeRepeatRatesFromVisits } from './analytics';
 
 describe('monthKey', () => {
   it('extracts YYYY-MM from an ISO date', () => {
@@ -104,5 +104,78 @@ describe('aggregateAgeBrackets', () => {
   it('returns all zero counts for an empty list', () => {
     const rows = aggregateAgeBrackets([]);
     expect(rows.every((r) => r.count === 0)).toBe(true);
+  });
+});
+
+describe('reclassifyVisitTypes', () => {
+  const v = (date: string, name: string, type: string, customer_id: string | null = null, status = 'visited') => ({
+    booking_date: date, start_time: '10:00', customer_name: name, customer_type: type, customer_id, status, amount: 0,
+  });
+
+  it('counts only the first visit of a 新規客 as new', () => {
+    const rows = reclassifyVisitTypes(
+      [v('2026-08-01', '山田 花子', 'new', 'a'), v('2026-10-01', '山田 花子', 'new', 'a')],
+      [{ id: 'a', customer_type: 'new', visit_count_offset: 0 }],
+    );
+    expect(rows.map((r) => r.customer_type)).toEqual(['new', 'existing']);
+  });
+
+  it('treats 既存客 and customers with prior visits outside the system as existing', () => {
+    const rows = reclassifyVisitTypes(
+      [v('2026-10-01', '田中 太郎', 'new', 'b'), v('2026-10-02', '佐藤 次郎', 'new', 'c')],
+      [
+        { id: 'b', customer_type: 'existing', visit_count_offset: 0 },
+        { id: 'c', customer_type: 'new', visit_count_offset: 2 },
+      ],
+    );
+    expect(rows.map((r) => r.customer_type)).toEqual(['existing', 'existing']);
+  });
+
+  it('treats a 新規客 as new on the first visit even if the booking said existing', () => {
+    const rows = reclassifyVisitTypes([v('2026-10-01', '鈴木 一郎', 'existing', 'd')], [{ id: 'd', customer_type: 'new' }]);
+    expect(rows[0].customer_type).toBe('new');
+  });
+
+  it('uses the name for unlinked bookings and duplicated customer records', () => {
+    const rows = reclassifyVisitTypes(
+      [
+        v('2026-08-01', '高橋　リサ', 'new'),
+        v('2026-10-01', '高橋 リサ', 'new', 'e'),
+        v('2026-10-03', '伊藤 明', 'new'),
+      ],
+      [{ id: 'e', customer_type: 'new' }],
+    );
+    expect(rows.map((r) => r.customer_type)).toEqual(['new', 'existing', 'new']);
+  });
+
+  it('leaves non-visited bookings untouched and ignores them for first-visit detection', () => {
+    const rows = reclassifyVisitTypes(
+      [v('2026-08-01', '山田 花子', 'new', 'a', 'confirmed'), v('2026-09-01', '山田 花子', 'new', 'a')],
+      [{ id: 'a', customer_type: 'new' }],
+    );
+    expect(rows.map((r) => r.customer_type)).toEqual(['new', 'new']);
+    expect(listNewCustomerNamesByMonth(rows)).toEqual([{ month: '2026-09', names: ['山田 花子'] }]);
+  });
+});
+
+describe('computeRepeatRatesFromVisits', () => {
+  it('uses the same new customers as the list and checks for a later visit', () => {
+    const v = (date: string, name: string, type: string, customer_id: string | null = null) => ({
+      booking_date: date, customer_name: name, customer_type: type, customer_id, status: 'visited', amount: 0,
+    });
+    const rows = computeRepeatRatesFromVisits([
+      v('2026-07-01', 'A', 'new', 'a'),
+      v('2026-07-01', 'A', 'existing', 'a'),
+      v('2026-08-01', 'A', 'existing', 'a'),
+      v('2026-07-10', 'B', 'new', 'b'),
+      v('2026-07-10', 'B', 'existing', 'b'),
+      v('2026-08-05', 'C', 'new'),
+      v('2026-09-05', 'C', 'existing', 'c'),
+      v('2026-08-06', 'D', 'existing', 'd'),
+    ]);
+    expect(rows).toEqual([
+      { month: '2026-07', newCustomers: 2, returned: 1, repeatRate: 0.5 },
+      { month: '2026-08', newCustomers: 1, returned: 1, repeatRate: 1 },
+    ]);
   });
 });
