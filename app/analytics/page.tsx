@@ -2,7 +2,16 @@ import { redirect } from 'next/navigation';
 import { isSupabaseConfigured, getServerSupabase, getCurrentStaff } from '@/lib/supabase/server';
 import SetupNotice from '@/components/SetupNotice';
 import AnalyticsClient from '@/components/AnalyticsClient';
-import { aggregateMonthlyCustomers, aggregateMonthlyRetail, computeRepeatRates, aggregateAgeBrackets, listNewCustomerNamesByMonth } from '@/lib/analytics';
+import {
+  aggregateMonthlyCustomers,
+  aggregateMonthlyRetail,
+  computeRepeatRatesFromVisits,
+  aggregateAgeBrackets,
+  listNewCustomerNamesByMonth,
+  reclassifyVisitTypes,
+  type VisitBookingRow,
+  type CustomerTypeRow,
+} from '@/lib/analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,24 +21,40 @@ export default async function AnalyticsPage() {
   const sb = await getServerSupabase();
   if (await getCurrentStaff()) redirect('/board');
 
-  const [{ data: bookingsData }, { data: retailData }, { data: recordsData }, { data: customersData }] = await Promise.all([
-    sb.from('bookings').select('booking_date,customer_type,status,amount,customer_name'),
+  // Supabase は1回の取得が最大1000件までなので、予約は1000件ずつに分けて全件取得する
+  const fetchAllBookings = async (): Promise<VisitBookingRow[]> => {
+    const PAGE = 1000;
+    const all: VisitBookingRow[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await sb
+        .from('bookings')
+        .select('id,booking_date,start_time,customer_id,customer_type,status,amount,customer_name')
+        .order('id')
+        .range(from, from + PAGE - 1);
+      if (error || !data) break;
+      all.push(...(data as VisitBookingRow[]));
+      if (data.length < PAGE) break;
+    }
+    return all;
+  };
+
+  const [bookingsData, { data: retailData }, { data: customersData }] = await Promise.all([
+    fetchAllBookings(),
     sb.from('retail_sales').select('sale_date,amount'),
-    sb.from('treatment_records').select('customer_id,performed_on'),
-    sb.from('customers').select('birth_year'),
+    sb.from('customers').select('id,customer_type,visit_count_offset,birth_year'),
   ]);
 
-  const bookingRows = (bookingsData ?? []) as { booking_date: string; customer_type: string; status: string; amount: number; customer_name: string }[];
+  const customerRows = (customersData ?? []) as (CustomerTypeRow & { birth_year: number | null })[];
+  // 予約ごとの「新規/既存」ではなく、お客様単位で「初めての来店か」を判定し直してから集計する
+  const bookingRows = reclassifyVisitTypes(bookingsData, customerRows);
   const monthlyCustomers = aggregateMonthlyCustomers(bookingRows);
   const newCustomerNames = listNewCustomerNamesByMonth(bookingRows);
   const monthlyRetail = aggregateMonthlyRetail(
     (retailData ?? []) as { sale_date: string; amount: number }[],
   );
-  const repeatRates = computeRepeatRates(
-    (recordsData ?? []) as { customer_id: string; performed_on: string }[],
-  );
+  const repeatRates = computeRepeatRatesFromVisits(bookingRows);
   const ageBrackets = aggregateAgeBrackets(
-    ((customersData ?? []) as { birth_year: number | null }[]).map((c) => c.birth_year),
+    customerRows.map((c) => c.birth_year),
   );
 
   return (
