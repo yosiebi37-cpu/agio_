@@ -94,7 +94,19 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
     return () => clearInterval(t);
   }, [router, date]);
 
-  const visibleStaff = staff.filter((s) => !hidden.has(s.id));
+  // 月1〜2回だけ出勤するスタッフなど、その日に出勤しない人の行まで並ぶとボードが見づらくなるため、
+  // 日表示では「その日にシフトがある人」だけを出す。
+  // ・「フリー」は担当未定の予約を受けるための枠なので常に表示
+  // ・シフトが無くても予約が入っている人は、予約を見落とさないよう表示
+  // ・その日のシフトが1件も登録されていない（シフト未入力の日）は、従来どおり全員表示
+  const onDutyStaff = useMemo(() => {
+    if (shifts.length === 0) return staff;
+    const onShift = new Set(shifts.map((sh) => sh.staff_id));
+    const hasBooking = new Set(bookings.map((b) => b.staff_id));
+    return staff.filter((s) => s.name === 'フリー' || onShift.has(s.id) || hasBooking.has(s.id));
+  }, [staff, shifts, bookings]);
+
+  const visibleStaff = onDutyStaff.filter((s) => !hidden.has(s.id));
 
   const byStaff = useMemo(() => {
     const map = new Map<string, BookingWithStaff[]>();
@@ -336,7 +348,7 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
         </div>
         <div className="bc-sep"></div>
         <div className="filter-staff">
-          {staff.map((s) => {
+          {onDutyStaff.map((s) => {
             const on = !hidden.has(s.id);
             return (
               <div
