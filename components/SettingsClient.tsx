@@ -44,7 +44,8 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
   const [savingProduct, setSavingProduct] = useState(false);
   const [productError, setProductError] = useState<string | null>(null);
 
-  const nextSortOrder = staff.reduce((max, s) => Math.max(max, s.sort_order), 0) + 1;
+  // 「フリー」は常にスタッフ一覧の一番下に置きたいので（並び順 999）、新しいスタッフの並び順はフリーを除いて決める
+  const nextSortOrder = staff.filter((s) => s.name !== 'フリー').reduce((max, s) => Math.max(max, s.sort_order), 0) + 1;
   const nextMenuSortOrder = menuItems.reduce((max, m) => Math.max(max, m.sort_order), 0) + 1;
   const nextProductSortOrder = retailProducts.reduce((max, p) => Math.max(max, p.sort_order), 0) + 1;
 
