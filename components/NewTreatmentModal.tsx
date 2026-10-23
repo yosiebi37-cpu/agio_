@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { toISODate, toMinutes, minutesToHHMM } from '@/lib/format';
 import { FALLBACK_MENUS, FALLBACK_RETAIL_PRODUCTS } from '@/lib/constants';
-import type { Staff, MenuItem, RetailProduct } from '@/lib/types';
+import type { Staff, MenuItem, RetailProduct, Booking } from '@/lib/types';
 
 interface Props {
   open: boolean;
@@ -96,6 +96,50 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // 予約ボードにその日の予約があれば、担当・開始時間・メニュー（金額）を自動で入れる
+  // （入った内容は手で直せる。予約がない日に切り替えたら、自動で入れた分だけ空欄に戻す）
+  const [linkedBooking, setLinkedBooking] = useState<{ id: string; date: string } | null>(null);
+  const linkedBookingRef = useRef(linkedBooking);
+  linkedBookingRef.current = linkedBooking;
+  const menuItemsRef = useRef(menuItems);
+  menuItemsRef.current = menuItems;
+  useEffect(() => {
+    if (!open || !performedOn) return;
+    let cancelled = false;
+    const sb = getBrowserSupabase();
+    sb.from('bookings')
+      .select('id,staff_id,start_time,menu,amount')
+      .eq('customer_id', customerId)
+      .eq('booking_date', performedOn)
+      .order('start_time', { ascending: true })
+      .then(({ data }) => {
+        if (cancelled) return;
+        const list = (data ?? []) as Pick<Booking, 'id' | 'staff_id' | 'start_time' | 'menu' | 'amount'>[];
+        // 予約ボードから開いた時（URLに時間あり）は、その時間の予約を優先する
+        const booking =
+          (defaultDate === performedOn && defaultTime
+            ? list.find((b) => b.start_time.slice(0, 5) === defaultTime)
+            : undefined) ?? list[0];
+        if (booking) {
+          setLinkedBooking({ id: booking.id, date: performedOn });
+          setStaffId(booking.staff_id ?? '');
+          setStartTime(booking.start_time.slice(0, 5));
+          if (booking.menu) {
+            setMenuLines([{ name: booking.menu, amount: String(booking.amount ?? 0) }]);
+          }
+        } else {
+          if (linkedBookingRef.current) {
+            setStaffId('');
+            const first = menuItemsRef.current[0];
+            setMenuLines([first ? { name: first.name, amount: String(first.price) } : emptyLine()]);
+          }
+          setLinkedBooking(null);
+        }
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, performedOn, customerId]);
+
   if (!open) return null;
 
   const updateMenuLine = (idx: number, name: string) => {
@@ -147,7 +191,11 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
       // 同じ日にすでにその方の予約がある場合は、新しく予約を作らずそちらに紐づける（重複防止）
       let bookingId: string | null = null;
       let boardWarning = '';
-      const { data: existingBookings } = await sb
+      // 自動入力に使った予約があれば、その予約に紐づける
+      if (linkedBooking && linkedBooking.date === performedOn) {
+        bookingId = linkedBooking.id;
+      }
+      const { data: existingBookings } = bookingId ? { data: [{ id: bookingId }] } : await sb
         .from('bookings')
         .select('id')
         .eq('customer_id', customerId)
@@ -294,6 +342,7 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
               onChange={(e) => { setStartTime(e.target.value); writeStored(LAST_TIME_KEY, e.target.value); }}
             />
             <div style={{ fontSize: 11, color: 'var(--ink-l)', marginTop: 4 }}>
+              {linkedBooking ? '予約ボードの予約から担当・時間・メニューを入れました（変更できます）。' : ''}
               同じ日に予約がなければ、自動で予約ボードにも「来店済み」として追加されます。すでに予約がある日は、そちらに記録が紐づきます（予約が重複して作られることはありません）。
             </div>
           </div>
