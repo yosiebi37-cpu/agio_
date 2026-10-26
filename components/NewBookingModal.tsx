@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { toISODate, initialsFromName, hiraganaToKatakana, toMinutes } from '@/lib/format';
-import { FALLBACK_MENUS } from '@/lib/constants';
+import { FALLBACK_MENUS, ACQUISITION_SOURCES } from '@/lib/constants';
 import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
 import type { Staff, MenuItem } from '@/lib/types';
 
@@ -46,6 +46,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
   const [menuLines, setMenuLines] = useState<LineItem[]>([emptyLine()]);
   const [discountLines, setDiscountLines] = useState<LineItem[]>([]);
   const [type, setType] = useState<'existing' | 'new'>('existing');
+  const [acquisitionSource, setAcquisitionSource] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -167,6 +168,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
             furigana: furigana.trim() || null,
             initials: initialsFromName(name),
             customer_type: type,
+            ...(type === 'new' && acquisitionSource ? { acquisition_source: acquisitionSource } : {}),
           })
           .select('id,name,furigana')
           .single();
@@ -179,6 +181,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
               name: name.trim(),
               initials: initialsFromName(name),
               customer_type: type,
+              ...(type === 'new' && acquisitionSource ? { acquisition_source: acquisitionSource } : {}),
             })
             .select('id,name')
             .single();
@@ -191,6 +194,13 @@ export default function NewBookingModal({ open, onClose }: Props) {
           return;
         }
         matchedCustomer = newCustomer as CustomerOption;
+      } else if (type === 'new' && acquisitionSource) {
+        // すでに顧客登録がある新規客（先に顧客管理で登録した場合など）は、来店経路が未入力のときだけ追記する
+        await sb
+          .from('customers')
+          .update({ acquisition_source: acquisitionSource })
+          .eq('id', matchedCustomer.id)
+          .is('acquisition_source', null);
       }
       const combinedMenu = validMenuLines.map((l) => l.name.trim()).join('＋');
       const menuTotal = validMenuLines.reduce((s, l) => s + (parseInt(l.amount, 10) || 0), 0);
@@ -236,6 +246,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
       resetFurigana();
       setMenuLines([menuItems.length ? { name: menuItems[0].name, amount: String(menuItems[0].price) } : emptyLine()]);
       setDiscountLines([]);
+      setAcquisitionSource('');
       onClose();
       router.push(`/board?date=${date}`);
       router.refresh();
@@ -416,6 +427,15 @@ export default function NewBookingModal({ open, onClose }: Props) {
               <option value="new">新規客（店舗）</option>
             </select>
           </div>
+          {type === 'new' && (
+            <div className="f-row" style={{ marginBottom: 0, marginTop: 14 }}>
+              <label className="f-label">来店経路（初めて来店したきっかけ）</label>
+              <select className="f-select" value={acquisitionSource} onChange={(e) => setAcquisitionSource(e.target.value)}>
+                <option value="">未入力（あとで顧客管理から入力できます）</option>
+                {ACQUISITION_SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
           {error && (
             <div style={{ marginTop: 14, fontSize: 14, color: 'var(--red)' }}>{error}</div>
           )}

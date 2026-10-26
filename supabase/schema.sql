@@ -103,6 +103,7 @@ alter table bookings add column if not exists reminder_sent_at timestamptz;
 
 -- LINEで予約したお客様のLINEユーザーID（前日リマインダー送信に使う。LIFFログインで取得）
 alter table customers add column if not exists line_user_id text;
+alter table customers add column if not exists acquisition_source text;  -- 来店経路（ホットペッパー / Instagram / 紹介 など）
 
 -- ---------------------------------------------------------------------------
 -- 施術履歴（カルテ）

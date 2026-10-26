@@ -131,6 +131,8 @@ export interface VisitBookingRow extends BookingRow {
   customer_name: string;
   customer_id?: string | null;
   start_time?: string | null;
+  /** 予約の取り込み元（'manual' | 'hotpepper' | 'square'） */
+  source?: string | null;
 }
 
 export interface CustomerTypeRow {
@@ -188,12 +190,23 @@ export function reclassifyVisitTypes<T extends VisitBookingRow>(bookings: T[], c
   return result;
 }
 
+interface NewCustomerCohort {
+  /** 新規来店した日（YYYY-MM-DD） */
+  firstDate: string;
+  /** 新規来店した予約 */
+  firstBooking: VisitBookingRow;
+  /** 同じ人とみなした予約に付いている顧客ID（重複登録で複数になることがある） */
+  customerIds: string[];
+  /** 新規来店より後の日に、もう一度来店しているか */
+  returned: boolean;
+}
+
 /**
- * reclassifyVisitTypes で付け直した予約から、月ごとの新規客のうち
- * その後もう一度（別の日に）来店した人の割合を出す。
- * 新規客一覧・新規客数と同じ人を対象にするため、カルテの有無には左右されない。
+ * reclassifyVisitTypes で付け直した予約から、新規で来店したお客様ごとに
+ * 「初回来店日」と「その後もう一度（別の日に）来店したか」をまとめる。
+ * 名前が同じなら顧客レコードが分かれていても同じ人とみなす。
  */
-export function computeRepeatRatesFromVisits(bookings: VisitBookingRow[]): RepeatRow[] {
+function collectNewCustomerCohorts(bookings: VisitBookingRow[]): NewCustomerCohort[] {
   const visited = bookings.filter((b) => b.status === 'visited');
 
   // 同じ人の来店をまとめるキー（名前が同じなら顧客レコードが分かれていても同じ人とみなす）
@@ -209,23 +222,47 @@ export function computeRepeatRatesFromVisits(bookings: VisitBookingRow[]): Repea
   };
 
   const sorted = [...visited].sort((a, b) => a.booking_date.localeCompare(b.booking_date));
-  const firstNew = new Map<string, string>(); // person -> 新規来店日
+  const firstNew = new Map<string, VisitBookingRow>(); // person -> 新規来店の予約
   const datesByPerson = new Map<string, Set<string>>();
+  const idsByPerson = new Map<string, Set<string>>();
   for (const b of sorted) {
     const person = personOf(b);
     const dates = datesByPerson.get(person) ?? new Set<string>();
     dates.add(b.booking_date);
     datesByPerson.set(person, dates);
-    if (b.customer_type === 'new' && !firstNew.has(person)) firstNew.set(person, b.booking_date);
+    if (b.customer_id) {
+      const ids = idsByPerson.get(person) ?? new Set<string>();
+      ids.add(b.customer_id);
+      idsByPerson.set(person, ids);
+    }
+    if (b.customer_type === 'new' && !firstNew.has(person)) firstNew.set(person, b);
   }
 
+  return Array.from(firstNew.entries()).map(([person, firstBooking]) => {
+    const firstDate = firstBooking.booking_date;
+    const dates = datesByPerson.get(person) ?? new Set<string>();
+    const ids = idsByPerson.get(person) ?? new Set<string>();
+    // 新規来店の予約の顧客IDを先頭にする（来店経路はこのIDのものを優先して使う）
+    const customerIds = [
+      ...(firstBooking.customer_id ? [firstBooking.customer_id] : []),
+      ...[...ids].filter((id) => id !== firstBooking.customer_id),
+    ];
+    return { firstDate, firstBooking, customerIds, returned: [...dates].some((d) => d > firstDate) };
+  });
+}
+
+/**
+ * reclassifyVisitTypes で付け直した予約から、月ごとの新規客のうち
+ * その後もう一度（別の日に）来店した人の割合を出す。
+ * 新規客一覧・新規客数と同じ人を対象にするため、カルテの有無には左右されない。
+ */
+export function computeRepeatRatesFromVisits(bookings: VisitBookingRow[]): RepeatRow[] {
   const monthMap = new Map<string, { newCustomers: number; returned: number }>();
-  for (const [person, firstDate] of firstNew) {
-    const month = monthKey(firstDate);
+  for (const c of collectNewCustomerCohorts(bookings)) {
+    const month = monthKey(c.firstDate);
     const row = monthMap.get(month) ?? { newCustomers: 0, returned: 0 };
     row.newCustomers += 1;
-    const dates = datesByPerson.get(person) ?? new Set<string>();
-    if ([...dates].some((d) => d > firstDate)) row.returned += 1;
+    if (c.returned) row.returned += 1;
     monthMap.set(month, row);
   }
 
@@ -237,6 +274,71 @@ export function computeRepeatRatesFromVisits(bookings: VisitBookingRow[]): Repea
       repeatRate: v.newCustomers > 0 ? v.returned / v.newCustomers : null,
     }))
     .sort((a, b) => a.month.localeCompare(b.month));
+}
+
+export interface SourceRepeatRow {
+  source: string;
+  newCustomers: number;
+  returned: number;
+  /** 全期間の再来率（0〜1）。newCustomers が 0 なら null */
+  repeatRate: number | null;
+  /** 初回来店から matureDays 日以上たった新規客の数 */
+  matureNewCustomers: number;
+  matureReturned: number;
+  /** 初回来店から matureDays 日以上たった新規客だけで見た再来率（0〜1）。対象が 0 人なら null */
+  matureRepeatRate: number | null;
+}
+
+/** 'YYYY-MM-DD' に日数を足した日付を 'YYYY-MM-DD' で返す */
+const addDays = (dateStr: string, days: number): string => {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+
+/**
+ * 来店経路（顧客管理で入力したもの）ごとに、新規客の数と再来率を出す。
+ * 来店経路が未入力でも、新規来店の予約がホットペッパー経由なら「ホットペッパー」とみなす。
+ * それ以外の未入力は unknownLabel にまとめる。
+ * 初回来店から日が浅い人は再来率が低く出るため、matureDays 日以上たった人だけの再来率も一緒に出す。
+ */
+export function computeRepeatRatesBySource(
+  bookings: VisitBookingRow[],
+  customerSources: Map<string, string | null>,
+  options: { today: string; sourceOrder: string[]; unknownLabel: string; hotpepperLabel: string; matureDays?: number },
+): SourceRepeatRow[] {
+  const matureDays = options.matureDays ?? 60;
+  const matureCutoff = addDays(options.today, -matureDays);
+  const map = new Map<string, { newCustomers: number; returned: number; matureNewCustomers: number; matureReturned: number }>();
+
+  for (const c of collectNewCustomerCohorts(bookings)) {
+    const entered = c.customerIds.map((id) => customerSources.get(id)).find((s) => s && s.trim());
+    const source = entered?.trim()
+      ?? (c.firstBooking.source === 'hotpepper' ? options.hotpepperLabel : options.unknownLabel);
+    const row = map.get(source) ?? { newCustomers: 0, returned: 0, matureNewCustomers: 0, matureReturned: 0 };
+    row.newCustomers += 1;
+    if (c.returned) row.returned += 1;
+    if (c.firstDate <= matureCutoff) {
+      row.matureNewCustomers += 1;
+      if (c.returned) row.matureReturned += 1;
+    }
+    map.set(source, row);
+  }
+
+  const orderOf = (source: string): number => {
+    if (source === options.unknownLabel) return Number.MAX_SAFE_INTEGER;
+    const i = options.sourceOrder.indexOf(source);
+    return i === -1 ? options.sourceOrder.length : i;
+  };
+
+  return Array.from(map.entries())
+    .map(([source, v]) => ({
+      source,
+      ...v,
+      repeatRate: v.newCustomers > 0 ? v.returned / v.newCustomers : null,
+      matureRepeatRate: v.matureNewCustomers > 0 ? v.matureReturned / v.matureNewCustomers : null,
+    }))
+    .sort((a, b) => orderOf(a.source) - orderOf(b.source) || a.source.localeCompare(b.source));
 }
 
 export interface AgeBracketRow {

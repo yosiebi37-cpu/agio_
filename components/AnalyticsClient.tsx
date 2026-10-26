@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { yen, formatMonthLong } from '@/lib/format';
-import type { MonthlyCustomerRow, MonthlyRetailRow, RepeatRow, AgeBracketRow, NewCustomerNameRow } from '@/lib/analytics';
+import type { MonthlyCustomerRow, MonthlyRetailRow, RepeatRow, AgeBracketRow, NewCustomerNameRow, SourceRepeatRow } from '@/lib/analytics';
 
 interface Props {
   monthlyCustomers: MonthlyCustomerRow[];
   monthlyRetail: MonthlyRetailRow[];
   repeatRates: RepeatRow[];
+  sourceRepeatRates: SourceRepeatRow[];
   ageBrackets: AgeBracketRow[];
   newCustomerNames: NewCustomerNameRow[];
 }
@@ -152,7 +153,9 @@ function AgeBracketChart({ rows }: { rows: AgeBracketRow[] }) {
   );
 }
 
-export default function AnalyticsClient({ monthlyCustomers, monthlyRetail, repeatRates, ageBrackets, newCustomerNames }: Props) {
+const pct = (v: number | null): string => (v === null ? '—' : `${Math.round(v * 100)}%`);
+
+export default function AnalyticsClient({ monthlyCustomers, monthlyRetail, repeatRates, sourceRepeatRates, ageBrackets, newCustomerNames }: Props) {
   const rows = useMemo<MergedRow[]>(() => {
     const months = new Set<string>();
     monthlyCustomers.forEach((r) => months.add(r.month));
@@ -256,6 +259,48 @@ export default function AnalyticsClient({ monthlyCustomers, monthlyRetail, repea
               </div>
             </div>
 
+            <div className="tbl-wrap" style={{ marginTop: 16 }}>
+              <div style={{ padding: '16px 16px 4px' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>来店経路別の新規客・再来率</div>
+                <div style={{ fontSize: 12, color: 'var(--ink-l)' }}>
+                  これまでの新規客すべてが対象です。「2ヶ月以上たった方の再来率」は、初回来店から60日以上たった方だけで計算しています（日が浅い方を除いた、実態に近い数字）。
+                </div>
+              </div>
+              {sourceRepeatRates.length === 0 ? (
+                <div className="empty-row">まだ集計できる新規客がいません。</div>
+              ) : (
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>来店経路</th>
+                      <th>新規客</th>
+                      <th>うち再来店</th>
+                      <th>再来率</th>
+                      <th>2ヶ月以上たった方の再来率</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sourceRepeatRates.map((r) => (
+                      <tr key={r.source}>
+                        <td>{r.source}</td>
+                        <td>{r.newCustomers}人</td>
+                        <td>{r.returned}人</td>
+                        <td>{pct(r.repeatRate)}</td>
+                        <td>
+                          {pct(r.matureRepeatRate)}
+                          {r.matureNewCustomers > 0 && (
+                            <span style={{ fontSize: 11, color: 'var(--ink-l)', marginLeft: 6 }}>
+                              （{r.matureReturned}/{r.matureNewCustomers}人）
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
             <div className="tbl-wrap" style={{ padding: 16, marginTop: 16 }}>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>年齢層</div>
               <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 6 }}>顧客管理に登録されているお客様（生まれ年が未登録の方は「不明」）</div>
@@ -322,7 +367,8 @@ export default function AnalyticsClient({ monthlyCustomers, monthlyRetail, repea
 
             <div style={{ fontSize: 12, color: 'var(--ink-l)', marginTop: 12, lineHeight: 1.7 }}>
               ・「新規客」は、顧客管理で「新規客」になっているお客様の、初めての来店だけを数えています。2回目以降の来店や「既存客」のお客様は、予約が新規扱いでも既存客として数えます。<br />
-              ・「リピート率」は、その月に初めて来店した新規のお客様のうち、その後もう一度来店した割合です。直近1〜2ヶ月はまだ再来店するための期間が短いため、低めに出ることがあります。
+              ・「リピート率」は、その月に初めて来店した新規のお客様のうち、その後もう一度来店した割合です。直近1〜2ヶ月はまだ再来店するための期間が短いため、低めに出ることがあります。<br />
+              ・「来店経路」は顧客管理で入力した経路で分けています。未入力でも、初回の予約がホットペッパー経由のお客様は「ホットペッパー」に数えます。
             </div>
           </>
         )}
