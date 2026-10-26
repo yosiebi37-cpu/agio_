@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { initialsFromName } from '@/lib/format';
 import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
+import { ACQUISITION_SOURCES } from '@/lib/constants';
 import type { Staff, CustomerType } from '@/lib/types';
 
 interface Props {
@@ -26,6 +27,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
   const [birthDay, setBirthDay] = useState('');
   const [customerType, setCustomerType] = useState<CustomerType>('new');
   const [staffId, setStaffId] = useState('');
+  const [acquisitionSource, setAcquisitionSource] = useState('');
   const [hairType, setHairType] = useState('');
   const [allergyTag, setAllergyTag] = useState('');
   const [allergyNote, setAllergyNote] = useState('');
@@ -41,6 +43,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
     setBirthDay('');
     setCustomerType('new');
     setStaffId('');
+    setAcquisitionSource('');
     setHairType('');
     setAllergyTag('');
     setAllergyNote('');
@@ -77,6 +80,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
           birth_day: dayNum,
           customer_type: customerType,
           assigned_staff_id: staffId || null,
+          ...(acquisitionSource ? { acquisition_source: acquisitionSource } : {}),
           hair_type: hairType.trim() || null,
           allergy_tag: allergyTag.trim() || null,
           allergy_note: allergyNote.trim() || null,
@@ -161,6 +165,16 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
                 {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+          </div>
+          <div className="f-row">
+            <label className="f-label">来店経路（初めて来店したきっかけ）</label>
+            <select className="f-select" value={acquisitionSource} onChange={(e) => setAcquisitionSource(e.target.value)}>
+              <option value="">未入力</option>
+              {ACQUISITION_SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {acquisitionSource && !ACQUISITION_SOURCES.includes(acquisitionSource) && (
+                <option value={acquisitionSource}>{acquisitionSource}</option>
+              )}
+            </select>
           </div>
           <div className="f-row">
             <label className="f-label">髪質メモ</label>

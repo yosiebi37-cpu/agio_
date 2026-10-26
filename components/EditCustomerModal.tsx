@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { initialsFromName } from '@/lib/format';
 import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
+import { ACQUISITION_SOURCES } from '@/lib/constants';
 import type { Customer, Staff, CustomerType } from '@/lib/types';
 
 interface Props {
@@ -27,6 +28,7 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
   const [birthDay, setBirthDay] = useState(c.birth_day ? String(c.birth_day) : '');
   const [customerType, setCustomerType] = useState<CustomerType>(c.customer_type);
   const [staffId, setStaffId] = useState(c.assigned_staff_id ?? '');
+  const [acquisitionSource, setAcquisitionSource] = useState(c.acquisition_source ?? '');
   const [visitCountOffset, setVisitCountOffset] = useState(String(c.visit_count_offset ?? 0));
   const [hairType, setHairType] = useState(c.hair_type ?? '');
   const [allergyTag, setAllergyTag] = useState(c.allergy_tag ?? '');
@@ -91,6 +93,7 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
           birth_day: dayNum,
           customer_type: customerType,
           assigned_staff_id: staffId || null,
+          acquisition_source: acquisitionSource || null,
           visit_count_offset: newOffset,
           visit_count: trackedVisits + newOffset,
           hair_type: hairType.trim() || null,
@@ -165,6 +168,16 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
                 {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+          </div>
+          <div className="f-row">
+            <label className="f-label">来店経路（初めて来店したきっかけ）</label>
+            <select className="f-select" value={acquisitionSource} onChange={(e) => setAcquisitionSource(e.target.value)}>
+              <option value="">未入力</option>
+              {ACQUISITION_SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {acquisitionSource && !ACQUISITION_SOURCES.includes(acquisitionSource) && (
+                <option value={acquisitionSource}>{acquisitionSource}</option>
+              )}
+            </select>
           </div>
           <div className="f-row">
             <label className="f-label">来店回数の調整（任意）</label>
