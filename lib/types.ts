@@ -53,6 +53,7 @@ export interface Customer {
   birth_month: number | null;
   birth_day: number | null;
   customer_type: CustomerType;
+  acquisition_source: string | null;
   hair_type: string | null;
   allergy_tag: string | null;
   allergy_note: string | null;

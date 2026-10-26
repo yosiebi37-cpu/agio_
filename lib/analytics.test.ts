@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { monthKey, aggregateMonthlyCustomers, aggregateMonthlyRetail, computeRepeatRates, aggregateAgeBrackets, listNewCustomerNamesByMonth, reclassifyVisitTypes, computeRepeatRatesFromVisits } from './analytics';
+import { monthKey, aggregateMonthlyCustomers, aggregateMonthlyRetail, computeRepeatRates, aggregateAgeBrackets, listNewCustomerNamesByMonth, reclassifyVisitTypes, computeRepeatRatesFromVisits, computeRepeatRatesBySource } from './analytics';
 
 describe('monthKey', () => {
   it('extracts YYYY-MM from an ISO date', () => {
@@ -177,5 +177,55 @@ describe('computeRepeatRatesFromVisits', () => {
       { month: '2026-07', newCustomers: 2, returned: 1, repeatRate: 0.5 },
       { month: '2026-08', newCustomers: 1, returned: 1, repeatRate: 1 },
     ]);
+  });
+});
+
+describe('computeRepeatRatesBySource', () => {
+  const v = (date: string, name: string, id: string | null, type: 'new' | 'existing', source = 'manual') => ({
+    booking_date: date, customer_name: name, customer_id: id, customer_type: type, status: 'visited', amount: 0, source,
+  });
+  const opts = { today: '2026-10-26', sourceOrder: ['ホットペッパー', 'Instagram', '紹介'], unknownLabel: '未入力', hotpepperLabel: 'ホットペッパー', matureDays: 60 };
+
+  it('顧客管理の来店経路ごとに新規客と再来率を出し、未入力は最後にまとめる', () => {
+    const rows = computeRepeatRatesBySource(
+      [
+        v('2026-06-01', 'A', 'a', 'new'),
+        v('2026-07-15', 'A', 'a', 'existing'),
+        v('2026-06-10', 'B', 'b', 'new'),
+        v('2026-06-12', 'C', 'c', 'new'),
+        v('2026-10-20', 'D', 'd', 'new'),
+      ],
+      new Map([['a', '紹介'], ['b', '紹介'], ['c', null], ['d', 'Instagram']]),
+      opts,
+    );
+    expect(rows.map((r) => r.source)).toEqual(['Instagram', '紹介', '未入力']);
+    const intro = rows.find((r) => r.source === '紹介')!;
+    expect(intro.newCustomers).toBe(2);
+    expect(intro.returned).toBe(1);
+    expect(intro.repeatRate).toBe(0.5);
+    expect(intro.matureRepeatRate).toBe(0.5);
+    const insta = rows.find((r) => r.source === 'Instagram')!;
+    expect(insta.matureNewCustomers).toBe(0);
+    expect(insta.matureRepeatRate).toBeNull();
+  });
+
+  it('来店経路が未入力でも、初回予約がホットペッパー経由ならホットペッパーに数える', () => {
+    const rows = computeRepeatRatesBySource(
+      [v('2026-06-01', 'A', 'a', 'new', 'hotpepper'), v('2026-07-01', 'A', 'a', 'existing', 'manual')],
+      new Map([['a', null]]),
+      opts,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].source).toBe('ホットペッパー');
+    expect(rows[0].repeatRate).toBe(1);
+  });
+
+  it('同じ名前の重複登録は同じ人とみなし、どちらかに入力された来店経路を使う', () => {
+    const rows = computeRepeatRatesBySource(
+      [v('2026-06-01', '山田 花子', 'x1', 'new'), v('2026-07-01', '山田花子', 'x2', 'existing')],
+      new Map([['x1', null], ['x2', '紹介']]),
+      opts,
+    );
+    expect(rows).toEqual([expect.objectContaining({ source: '紹介', newCustomers: 1, returned: 1 })]);
   });
 });

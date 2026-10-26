@@ -24,6 +24,11 @@ export const FALLBACK_RETAIL_PRODUCTS: RetailProduct[] = [
   { id: 'fallback-3', name: 'スタイリング剤', price: 2750, sort_order: 3, is_active: true, created_at: '' },
 ];
 
+// 来店経路（お客様が何をきっかけに初めて来店したか）の選択肢。分析ページの経路別再来率もこの順番で表示する
+export const ACQUISITION_SOURCES: string[] = ['ホットペッパー', 'Instagram', 'Googleマップ', '紹介', '通りがかり', '以前からのお客様', 'その他'];
+// 来店経路が未入力のお客様をまとめる表示名
+export const UNKNOWN_ACQUISITION_SOURCE = '未入力';
+
 // 経費のカテゴリ（月ごとの経費集計をそろえるための固定リスト）
 export const EXPENSE_CATEGORIES: string[] = [
   '家賃',
