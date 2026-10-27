@@ -5,6 +5,7 @@ import SalesClient from '@/components/SalesClient';
 import DailyReportClient from '@/components/DailyReportClient';
 import { toISODate } from '@/lib/format';
 import type { Staff, RetailSale, Expense } from '@/lib/types';
+import { BOOKING_OWNER_SELECT, isOwnClientBooking, type BookingForCommission } from '@/lib/commission';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,7 +73,7 @@ export default async function SalesPage({
   const [{ data: bookingsData }, { data: staffData }, { data: retailData }, { data: manualData }, { data: settingsData }, { data: expensesData }] = await Promise.all([
     sb
       .from('bookings')
-      .select('booking_date,staff_id,amount,status,customer_type')
+      .select(`booking_date,staff_id,amount,status,customer_type,${BOOKING_OWNER_SELECT}`)
       .gte('booking_date', start)
       .lte('booking_date', end),
     sb.from('staff').select('*').order('sort_order'),
@@ -86,7 +87,7 @@ export default async function SalesPage({
     sb.from('expenses').select('category,amount').gte('expense_date', start).lte('expense_date', end),
   ]);
 
-  const bookings = (bookingsData ?? []) as { booking_date: string; staff_id: string; amount: number; status: string; customer_type: string }[];
+  const bookings = (bookingsData ?? []) as unknown as (BookingForCommission & { booking_date: string; amount: number; status: string; customer_type: string })[];
   const staff = (staffData ?? []) as Staff[];
   const retail = (retailData ?? []) as { sale_date: string; staff_id: string | null; amount: number; product_name: string }[];
   const manual = (manualData ?? []) as { staff_id: string; existing_amount: number; new_amount: number }[];
@@ -117,11 +118,11 @@ export default async function SalesPage({
   const retailRate = settingsData?.retail_rate ?? 20;
 
   const contractEx = bookings
-    .filter((b) => contractIds.has(b.staff_id) && b.customer_type === 'existing')
+    .filter((b) => contractIds.has(b.staff_id) && isOwnClientBooking(b))
     .reduce((s, b) => s + (b.amount ?? 0), 0)
     + manual.filter((m) => contractIds.has(m.staff_id)).reduce((s, m) => s + (m.existing_amount ?? 0), 0);
   const contractNw = bookings
-    .filter((b) => contractIds.has(b.staff_id) && b.customer_type === 'new')
+    .filter((b) => contractIds.has(b.staff_id) && !isOwnClientBooking(b))
     .reduce((s, b) => s + (b.amount ?? 0), 0)
     + manual.filter((m) => contractIds.has(m.staff_id)).reduce((s, m) => s + (m.new_amount ?? 0), 0);
   const contractRetail = retail
