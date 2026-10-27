@@ -296,11 +296,11 @@ export default function DailyReportClient({ date, bookings, staff, retailSales, 
 
         <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 8 }}>スタッフ別(施術)</div>
         <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 8 }}>
-          「既存客手入力」「新規客手入力」は直接入力できます。予約ボードの売上に上乗せして計算されます。
+          「本人顧客手入力」「店舗客手入力」は直接入力できます。予約ボードの売上に上乗せして計算されます。
         </div>
         <div className="tbl-wrap">
           <table className="tbl">
-            <thead><tr><th>スタッフ</th><th>来店数</th><th>予約分売上</th><th>既存客手入力</th><th>新規客手入力</th><th>合計</th></tr></thead>
+            <thead><tr><th>スタッフ</th><th>来店数</th><th>予約分売上</th><th>本人顧客手入力</th><th>店舗客手入力</th><th>合計</th></tr></thead>
             <tbody>
               {stats.byStaff.map((r) => (
                 <tr key={r.staff.id}>

@@ -70,6 +70,12 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff,
               <div className="ki-icon" style={{ background: 'var(--accent-l)', color: 'var(--accent)' }}><i className="ti ti-route"></i></div>
               <div><div className="ki-label">来店経路</div><div className="ki-val">{c.acquisition_source ?? '—'}</div></div>
             </div>
+            {c.own_client_staff_id && (
+              <div className="ki-row">
+                <div className="ki-icon" style={{ background: 'var(--gold-l)', color: 'var(--gold-d)' }}><i className="ti ti-user-star"></i></div>
+                <div><div className="ki-label">業務委託の本人顧客</div><div className="ki-val">{staff.find((s) => s.id === c.own_client_staff_id)?.name ?? '—'} さん（60%）</div></div>
+              </div>
+            )}
             <div className="ki-row">
               <div className="ki-icon" style={{ background: 'var(--gold-l)', color: 'var(--gold-d)' }}><i className="ti ti-sparkles"></i></div>
               <div><div className="ki-label">髪質</div><div className="ki-val">{c.hair_type ?? '—'}</div></div>

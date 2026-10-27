@@ -58,8 +58,8 @@ export default function MyRewardClient({
       <div className="fl-body">
         <div className="fl-kpis">
           <div className="kpi"><div className="kpi-label">来店数</div><div className="kpi-val">{visitCount}件</div><div className="kpi-sub">{formatMonthLong(month)}</div></div>
-          <div className="kpi"><div className="kpi-label">既存客売上</div><div className="kpi-val">{yen(existingSales)}</div><div className="kpi-sub">@ {exRate}%</div></div>
-          <div className="kpi"><div className="kpi-label">新規客売上</div><div className="kpi-val">{yen(newSales)}</div><div className="kpi-sub">@ {nwRate}%</div></div>
+          <div className="kpi"><div className="kpi-label">本人顧客売上</div><div className="kpi-val">{yen(existingSales)}</div><div className="kpi-sub">@ {exRate}%</div></div>
+          <div className="kpi"><div className="kpi-label">店舗客売上</div><div className="kpi-val">{yen(newSales)}</div><div className="kpi-sub">@ {nwRate}%</div></div>
           <div className="kpi"><div className="kpi-label">店販売上</div><div className="kpi-val">{yen(retailSales)}</div><div className="kpi-sub">@ {retailRate}%</div></div>
         </div>
         <div className="fl-kpis">
@@ -70,8 +70,8 @@ export default function MyRewardClient({
           <div className="tbl-wrap" style={{ padding: 18 }}>
             <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-l)', marginBottom: 12 }}>報酬内訳</div>
             <div className="flc-breakdown">
-              <div className="flc-row"><span className="flc-key">既存客報酬（{exRate}%）</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(exReward)}</span></div>
-              <div className="flc-row"><span className="flc-key">新規客報酬（{nwRate}%）</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(nwReward)}</span></div>
+              <div className="flc-row"><span className="flc-key">本人顧客報酬（{exRate}%）</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(exReward)}</span></div>
+              <div className="flc-row"><span className="flc-key">店舗客報酬（{nwRate}%）</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(nwReward)}</span></div>
               <div className="flc-row" style={{ border: 'none' }}><span className="flc-key">店販報酬（{retailRate}%）</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(retailReward)}</span></div>
             </div>
             <div className="flc-reward" style={{ marginTop: 12 }}>

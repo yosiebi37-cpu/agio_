@@ -28,6 +28,7 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
   const [birthDay, setBirthDay] = useState(c.birth_day ? String(c.birth_day) : '');
   const [customerType, setCustomerType] = useState<CustomerType>(c.customer_type);
   const [staffId, setStaffId] = useState(c.assigned_staff_id ?? '');
+  const [ownClientStaffId, setOwnClientStaffId] = useState(c.own_client_staff_id ?? '');
   const [acquisitionSource, setAcquisitionSource] = useState(c.acquisition_source ?? '');
   const [visitCountOffset, setVisitCountOffset] = useState(String(c.visit_count_offset ?? 0));
   const [hairType, setHairType] = useState(c.hair_type ?? '');
@@ -93,6 +94,7 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
           birth_day: dayNum,
           customer_type: customerType,
           assigned_staff_id: staffId || null,
+          own_client_staff_id: ownClientStaffId || null,
           acquisition_source: acquisitionSource || null,
           visit_count_offset: newOffset,
           visit_count: trackedVisits + newOffset,
@@ -167,6 +169,16 @@ export default function EditCustomerModal({ open, onClose, customer: c, staff }:
                 <option value="">未割当</option>
                 {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
+            </div>
+          </div>
+          <div className="f-row">
+            <label className="f-label">業務委託の本人顧客（60%）</label>
+            <select className="f-select" value={ownClientStaffId} onChange={(e) => setOwnClientStaffId(e.target.value)}>
+              <option value="">なし（agioのお客様・50%）</option>
+              {staff.filter((s) => s.employment_type === 'contract' || s.id === ownClientStaffId).map((s) => <option key={s.id} value={s.id}>{s.name} さんの本人顧客</option>)}
+            </select>
+            <div style={{ fontSize: 11, color: 'var(--ink-l)', marginTop: 4 }}>
+              業務委託スタッフがもともと持っているお客様だけ設定してください。そのスタッフが担当した予約だけ本人顧客の報酬率になります。agioの新規・再来（フリー・指名どちらも）は「なし」のままで店舗客の報酬率です。
             </div>
           </div>
           <div className="f-row">

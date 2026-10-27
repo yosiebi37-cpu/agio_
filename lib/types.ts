@@ -60,6 +60,8 @@ export interface Customer {
   avatar_bg: string;
   avatar_fg: string;
   assigned_staff_id: string | null;
+  /** 業務委託スタッフの本人顧客（持ち込み客）。このスタッフが担当したときだけ本人顧客の報酬率 */
+  own_client_staff_id?: string | null;
   visit_count: number;
   visit_count_offset: number;
   lifetime_value: number;
