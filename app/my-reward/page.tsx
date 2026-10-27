@@ -2,6 +2,7 @@ import { isSupabaseConfigured, getServerSupabase, getCurrentStaff } from '@/lib/
 import SetupNotice from '@/components/SetupNotice';
 import MyRewardClient from '@/components/MyRewardClient';
 import { toISODate } from '@/lib/format';
+import { BOOKING_OWNER_SELECT, isOwnClientBooking, type BookingForCommission } from '@/lib/commission';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +43,7 @@ export default async function MyRewardPage({
   const [{ data: bookingsData }, { data: retailData }, { data: manualData }, { data: settingsData }] = await Promise.all([
     sb
       .from('bookings')
-      .select('customer_type,amount,status')
+      .select(`staff_id,amount,status,${BOOKING_OWNER_SELECT}`)
       .eq('staff_id', staff.id)
       .gte('booking_date', start)
       .lte('booking_date', end),
@@ -56,13 +57,13 @@ export default async function MyRewardPage({
     sb.from('commission_settings').select('*').eq('id', 1).maybeSingle(),
   ]);
 
-  const bookings = (bookingsData ?? []) as { customer_type: string; amount: number; status: string }[];
+  const bookings = (bookingsData ?? []) as unknown as (BookingForCommission & { amount: number; status: string })[];
   const retail = (retailData ?? []) as { amount: number }[];
   const manual = (manualData ?? []) as { existing_amount: number; new_amount: number }[];
 
   const visited = bookings.filter((b) => b.status === 'visited');
-  const bookingEx = visited.filter((b) => b.customer_type === 'existing').reduce((s, b) => s + (b.amount ?? 0), 0);
-  const bookingNw = visited.filter((b) => b.customer_type === 'new').reduce((s, b) => s + (b.amount ?? 0), 0);
+  const bookingEx = visited.filter((b) => isOwnClientBooking(b)).reduce((s, b) => s + (b.amount ?? 0), 0);
+  const bookingNw = visited.filter((b) => !isOwnClientBooking(b)).reduce((s, b) => s + (b.amount ?? 0), 0);
   const manualEx = manual.reduce((s, m) => s + (m.existing_amount ?? 0), 0);
   const manualNw = manual.reduce((s, m) => s + (m.new_amount ?? 0), 0);
   const retailTotal = retail.reduce((s, r) => s + (r.amount ?? 0), 0);
