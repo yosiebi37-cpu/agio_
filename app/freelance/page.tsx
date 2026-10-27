@@ -4,6 +4,7 @@ import SetupNotice from '@/components/SetupNotice';
 import FreelanceClient, { type FreelanceRow, type FreelanceDailyRow } from '@/components/FreelanceClient';
 import { toISODate } from '@/lib/format';
 import type { Staff } from '@/lib/types';
+import { BOOKING_OWNER_SELECT, isOwnClientBooking, type BookingForCommission } from '@/lib/commission';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,14 +55,14 @@ export default async function FreelancePage({
   const staff = (staffData ?? []) as Staff[];
   const ids = staff.map((s) => s.id);
 
-  let bookings: { staff_id: string; customer_type: string; amount: number; booking_date: string }[] = [];
+  let bookings: (BookingForCommission & { amount: number; booking_date: string })[] = [];
   let retailSales: { staff_id: string | null; amount: number; sale_date: string }[] = [];
   let manualSales: { staff_id: string; existing_amount: number; new_amount: number; sale_date: string }[] = [];
   if (ids.length) {
     const [{ data: bookingData }, { data: retailData }, { data: manualData }] = await Promise.all([
       sb
         .from('bookings')
-        .select('staff_id,customer_type,amount,booking_date')
+        .select(`staff_id,amount,booking_date,${BOOKING_OWNER_SELECT}`)
         .gte('booking_date', start)
         .lte('booking_date', end)
         .in('staff_id', ids),
@@ -78,7 +79,7 @@ export default async function FreelancePage({
         .lte('sale_date', end)
         .in('staff_id', ids),
     ]);
-    bookings = (bookingData ?? []) as typeof bookings;
+    bookings = (bookingData ?? []) as unknown as typeof bookings;
     retailSales = (retailData ?? []) as typeof retailSales;
     manualSales = (manualData ?? []) as typeof manualSales;
   }
@@ -94,8 +95,9 @@ export default async function FreelancePage({
       bg: s.bg_color,
       fg: s.fg_color,
       count: mine.length,
-      bookingEx: mine.filter((b) => b.customer_type === 'existing').reduce((sum, b) => sum + (b.amount ?? 0), 0),
-      bookingNw: mine.filter((b) => b.customer_type === 'new').reduce((sum, b) => sum + (b.amount ?? 0), 0),
+      // 本人顧客（60%）＝顧客カルテでこのスタッフの本人顧客に設定されたお客様のみ。それ以外は店舗客（50%）
+      bookingEx: mine.filter((b) => isOwnClientBooking(b)).reduce((sum, b) => sum + (b.amount ?? 0), 0),
+      bookingNw: mine.filter((b) => !isOwnClientBooking(b)).reduce((sum, b) => sum + (b.amount ?? 0), 0),
       manualEx: myManual.reduce((sum, m) => sum + (m.existing_amount ?? 0), 0),
       manualNw: myManual.reduce((sum, m) => sum + (m.new_amount ?? 0), 0),
       retailSales: myRetail.reduce((sum, r) => sum + (r.amount ?? 0), 0),
@@ -127,7 +129,7 @@ export default async function FreelancePage({
       if (!s) continue;
       const row = rowFor(s, b.booking_date);
       row.count += 1;
-      if (b.customer_type === 'existing') row.bookingEx += b.amount ?? 0;
+      if (isOwnClientBooking(b)) row.bookingEx += b.amount ?? 0;
       else row.bookingNw += b.amount ?? 0;
     }
     for (const r of retailSales) {
