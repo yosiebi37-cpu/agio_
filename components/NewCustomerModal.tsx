@@ -27,6 +27,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
   const [birthDay, setBirthDay] = useState('');
   const [customerType, setCustomerType] = useState<CustomerType>('new');
   const [staffId, setStaffId] = useState('');
+  const [ownClientStaffId, setOwnClientStaffId] = useState('');
   const [acquisitionSource, setAcquisitionSource] = useState('');
   const [hairType, setHairType] = useState('');
   const [allergyTag, setAllergyTag] = useState('');
@@ -43,6 +44,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
     setBirthDay('');
     setCustomerType('new');
     setStaffId('');
+    setOwnClientStaffId('');
     setAcquisitionSource('');
     setHairType('');
     setAllergyTag('');
@@ -80,6 +82,7 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
           birth_day: dayNum,
           customer_type: customerType,
           assigned_staff_id: staffId || null,
+          ...(ownClientStaffId ? { own_client_staff_id: ownClientStaffId } : {}),
           ...(acquisitionSource ? { acquisition_source: acquisitionSource } : {}),
           hair_type: hairType.trim() || null,
           allergy_tag: allergyTag.trim() || null,
@@ -164,6 +167,16 @@ export default function NewCustomerModal({ open, onClose, staff }: Props) {
                 <option value="">未割当</option>
                 {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
+            </div>
+          </div>
+          <div className="f-row">
+            <label className="f-label">業務委託の本人顧客（60%）</label>
+            <select className="f-select" value={ownClientStaffId} onChange={(e) => setOwnClientStaffId(e.target.value)}>
+              <option value="">なし（agioのお客様・50%）</option>
+              {staff.filter((s) => s.employment_type === 'contract').map((s) => <option key={s.id} value={s.id}>{s.name} さんの本人顧客</option>)}
+            </select>
+            <div style={{ fontSize: 11, color: 'var(--ink-l)', marginTop: 4 }}>
+              業務委託スタッフがもともと持っているお客様だけ設定してください。agioの新規・再来は「なし」のままでOKです。
             </div>
           </div>
           <div className="f-row">

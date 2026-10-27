@@ -106,7 +106,7 @@ export default function FreelanceClient({ rows, dailyRows = [], date, view, mont
   };
 
   const exportCsv = () => {
-    const header = ['スタッフ', '件数', '既存客売上', '新規客売上', '店販売上', '合計売上', `既存報酬(${rex}%)`, `新規報酬(${rnw}%)`, `店販報酬(${rret}%)`, '報酬合計'];
+    const header = ['スタッフ', '件数', '本人顧客売上', '店舗客売上', '店販売上', '合計売上', `本人顧客報酬(${rex}%)`, `店舗客報酬(${rnw}%)`, `店販報酬(${rret}%)`, '報酬合計'];
     const lines = totals.map((r) => {
       const exR = Math.round((r.exSales * rex) / 100);
       const nwR = Math.round((r.nwSales * rnw) / 100);
@@ -147,7 +147,7 @@ export default function FreelanceClient({ rows, dailyRows = [], date, view, mont
         </div>
         <div className="rate-box">
           <div className="rate-dot" style={{ background: 'var(--accent)' }}></div>
-          <span className="rate-label">既存客</span>
+          <span className="rate-label">本人顧客</span>
           <input
             className="rate-input"
             type="number"
@@ -161,7 +161,7 @@ export default function FreelanceClient({ rows, dailyRows = [], date, view, mont
         </div>
         <div className="rate-box">
           <div className="rate-dot" style={{ background: 'var(--gold)' }}></div>
-          <span className="rate-label">新規客（店舗）</span>
+          <span className="rate-label">店舗客（新規・再来）</span>
           <input
             className="rate-input"
             type="number"
@@ -192,11 +192,12 @@ export default function FreelanceClient({ rows, dailyRows = [], date, view, mont
       <div className="fl-body">
         <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 12 }}>
           {view === 'day' ? '予約ボードの売上と店販の記録から自動で計算しています。' : 'この月の合計です。'}
+          {' '}本人顧客＝顧客カルテで「業務委託の本人顧客」にそのスタッフが設定されたお客様。agioの新規・再来（フリー・指名）はすべて店舗客です。
         </div>
         <div className="fl-kpis">
           <div className="kpi"><div className="kpi-label">委託売上合計</div><div className="kpi-val">{yen(calc.totalSales)}</div><div className="kpi-sub">{totals.length}名 / {calc.count}件</div></div>
-          <div className="kpi"><div className="kpi-label">既存客売上</div><div className="kpi-val">{yen(calc.totalEx)}</div><div className="kpi-sub">@ {rex}%</div></div>
-          <div className="kpi"><div className="kpi-label">新規客売上</div><div className="kpi-val">{yen(calc.totalNw)}</div><div className="kpi-sub">@ {rnw}%</div></div>
+          <div className="kpi"><div className="kpi-label">本人顧客売上</div><div className="kpi-val">{yen(calc.totalEx)}</div><div className="kpi-sub">@ {rex}%</div></div>
+          <div className="kpi"><div className="kpi-label">店舗客売上</div><div className="kpi-val">{yen(calc.totalNw)}</div><div className="kpi-sub">@ {rnw}%</div></div>
           <div className="kpi"><div className="kpi-label">店販売上</div><div className="kpi-val">{yen(calc.totalRetail)}</div><div className="kpi-sub">@ {rret}%</div></div>
         </div>
         <div className="fl-kpis">
@@ -215,18 +216,18 @@ export default function FreelanceClient({ rows, dailyRows = [], date, view, mont
                   <div><div className="flc-name">{r.name}</div><div className="flc-role">業務委託 ・ {r.count}件</div></div>
                 </div>
                 <div className="flc-breakdown">
-                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客売上（予約分）</span><span className="flc-val">{yen(r.bookingEx)}</span></div>
+                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>本人顧客売上（予約分）</span><span className="flc-val">{yen(r.bookingEx)}</span></div>
                   {r.manualEx > 0 && (
-                    <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>既存客 手入力（過去分）</span><span className="flc-val">{yen(r.manualEx)}</span></div>
+                    <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--accent)' }}></div>本人顧客 手入力（過去分）</span><span className="flc-val">{yen(r.manualEx)}</span></div>
                   )}
-                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客売上（予約分）</span><span className="flc-val">{yen(r.bookingNw)}</span></div>
+                  <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>店舗客売上（予約分）</span><span className="flc-val">{yen(r.bookingNw)}</span></div>
                   {r.manualNw > 0 && (
-                    <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>新規客 手入力（過去分）</span><span className="flc-val">{yen(r.manualNw)}</span></div>
+                    <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--gold)' }}></div>店舗客 手入力（過去分）</span><span className="flc-val">{yen(r.manualNw)}</span></div>
                   )}
                   <div className="flc-row"><span className="flc-key"><div className="flc-dot" style={{ background: 'var(--ink-l)' }}></div>店販売上</span><span className="flc-val">{yen(r.retailSales)}</span></div>
                   <div className="flc-row"><span className="flc-key">合計売上</span><span className="flc-val" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17 }}>{yen(r.exSales + r.nwSales + r.retailSales)}</span></div>
-                  <div className="flc-row"><span className="flc-key">既存報酬({rex}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(exR)}</span></div>
-                  <div className="flc-row"><span className="flc-key">新規報酬({rnw}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(nwR)}</span></div>
+                  <div className="flc-row"><span className="flc-key">本人顧客報酬({rex}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(exR)}</span></div>
+                  <div className="flc-row"><span className="flc-key">店舗客報酬({rnw}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(nwR)}</span></div>
                   <div className="flc-row" style={{ border: 'none' }}><span className="flc-key">店販報酬({rret}%)</span><span className="flc-val" style={{ color: 'var(--accent)' }}>{yen(retR)}</span></div>
                 </div>
                 <div className="flc-reward"><span className="flc-reward-label">報酬合計</span><span className="flc-reward-val">{yen(exR + nwR + retR)}</span></div>
@@ -244,10 +245,10 @@ export default function FreelanceClient({ rows, dailyRows = [], date, view, mont
                   <th>日付</th>
                   <th>スタッフ</th>
                   <th>予約数</th>
-                  <th>既存予約分</th>
-                  <th>既存手入力</th>
-                  <th>新規予約分</th>
-                  <th>新規手入力</th>
+                  <th>本人顧客 予約分</th>
+                  <th>本人顧客 手入力</th>
+                  <th>店舗客 予約分</th>
+                  <th>店舗客 手入力</th>
                   <th>店販</th>
                 </tr>
               </thead>
@@ -275,9 +276,9 @@ export default function FreelanceClient({ rows, dailyRows = [], date, view, mont
         <div className="fl-total-bar">
           <div className="ftb-item"><div className="ftb-label">売上合計</div><div className="ftb-val">{yen(calc.totalSales)}</div></div>
           <div className="ftb-sep"></div>
-          <div className="ftb-item"><div className="ftb-label">既存客 報酬</div><div className="ftb-val" style={{ color: 'var(--accent)' }}>{yen(calc.rewardEx)}</div></div>
+          <div className="ftb-item"><div className="ftb-label">本人顧客 報酬</div><div className="ftb-val" style={{ color: 'var(--accent)' }}>{yen(calc.rewardEx)}</div></div>
           <div className="ftb-sep"></div>
-          <div className="ftb-item"><div className="ftb-label">新規客 報酬</div><div className="ftb-val" style={{ color: 'var(--accent)' }}>{yen(calc.rewardNw)}</div></div>
+          <div className="ftb-item"><div className="ftb-label">店舗客 報酬</div><div className="ftb-val" style={{ color: 'var(--accent)' }}>{yen(calc.rewardNw)}</div></div>
           <div className="ftb-sep"></div>
           <div className="ftb-item"><div className="ftb-label">店販 報酬</div><div className="ftb-val" style={{ color: 'var(--accent)' }}>{yen(calc.rewardRetail)}</div></div>
           <div className="ftb-sep"></div>
