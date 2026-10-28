@@ -14,9 +14,9 @@ describe('normalize', () => {
     expect(normalizePhone('０９０１１１１２２２２')).toBe('09011112222');
     expect(normalizePhone('+81 90 1111 2222')).toBe('09011112222');
   });
-  it('name: 空白・様を吸収', () => {
-    expect(normalizeName('坂本様 恵子')).toBe(normalizeName('坂本恵子'));
-    expect(normalizeName('熊谷　美穂 様')).toBe('熊谷美穂');
+  it('name: 空白は吸収するが「様」は別の名前として扱う', () => {
+    expect(normalizeName('熊谷　美穂')).toBe('熊谷美穂');
+    expect(normalizeName('坂本様 恵子')).not.toBe(normalizeName('坂本 恵子'));
   });
   it('kana: ひらがな→カタカナ', () => {
     expect(normalizeKana('しまさか さとる')).toBe('シマサカサトル');
@@ -46,6 +46,27 @@ describe('findMatchingCustomer', () => {
   });
   it('初めてのお客様は null', () => {
     expect(findMatchingCustomer(base, { phone: '08099999999', name: '新井 太郎' })).toBeNull();
+  });
+});
+
+describe('取り違え防止', () => {
+  const family = [
+    { id: 't1', name: '竹中 瑞紀', furigana: 'タケナガ ミズキ', phone: '09012345678', customer_type: 'new' as const, visit_count: 1 },
+    { id: 's1', name: '坂本 恵子', furigana: 'サカモト ケイコ', phone: '08078037265', customer_type: 'existing' as const, visit_count: 3 },
+  ];
+  it('親子で同じ電話番号でも、名前が違えば別の人', () => {
+    expect(findMatchingCustomer(family, { phone: '090-1234-5678', name: '竹中 遥月', furigana: 'タケナカ ハヅキ' })).toBeNull();
+    expect(findMatchingCustomer(family, { phone: '090-1234-5678', name: '竹中 瑞紀' })?.customer.id).toBe('t1');
+  });
+  it('「坂本様 恵子」は「坂本 恵子」に紐付けない', () => {
+    expect(findMatchingCustomer(family, { name: '坂本様 恵子' })).toBeNull();
+  });
+  it('同姓同名でも電話番号が2桁以上違えば別の人', () => {
+    expect(findMatchingCustomer(family, { phone: '09099998888', name: '坂本 恵子' })).toBeNull();
+  });
+  it('親子の共有電話番号は重複扱いしない', () => {
+    const list = [...family, { id: 't2', name: '竹中 遥月', furigana: 'タケナカ ハヅキ', phone: '09012345678' }];
+    expect(findDuplicateIds(list).size).toBe(0);
   });
 });
 
