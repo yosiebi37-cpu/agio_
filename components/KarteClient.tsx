@@ -9,6 +9,7 @@ import NewTreatmentModal from './NewTreatmentModal';
 import EditTreatmentModal from './EditTreatmentModal';
 import NewChemicalModal from './NewChemicalModal';
 import KartePhotoTab from './KartePhotoTab';
+import MergeCustomerModal, { type MergeCandidate } from './MergeCustomerModal';
 import type { Customer, TreatmentRecord, ChemicalRecord, Staff, KartePhoto, RetailSale } from '@/lib/types';
 
 type CustomerWithStaff = Customer & { staff?: { name: string } | null };
@@ -21,15 +22,17 @@ interface Props {
   staff: Staff[];
   photos: KartePhoto[];
   retailSales: RetailSale[];
+  duplicateCandidates?: MergeCandidate[];
   defaultTreatmentDate?: string;
   defaultTreatmentTime?: string;
 }
 
 type Tab = 'hist' | 'drug' | 'photo' | 'next';
 
-export default function KarteClient({ customer: c, treatments, chemicals, staff, photos, retailSales, defaultTreatmentDate, defaultTreatmentTime }: Props) {
+export default function KarteClient({ customer: c, treatments, chemicals, staff, photos, retailSales, duplicateCandidates = [], defaultTreatmentDate, defaultTreatmentTime }: Props) {
   const [tab, setTab] = useState<Tab>('hist');
   const [editOpen, setEditOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
   const [treatmentOpen, setTreatmentOpen] = useState(false);
   const [chemicalOpen, setChemicalOpen] = useState(false);
   const [editTreatment, setEditTreatment] = useState<TreatmentWithStaff | null>(null);
@@ -43,6 +46,15 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff,
             <Link href="/customers" className="karte-back" style={{ marginBottom: 0 }}><i className="ti ti-arrow-left"></i>一覧へ戻る</Link>
             <button className="btn-sm" onClick={() => setEditOpen(true)}><i className="ti ti-edit"></i>編集</button>
           </div>
+          {duplicateCandidates.length > 0 && (
+            <div style={{ margin: '12px 16px 0', padding: '10px 12px', borderRadius: 8, background: 'var(--gold-l)', fontSize: 13, color: 'var(--ink-m)', lineHeight: 1.6 }}>
+              <i className="ti ti-users" style={{ marginRight: 4 }}></i>
+              同じお客様かもしれない登録が{duplicateCandidates.length}件あります
+              <button className="btn-sm" style={{ marginTop: 6, display: 'block' }} onClick={() => setMergeOpen(true)}>
+                <i className="ti ti-git-merge"></i>確認してまとめる
+              </button>
+            </div>
+          )}
           <div className="karte-top">
             <div className="k-avatar" style={{ background: c.avatar_bg, color: c.avatar_fg }}>{c.initials}</div>
             {c.furigana && <div style={{ fontSize: 12, color: 'var(--ink-l)', marginBottom: 1 }}>{c.furigana}</div>}
@@ -198,6 +210,9 @@ export default function KarteClient({ customer: c, treatments, chemicals, staff,
         </div>
       </div>
       <EditCustomerModal open={editOpen} onClose={() => setEditOpen(false)} customer={c} staff={staff} />
+      {mergeOpen && (
+        <MergeCustomerModal open={mergeOpen} onClose={() => setMergeOpen(false)} customer={c} candidates={duplicateCandidates} />
+      )}
       <NewTreatmentModal
         open={treatmentOpen}
         onClose={() => setTreatmentOpen(false)}

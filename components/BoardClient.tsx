@@ -22,6 +22,7 @@ import { hhmm, toMinutes, yenK, formatDateShort, toISODate, initialsFromName } f
 import EditBookingModal from './EditBookingModal';
 import AddRetailToBookingModal from './AddRetailToBookingModal';
 import type { Staff, BookingWithStaff, RetailSale } from '@/lib/types';
+import { findMatchingCustomer, type MatchCandidate } from '@/lib/customer-match';
 
 function textOn(bg: string): string {
   const c = bg.replace('#', '');
@@ -236,7 +237,9 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
   const ensureCustomerLinked = async (b: BookingWithStaff): Promise<string | null> => {
     if (b.customer_id) return b.customer_id;
     const sb = getBrowserSupabase();
-    const { data: existing } = await sb.from('customers').select('id').eq('name', b.customer_name).maybeSingle();
+    // 名前の空白・「様」の有無の違いや、同名の登録が複数あっても既存のお客様を見つけられるようにする
+    const { data: candidates } = await sb.from('customers').select('id,name,furigana,phone,line_user_id,customer_type,visit_count');
+    const existing = findMatchingCustomer((candidates ?? []) as MatchCandidate[], { name: b.customer_name })?.customer;
     let customerId = existing?.id as string | undefined;
     if (!customerId) {
       const { data: created, error: createError } = await sb
