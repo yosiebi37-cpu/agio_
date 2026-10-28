@@ -7,6 +7,7 @@ import { toISODate, initialsFromName, hiraganaToKatakana, toMinutes } from '@/li
 import { FALLBACK_MENUS, ACQUISITION_SOURCES } from '@/lib/constants';
 import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
 import type { Staff, MenuItem } from '@/lib/types';
+import { normalizeName } from '@/lib/customer-match';
 
 interface Props {
   open: boolean;
@@ -97,7 +98,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const matchedCustomer = customers.find((c) => c.name === name.trim());
+  const matchedCustomer = customers.find((c) => normalizeName(c.name) === normalizeName(name));
   const searchResults = useMemo(() => {
     const q = name.trim();
     if (!q || matchedCustomer) return [];
@@ -159,7 +160,7 @@ export default function NewBookingModal({ open, onClose }: Props) {
           return;
         }
       }
-      let matchedCustomer = customers.find((c) => c.name === name.trim());
+      let matchedCustomer = customers.find((c) => normalizeName(c.name) === normalizeName(name));
       if (!matchedCustomer) {
         let { data: newCustomer, error: customerError } = await sb
           .from('customers')

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { TYPE_LABEL, TYPE_TAG_CLASS } from '@/lib/constants';
 import { formatDateSlash, hiraganaToKatakana } from '@/lib/format';
 import NewCustomerModal from './NewCustomerModal';
+import { findDuplicateIds } from '@/lib/customer-match';
 import type { Staff, CustomerWithStaff } from '@/lib/types';
 
 interface Props {
@@ -24,6 +25,8 @@ export default function CustomersClient({ customers, staff }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
   const missingCount = useMemo(() => customers.filter((c) => lacksBirthday(c) || lacksPhone(c)).length, [customers]);
+  // 名前または電話番号が同じ登録（二重登録の可能性）
+  const duplicateIds = useMemo(() => findDuplicateIds(customers), [customers]);
 
   const filtered = useMemo(() => {
     const kw = q.trim();
@@ -35,10 +38,11 @@ export default function CustomersClient({ customers, staff }: Props) {
       if (missing === 'any' && !(lacksBirthday(c) || lacksPhone(c))) return false;
       if (missing === 'birthday' && !lacksBirthday(c)) return false;
       if (missing === 'phone' && !lacksPhone(c)) return false;
+      if (missing === 'duplicate' && !duplicateIds.has(c.id)) return false;
       if (kw && !(c.name.includes(kw) || (c.furigana ?? '').includes(kwKatakana) || (c.phone ?? '').includes(kw))) return false;
       return true;
     });
-  }, [customers, q, type, stylist, missing]);
+  }, [customers, q, type, stylist, missing, duplicateIds]);
 
   return (
     <div className="page-wrap">
@@ -46,7 +50,7 @@ export default function CustomersClient({ customers, staff }: Props) {
         <div className="page-head">
           <div>
             <div className="page-h1">顧客管理</div>
-            <div className="page-sub">{customers.length}名登録済み ・ 生年月日/電話番号の未入力あり {missingCount}名</div>
+            <div className="page-sub">{customers.length}名登録済み ・ 生年月日/電話番号の未入力あり {missingCount}名{duplicateIds.size > 0 && ` ・ 重複の可能性あり ${duplicateIds.size}件`}</div>
           </div>
           <button className="btn-new" onClick={() => setModalOpen(true)}>
             <i className="ti ti-plus"></i>新規登録
@@ -74,6 +78,7 @@ export default function CustomersClient({ customers, staff }: Props) {
             <option value="any">未入力あり（生年月日 or 電話）</option>
             <option value="birthday">生年月日が未入力</option>
             <option value="phone">電話番号が未入力</option>
+            <option value="duplicate">重複の可能性あり（同じ名前・電話番号）</option>
           </select>
         </div>
 
@@ -103,6 +108,7 @@ export default function CustomersClient({ customers, staff }: Props) {
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       {lacksBirthday(c) && <span className="tag" style={{ color: 'var(--red)', border: '1px solid var(--red)' }}>生年月日</span>}
                       {lacksPhone(c) && <span className="tag" style={{ color: 'var(--red)', border: '1px solid var(--red)' }}>電話</span>}
+                      {duplicateIds.has(c.id) && <span className="tag" style={{ color: 'var(--gold-d)', border: '1px solid var(--gold-d)' }}>重複?</span>}
                     </div>
                   </td>
                   <td><span className={`tag ${TYPE_TAG_CLASS[c.customer_type]}`}>{TYPE_LABEL[c.customer_type]}</span></td>
