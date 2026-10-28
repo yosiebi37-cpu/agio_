@@ -3,6 +3,7 @@ import { getServiceSupabase } from '@/lib/supabase/server';
 import { toMinutes, minutesToHHMM, initialsFromName } from '@/lib/format';
 import { sendLinePushMessage, manageBookingUrl } from '@/lib/line';
 import { syncBookingToSquare } from '@/lib/square-sync';
+import { findMatchingCustomer, normalizePhone, type MatchCandidate } from '@/lib/customer-match';
 
 const OPEN_MIN = 9 * 60;
 const CLOSE_MIN = 20 * 60;
@@ -129,20 +130,36 @@ export async function POST(request: Request) {
     }
   }
 
-  // お客様の解決（電話番号で既存客を検索、無ければ新規作成）
+  // お客様の解決：LINEユーザーID → 電話番号 → お名前 の順で既存のお客様を探し、
+  // 見つからないときだけ新規作成する（顧客管理に同じ人が二重登録されないようにする）
   let customerId: string;
   let customerType: 'existing' | 'new' = 'new';
-  const { data: foundCustomer } = await sb
+  let phoneMismatchNote: string | null = null;
+  const { data: customerRows } = await sb
     .from('customers')
-    .select('id,customer_type,line_user_id')
-    .eq('phone', phone.trim())
-    .maybeSingle();
-  if (foundCustomer) {
-    customerId = foundCustomer.id;
-    customerType = foundCustomer.customer_type;
+    .select('id,name,furigana,phone,line_user_id,customer_type,visit_count');
+  const match = findMatchingCustomer((customerRows ?? []) as MatchCandidate[], {
+    lineUserId,
+    phone,
+    name,
+    furigana,
+  });
+  if (match) {
+    const found = match.customer;
+    customerId = found.id;
+    customerType = found.customer_type ?? 'existing';
+    // 足りない情報だけ補う（すでに入っている電話番号・フリガナは上書きしない）
+    const patch: Record<string, string> = {};
     // LINE予約でLINEユーザーIDが取れた場合、前日リマインダー送信のために保存しておく
-    if (lineUserId && foundCustomer.line_user_id !== lineUserId) {
-      await sb.from('customers').update({ line_user_id: lineUserId }).eq('id', customerId);
+    if (lineUserId && found.line_user_id !== lineUserId) patch.line_user_id = lineUserId;
+    if (!(found.phone ?? '').trim()) patch.phone = phone.trim();
+    if (!(found.furigana ?? '').trim() && furigana?.trim()) patch.furigana = furigana.trim();
+    if (Object.keys(patch).length) {
+      await sb.from('customers').update(patch).eq('id', customerId);
+    }
+    // 登録済みの電話番号と違う番号で予約された場合は、予約メモに残してスタッフが確認できるようにする
+    if ((found.phone ?? '').trim() && normalizePhone(found.phone) !== normalizePhone(phone)) {
+      phoneMismatchNote = `※予約時の電話番号：${phone.trim()}（登録済み：${found.phone}）`;
     }
   } else {
     const { data: newCustomer, error: customerError } = await sb
@@ -163,6 +180,8 @@ export async function POST(request: Request) {
     customerId = newCustomer.id;
   }
 
+  const bookingNote = [memo?.trim(), phoneMismatchNote].filter(Boolean).join('\n') || null;
+
   const { data: booking, error: bookingError } = await sb
     .from('bookings')
     .insert({
@@ -176,7 +195,7 @@ export async function POST(request: Request) {
       status: 'confirmed',
       customer_type: customerType,
       amount: menuPrice ?? 0,
-      note: memo?.trim() || null,
+      note: bookingNote,
       idempotency_key: idempotencyKey,
     })
     .select('id')
