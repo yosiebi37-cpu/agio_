@@ -1,6 +1,8 @@
 import { isSupabaseConfigured, getServerSupabase } from '@/lib/supabase/server';
 import SetupNotice from '@/components/SetupNotice';
 import KarteClient from '@/components/KarteClient';
+import type { MergeCandidate } from '@/components/MergeCustomerModal';
+import { findDuplicateCandidates } from '@/lib/customer-match';
 import type { Customer, TreatmentRecord, ChemicalRecord, Staff, KartePhoto, RetailSale } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -37,7 +39,7 @@ export default async function KartePage({
     );
   }
 
-  const [{ data: treatments }, { data: chemicals }, { data: staffData }, { data: photos }, { data: retailSales }] = await Promise.all([
+  const [{ data: treatments }, { data: chemicals }, { data: staffData }, { data: photos }, { data: retailSales }, { data: allCustomers }] = await Promise.all([
     sb
       .from('treatment_records')
       .select('*, staff:staff_id(name)')
@@ -59,7 +61,16 @@ export default async function KartePage({
       .select('*')
       .eq('customer_id', id)
       .order('sale_date', { ascending: false }),
+    // 二重登録の候補を探すための一覧（名前・電話番号・フリガナが一致するお客様）
+    sb
+      .from('customers')
+      .select('id,name,furigana,phone,customer_type,visit_count,last_visit_on,staff:assigned_staff_id(name)'),
   ]);
+
+  const duplicateCandidates = findDuplicateCandidates(
+    customer as unknown as Customer,
+    (allCustomers ?? []) as unknown as MergeCandidate[],
+  );
 
   return (
     <KarteClient
@@ -69,6 +80,7 @@ export default async function KartePage({
       staff={(staffData ?? []) as Staff[]}
       photos={(photos ?? []) as KartePhoto[]}
       retailSales={(retailSales ?? []) as RetailSale[]}
+      duplicateCandidates={duplicateCandidates}
       defaultTreatmentDate={dateParam}
       defaultTreatmentTime={timeParam}
     />
