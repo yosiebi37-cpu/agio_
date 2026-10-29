@@ -11,6 +11,7 @@
 - **Vercel** — ホスティング
 - アイコン: Tabler Icons（webfont / CDN）、フォント: Cormorant Garamond + DM Sans
 
+
 ```
 app/                  画面（ルーティング）
   board/              予約ボード
