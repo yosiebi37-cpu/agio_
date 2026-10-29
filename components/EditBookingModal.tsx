@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { FALLBACK_MENUS } from '@/lib/constants';
+import LineLinkPanel from './LineLinkPanel';
 import type { Staff, MenuItem, BookingWithStaff } from '@/lib/types';
 
 interface Props {
@@ -272,6 +273,12 @@ export default function EditBookingModal({ open, onClose, booking, staff }: Prop
             <label className="f-label">メモ</label>
             <textarea className="f-input f-textarea" rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
+          <LineLinkPanel
+            bookingId={booking.id}
+            customerId={booking.customer_id}
+            bookingDate={booking.booking_date}
+            status={booking.status}
+          />
           {error && (
             <div style={{ marginTop: 14, fontSize: 14, color: 'var(--red)' }}>{error}</div>
           )}

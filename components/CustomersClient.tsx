@@ -25,6 +25,8 @@ export default function CustomersClient({ customers, staff }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
   const missingCount = useMemo(() => customers.filter((c) => lacksBirthday(c) || lacksPhone(c)).length, [customers]);
+  // 前日のLINEリマインドが届くお客様（LINEと連携済み）の人数
+  const lineLinkedCount = useMemo(() => customers.filter((c) => c.line_user_id).length, [customers]);
   // 名前または電話番号が同じ登録（二重登録の可能性）
   const duplicateIds = useMemo(() => findDuplicateIds(customers), [customers]);
 
@@ -39,6 +41,8 @@ export default function CustomersClient({ customers, staff }: Props) {
       if (missing === 'birthday' && !lacksBirthday(c)) return false;
       if (missing === 'phone' && !lacksPhone(c)) return false;
       if (missing === 'duplicate' && !duplicateIds.has(c.id)) return false;
+      if (missing === 'line' && !c.line_user_id) return false;
+      if (missing === 'noline' && c.line_user_id) return false;
       if (kw && !(c.name.includes(kw) || (c.furigana ?? '').includes(kwKatakana) || (c.phone ?? '').includes(kw))) return false;
       return true;
     });
@@ -50,7 +54,7 @@ export default function CustomersClient({ customers, staff }: Props) {
         <div className="page-head">
           <div>
             <div className="page-h1">顧客管理</div>
-            <div className="page-sub">{customers.length}名登録済み ・ 生年月日/電話番号の未入力あり {missingCount}名{duplicateIds.size > 0 && ` ・ 重複の可能性あり ${duplicateIds.size}件`}</div>
+            <div className="page-sub">{customers.length}名登録済み ・ 生年月日/電話番号の未入力あり {missingCount}名{duplicateIds.size > 0 && ` ・ 重複の可能性あり ${duplicateIds.size}件`} ・ LINE連携 {lineLinkedCount}名</div>
           </div>
           <button className="btn-new" onClick={() => setModalOpen(true)}>
             <i className="ti ti-plus"></i>新規登録
@@ -79,6 +83,8 @@ export default function CustomersClient({ customers, staff }: Props) {
             <option value="birthday">生年月日が未入力</option>
             <option value="phone">電話番号が未入力</option>
             <option value="duplicate">重複の可能性あり（同じ名前・電話番号）</option>
+            <option value="line">LINE連携済み</option>
+            <option value="noline">LINE未連携（前日のLINEリマインドが届かない）</option>
           </select>
         </div>
 
@@ -99,6 +105,7 @@ export default function CustomersClient({ customers, staff }: Props) {
                       </div>
                       <span>
                         {c.name}
+                        {c.line_user_id && <span className="tag" style={{ marginLeft: 6, fontSize: 11, color: '#06C755', border: '1px solid #06C755' }}>LINE</span>}
                         {c.furigana && <div style={{ fontSize: 12, color: 'var(--ink-l)' }}>{c.furigana}</div>}
                       </span>
                       <i className="ti ti-chevron-right" style={{ fontSize: 14, opacity: 0.5 }}></i>
