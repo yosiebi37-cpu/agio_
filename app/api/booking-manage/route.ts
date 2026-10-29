@@ -35,9 +35,10 @@ interface OwnBooking {
   menu: string;
   amount: number;
   square_booking_id: string | null;
+  source: string;
 }
 
-const BOOKING_COLUMNS = 'id,customer_id,customer_name,staff_id,booking_date,start_time,end_time,menu,amount,square_booking_id';
+const BOOKING_COLUMNS = 'id,customer_id,customer_name,staff_id,booking_date,start_time,end_time,menu,amount,square_booking_id,source';
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
 
@@ -118,7 +119,7 @@ async function notifyCustomer(lineUserId: string, text: string): Promise<void> {
 /**
  * お客様向けの「予約の確認・日時変更・キャンセル」。
  * LINEのLIFFで取得したアクセストークンを検証し、そのLINEアカウントに紐づくお客様の予約だけを扱う。
- * 対象はagio（手入力・/book・/book/line）で作られた、まだ来店前の予約のみ。
+ * 一覧にはこれからの予約をすべて表示し、変更・キャンセルできるのはagio（手入力・/book・/book/line）で作られた予約のみ。
  */
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as ManageBody | null;
@@ -138,13 +139,22 @@ export async function POST(request: Request) {
   const customerIds = (customers ?? []).map((c: { id: string }) => c.id);
 
   if (body.action === 'list') {
-    if (customerIds.length === 0) return NextResponse.json({ ok: true, bookings: [] });
+    if (customerIds.length === 0) {
+      // まだLINEとお客様情報がつながっていない方（お店・電話・ホットペッパーで予約した方など）。
+      // 画面で「連携申請」フォームを出すため、申請済み（スタッフの確認待ち）かどうかも返す
+      const { data: pending } = await sb
+        .from('line_link_requests')
+        .select('id')
+        .eq('line_user_id', lineUserId)
+        .eq('status', 'pending')
+        .limit(1);
+      return NextResponse.json({ ok: true, linked: false, pendingRequest: (pending ?? []).length > 0, bookings: [] });
+    }
     const { data } = await sb
       .from('bookings')
       .select(BOOKING_COLUMNS)
       .in('customer_id', customerIds)
       .eq('status', 'confirmed')
-      .eq('source', 'manual')
       .gte('booking_date', today)
       .order('booking_date')
       .order('start_time');
@@ -152,6 +162,7 @@ export async function POST(request: Request) {
     const staffNames = await loadStaffNames(sb, Array.from(new Set(rows.map((b) => b.staff_id))));
     return NextResponse.json({
       ok: true,
+      linked: true,
       deadlineHour: MODIFY_DEADLINE_HOUR,
       bookings: rows.map((b) => ({
         id: b.id,
@@ -161,7 +172,9 @@ export async function POST(request: Request) {
         menu: b.menu,
         staffName: staffNames.get(b.staff_id) ?? '',
         amount: b.amount,
-        modifiable: canModifyBooking(b.booking_date, nowMs),
+        source: b.source,
+        // ホットペッパー・Squareからの予約は表示だけ（変更・キャンセルはそれぞれのサービスか店舗で）
+        modifiable: b.source === 'manual' && canModifyBooking(b.booking_date, nowMs),
       })),
     });
   }
