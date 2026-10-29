@@ -65,3 +65,21 @@ export async function sendLineReplyMessage(replyToken: string, text: string, acc
     body: JSON.stringify({ replyToken, messages: [{ type: 'text', text }] }),
   });
 }
+
+/** お客様がLINE公式アカウントを友だち追加しているか（ブロック中・未追加なら false） */
+export async function isLineFriend(userId: string, accessToken: string): Promise<boolean> {
+  const res = await fetch(`https://api.line.me/v2/bot/profile/${encodeURIComponent(userId)}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return res.ok;
+}
+
+/** LINE公式アカウントの「友だち追加」ページのURL。取得できなければ null */
+export async function lineAddFriendUrl(accessToken: string): Promise<string | null> {
+  const res = await fetch('https://api.line.me/v2/bot/info', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) return null;
+  const info = (await res.json().catch(() => null)) as { basicId?: string } | null;
+  return info?.basicId ? `https://line.me/R/ti/p/${encodeURIComponent(info.basicId)}` : null;
+}
