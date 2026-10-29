@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { yen, formatDateLong, toISODate } from '@/lib/format';
+import LineLinkRequestForm from './LineLinkRequestForm';
 
 interface ManagedBooking {
   id: string;
@@ -13,6 +14,8 @@ interface ManagedBooking {
   staffName: string;
   amount: number;
   modifiable: boolean;
+  /** manual = agioで受けた予約、hotpepper / square = それぞれのサービスから入った予約 */
+  source?: string;
 }
 
 type Phase = 'loading' | 'ready' | 'error';
@@ -23,6 +26,9 @@ export default function ManageBookingClient() {
   const [notice, setNotice] = useState<string | null>(null);
   const [bookings, setBookings] = useState<ManagedBooking[]>([]);
   const [deadlineHour, setDeadlineHour] = useState(18);
+  // このLINEがお客様情報とつながっているか（つながっていなければ連携申請フォームを出す）
+  const [linked, setLinked] = useState(true);
+  const [pendingRequest, setPendingRequest] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newDate, setNewDate] = useState('');
@@ -52,6 +58,8 @@ export default function ManageBookingClient() {
       return;
     }
     setBookings(data.bookings ?? []);
+    setLinked(data.linked !== false);
+    setPendingRequest(Boolean(data.pendingRequest));
     if (data.deadlineHour) setDeadlineHour(data.deadlineHour);
     setPhase('ready');
   }, [call]);
@@ -160,12 +168,11 @@ export default function ManageBookingClient() {
             {notice && (
               <div style={{ marginBottom: 16, fontSize: 14, color: 'var(--accent)' }} role="status">{notice}</div>
             )}
-            {bookings.length === 0 && (
-              <div className="empty-row">
-                現在、確認できるご予約はありません。
-                <br />
-                （LINEからご予約いただいた、これからのご予約が表示されます）
-              </div>
+            {!linked && (
+              <LineLinkRequestForm getToken={() => tokenRef.current} pending={pendingRequest} onLinked={() => void loadBookings()} />
+            )}
+            {linked && bookings.length === 0 && (
+              <div className="empty-row">現在、これからのご予約はありません。</div>
             )}
 
             {bookings.map((b) => (
@@ -178,7 +185,15 @@ export default function ManageBookingClient() {
                   担当: {b.staffName || '—'} ／ {yen(b.amount)}<span style={{ fontSize: 11 }}>（税込）</span>
                 </div>
 
-                {!b.modifiable && (
+                {(b.source ?? 'manual') !== 'manual' && (
+                  <div style={{ marginTop: 12, fontSize: 13, color: 'var(--ink-l)', lineHeight: 1.7 }}>
+                    {b.source === 'hotpepper' ? 'ホットペッパーからのご予約です。' : 'こちらは店舗でお受けしたご予約です。'}
+                    <br />
+                    ご変更・キャンセルは、{b.source === 'hotpepper' ? 'ホットペッパーのページから' : '店舗まで直接'}お願いいたします。
+                  </div>
+                )}
+
+                {!b.modifiable && (b.source ?? 'manual') === 'manual' && (
                   <div style={{ marginTop: 12, fontSize: 13, color: 'var(--ink-l)', lineHeight: 1.7 }}>
                     ご変更・キャンセルは、ご予約の前日の{deadlineHour}時までとなっております。
                     <br />
