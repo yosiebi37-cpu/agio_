@@ -5,18 +5,21 @@ import { useRouter } from 'next/navigation';
 import { TYPE_LABEL, TYPE_TAG_CLASS } from '@/lib/constants';
 import { formatDateSlash, hiraganaToKatakana } from '@/lib/format';
 import NewCustomerModal from './NewCustomerModal';
+import LineLinkRequests, { type LineLinkRequest } from './LineLinkRequests';
 import { findDuplicateIds } from '@/lib/customer-match';
 import type { Staff, CustomerWithStaff } from '@/lib/types';
 
 interface Props {
   customers: CustomerWithStaff[];
   staff: Staff[];
+  /** LINEからの連携申請（スタッフの確認待ち） */
+  linkRequests?: LineLinkRequest[];
 }
 
 const lacksBirthday = (c: CustomerWithStaff) => !c.birth_year || !c.birth_month || !c.birth_day;
 const lacksPhone = (c: CustomerWithStaff) => !(c.phone ?? '').trim();
 
-export default function CustomersClient({ customers, staff }: Props) {
+export default function CustomersClient({ customers, staff, linkRequests = [] }: Props) {
   const router = useRouter();
   const [q, setQ] = useState('');
   const [type, setType] = useState('all');
@@ -60,6 +63,8 @@ export default function CustomersClient({ customers, staff }: Props) {
             <i className="ti ti-plus"></i>新規登録
           </button>
         </div>
+
+        <LineLinkRequests requests={linkRequests} customers={customers} />
 
         <div className="search-row">
           <input
