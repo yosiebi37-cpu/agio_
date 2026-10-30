@@ -135,6 +135,8 @@ export async function POST(request: Request) {
   let customerId: string;
   let customerType: 'existing' | 'new' = 'new';
   let phoneMismatchNote: string | null = null;
+  // このお客様にLINEがつながっているか（つながっていなければ、予約完了画面でLINE連携を案内する）
+  let lineLinked = false;
   const { data: customerRows } = await sb
     .from('customers')
     .select('id,name,furigana,phone,line_user_id,customer_type,visit_count');
@@ -148,6 +150,7 @@ export async function POST(request: Request) {
     const found = match.customer;
     customerId = found.id;
     customerType = found.customer_type ?? 'existing';
+    lineLinked = Boolean(lineUserId || found.line_user_id);
     // 足りない情報だけ補う（すでに入っている電話番号・フリガナは上書きしない）
     const patch: Record<string, string> = {};
     // LINE予約でLINEユーザーIDが取れた場合、前日リマインダー送信のために保存しておく
@@ -178,6 +181,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: customerError?.message ?? 'お客様情報の登録に失敗しました。' }, { status: 500 });
     }
     customerId = newCustomer.id;
+    lineLinked = Boolean(lineUserId);
   }
 
   const bookingNote = [memo?.trim(), phoneMismatchNote].filter(Boolean).join('\n') || null;
@@ -249,5 +253,5 @@ export async function POST(request: Request) {
     // Square連携の失敗は無視する（予約自体は成立している）
   }
 
-  return NextResponse.json({ ok: true, bookingId: booking.id });
+  return NextResponse.json({ ok: true, bookingId: booking.id, lineLinked });
 }

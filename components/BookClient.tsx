@@ -7,6 +7,7 @@ import { yen, toISODate, addDays, toMinutes, minutesToHHMM, hhmm, formatDateLong
 import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
 import { MENU_CATEGORIES, OTHER_MENU_CATEGORY } from '@/lib/constants';
 import type { MenuItem, PublicStaff } from '@/lib/types';
+import LineReminderOffer from './LineReminderOffer';
 
 /** 全角数字・記号を半角に正規化する（電話番号欄向け） */
 const toHalfWidth = (s: string): string =>
@@ -66,6 +67,8 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
   const [phoneTouched, setPhoneTouched] = useState(false);
   const [memo, setMemo] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // 予約完了後の情報（LINE外で予約したお客様に、LINE連携を案内するために使う）
+  const [doneBooking, setDoneBooking] = useState<{ id: string; lineLinked: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(() =>
     typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
@@ -301,6 +304,9 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
         }
         return;
       }
+      setDoneBooking(
+        typeof data.bookingId === 'string' ? { id: data.bookingId, lineLinked: data.lineLinked === true } : null,
+      );
       setStep('done');
       setSubmitting(false);
     } catch (e) {
@@ -354,6 +360,7 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
               </Link>
             </div>
           )}
+          {!useLiff && doneBooking && !doneBooking.lineLinked && <LineReminderOffer bookingId={doneBooking.id} />}
         </div>
       </div>
     );
