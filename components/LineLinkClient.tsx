@@ -87,7 +87,7 @@ export default function LineLinkClient() {
 
   return (
     <div className="page-wrap">
-      <div className="inner-page" style={{ maxWidth: 560, margin: '0 auto' }}>
+      <div className="inner-page" style={{ maxWidth: 560, margin: '0 auto', width: '100%' }}>
         <div className="login-title" style={{ textAlign: 'center', marginTop: 24 }}>agio</div>
         <div className="login-sub" style={{ textAlign: 'center', marginBottom: 32 }}>LINE連携</div>
 
