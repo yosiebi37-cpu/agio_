@@ -344,7 +344,7 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
   if (step === 'done') {
     return (
       <div className="page-wrap">
-        <div className="inner-page" style={{ maxWidth: 480, margin: '0 auto' }}>
+        <div className="inner-page" style={{ maxWidth: 480, margin: '0 auto', width: '100%' }}>
           <div className="login-title" style={{ textAlign: 'center', marginTop: 40 }}>agio</div>
           <div style={{ textAlign: 'center', marginTop: 24, fontSize: 16 }}>
             ご予約ありがとうございます!
@@ -368,7 +368,7 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
 
   return (
     <div className="page-wrap">
-      <div className="inner-page" style={{ maxWidth: 560, margin: '0 auto' }}>
+      <div className="inner-page" style={{ maxWidth: 560, margin: '0 auto', width: '100%' }}>
         <div className="login-title" style={{ textAlign: 'center', marginTop: 24 }}>agio</div>
         <div className="login-sub" style={{ textAlign: 'center', marginBottom: useLiff && step === 'menu' ? 16 : 32 }}>ご予約はこちらから</div>
         {useLiff && step === 'menu' && (
