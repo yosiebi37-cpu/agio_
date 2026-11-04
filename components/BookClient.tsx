@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { yen, toISODate, addDays, toMinutes, minutesToHHMM, hhmm, formatDateLong, formatDateTiny } from '@/lib/format';
+import { yen, toISODate, addDays, toMinutes, minutesToHHMM, hhmm, formatDateLong, formatDateTiny, containsKanji } from '@/lib/format';
 import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
 import { MENU_CATEGORIES, OTHER_MENU_CATEGORY } from '@/lib/constants';
 import type { MenuItem, PublicStaff } from '@/lib/types';
@@ -74,6 +74,12 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
     typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
   );
 
+  // LIFFの非同期処理の中から「いまフリガナ欄に何か入っているか」を見るための参照
+  const lastNameFuriganaRef = useRef('');
+  const firstNameFuriganaRef = useRef('');
+  lastNameFuriganaRef.current = lastNameFurigana.furigana;
+  firstNameFuriganaRef.current = firstNameFurigana.furigana;
+
   const phoneDigits = phone.replace(/[^0-9]/g, '');
   const phoneError = phoneTouched && phone.trim() && (phoneDigits.length < 10 || phoneDigits.length > 11)
     ? '電話番号は10〜11桁の数字で入力してください（ハイフンはあってもなくても大丈夫です）'
@@ -101,6 +107,25 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
           setLineUserId(profile.userId);
+          // 前回のご予約でLINE連携済みのお客様は、お名前・電話番号を自動で入れておく
+          // （毎回の入力の手間と、セイ・メイ欄と姓・名欄の入れ違いを防ぐ）
+          const accessToken = liff.getAccessToken();
+          if (accessToken) {
+            const res = await fetch('/api/line-customer', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ accessToken }),
+            });
+            const saved = await res.json().catch(() => null);
+            if (saved?.found) {
+              // お客様がすでに何か入力していたら上書きしない
+              setLastName((v) => v || saved.lastName || '');
+              setFirstName((v) => v || saved.firstName || '');
+              setPhone((v) => v || saved.phone || '');
+              if (saved.lastKana && !lastNameFuriganaRef.current) lastNameFurigana.reset(saved.lastKana);
+              if (saved.firstKana && !firstNameFuriganaRef.current) firstNameFurigana.reset(saved.firstKana);
+            }
+          }
         }
       } catch {
         // LIFFの初期化・ログインに失敗しても予約自体は通常通り続行する
@@ -268,6 +293,12 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
     }
     if (phoneError) {
       setError(phoneError);
+      return;
+    }
+    // セイ・メイ欄に漢字が入っている＝姓・名欄と入れ違えている可能性が高いので、送信前に止める
+    // （入れ違ったまま登録されると、既存のカルテと同じ人だと判定できず二重登録になるため）
+    if (containsKanji(lastNameFurigana.furigana) || containsKanji(firstNameFurigana.furigana)) {
+      setError('セイ・メイ欄はカタカナで入力してください（漢字のお名前は「姓」「名」欄へお願いします）。');
       return;
     }
     setSubmitting(true);
@@ -559,30 +590,6 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
             <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>お客様情報</div>
             <div className="f-row2">
               <div>
-                <label className="f-label">セイ</label>
-                <input
-                  className="f-input"
-                  type="text"
-                  placeholder="ヤマダ"
-                  value={lastNameFurigana.furigana}
-                  onChange={lastNameFurigana.onFuriganaChange}
-                  style={{ fontSize: 16 }}
-                />
-              </div>
-              <div>
-                <label className="f-label">メイ</label>
-                <input
-                  className="f-input"
-                  type="text"
-                  placeholder="ハナコ"
-                  value={firstNameFurigana.furigana}
-                  onChange={firstNameFurigana.onFuriganaChange}
-                  style={{ fontSize: 16 }}
-                />
-              </div>
-            </div>
-            <div className="f-row2">
-              <div>
                 <label className="f-label">姓</label>
                 <input
                   className="f-input"
@@ -607,6 +614,33 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
                   onChange={(e) => setFirstName(e.target.value)}
                   onCompositionUpdate={firstNameFurigana.nameCompositionHandlers.onCompositionUpdate}
                   onCompositionEnd={firstNameFurigana.nameCompositionHandlers.onCompositionEnd}
+                  style={{ fontSize: 16 }}
+                />
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--ink-l)', margin: '-6px 0 12px' }}>
+              お名前を入力すると、フリガナは自動で入ります（違っていたら直してください）
+            </div>
+            <div className="f-row2">
+              <div>
+                <label className="f-label">セイ</label>
+                <input
+                  className="f-input"
+                  type="text"
+                  placeholder="ヤマダ"
+                  value={lastNameFurigana.furigana}
+                  onChange={lastNameFurigana.onFuriganaChange}
+                  style={{ fontSize: 16 }}
+                />
+              </div>
+              <div>
+                <label className="f-label">メイ</label>
+                <input
+                  className="f-input"
+                  type="text"
+                  placeholder="ハナコ"
+                  value={firstNameFurigana.furigana}
+                  onChange={firstNameFurigana.onFuriganaChange}
                   style={{ fontSize: 16 }}
                 />
               </div>
