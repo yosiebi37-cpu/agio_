@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizePhone, normalizeName, normalizeKana, findMatchingCustomer, findDuplicateIds, findDuplicateCandidates } from './customer-match';
+import { normalizePhone, normalizeName, normalizeKana, findMatchingCustomer, findDuplicateIds, findDuplicateCandidates, splitPersonName } from './customer-match';
 
 const base = [
   { id: 'a', name: '熊谷 美穂', furigana: 'クマガイ ミホ', phone: null, line_user_id: null, customer_type: 'existing' as const, visit_count: 3 },
@@ -77,5 +77,16 @@ describe('duplicates', () => {
     expect(ids.has('a') && ids.has('e')).toBe(true);
     expect(ids.has('f')).toBe(false);
     expect(findDuplicateCandidates(base[0], list).map((c) => c.id)).toEqual(['e']);
+  });
+});
+
+describe('splitPersonName', () => {
+  it('全角・半角の空白どちらでも姓と名に分ける', () => {
+    expect(splitPersonName('森川　愛')).toEqual({ last: '森川', first: '愛' });
+    expect(splitPersonName('モリカワ 　 アイ')).toEqual({ last: 'モリカワ', first: 'アイ' });
+  });
+  it('空白がなければ全部を姓にする', () => {
+    expect(splitPersonName('鈴木')).toEqual({ last: '鈴木', first: '' });
+    expect(splitPersonName(null)).toEqual({ last: '', first: '' });
   });
 });

@@ -159,3 +159,13 @@ export function findDuplicateCandidates<T extends MatchCandidate>(target: MatchC
     return false;
   });
 }
+
+/**
+ * 「森川　愛」「モリカワ 　 アイ」のような登録名を、姓と名に分ける（空白・全角空白どちらでも）。
+ * 空白がない場合は全部を姓として扱う。
+ */
+export function splitPersonName(s: string | null | undefined): { last: string; first: string } {
+  const parts = (s ?? '').trim().split(/[\s　]+/).filter(Boolean);
+  if (!parts.length) return { last: '', first: '' };
+  return { last: parts[0], first: parts.slice(1).join(' ') };
+}
