@@ -36,3 +36,19 @@ describe('pickSquareServiceForMenu', () => {
     expect(pickSquareServiceForMenu('カットのみ', items)).toBeNull();
   });
 });
+
+describe('pickSquareServiceForMenu with LINE限定 / 一般 menus of the same name', () => {
+  const dup = [
+    { name: '【agio基本白髪染め】コンシャスリタッチカラー＋カット', square_service_variation_id: 'SQ_LINE', price: 8500 },
+    { name: '【agio基本白髪染め】コンシャスリタッチカラー＋カット', square_service_variation_id: 'SQ_GENERAL', price: 9500 },
+  ];
+
+  it('picks the menu whose price matches the booking amount', () => {
+    expect(pickSquareServiceForMenu('【agio基本白髪染め】コンシャスリタッチカラー＋カット', dup, 9500)).toBe('SQ_GENERAL');
+    expect(pickSquareServiceForMenu('【agio基本白髪染め】コンシャスリタッチカラー＋カット', dup, 8500)).toBe('SQ_LINE');
+  });
+
+  it('falls back to the first one when no price matches', () => {
+    expect(pickSquareServiceForMenu('【agio基本白髪染め】コンシャスリタッチカラー＋カット', dup, 7000)).toBe('SQ_LINE');
+  });
+});

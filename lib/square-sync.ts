@@ -20,6 +20,7 @@ export type SquareSyncResult = 'synced' | 'already' | 'not_configured' | 'failed
 interface MenuSquareRow {
   name: string;
   square_service_variation_id: string | null;
+  price?: number | null;
 }
 
 /**
@@ -27,16 +28,22 @@ interface MenuSquareRow {
  * 複数メニューの予約は「メニューA＋メニューB」のように＋でつながっているが、
  * メニュー名そのものにも＋が含まれる（例：カット＋カラー）ため、単純に＋で分割はできない。
  * そこで、①完全一致 → ②先頭から一致する一番長いメニュー名（＝1つ目のメニュー）の順に探す。
+ * 「LINE限定」と「一般」で同じ名前のメニューがある時は、予約の金額と同じ値段のメニューを優先する。
  */
-export function pickSquareServiceForMenu(menu: string, items: MenuSquareRow[]): string | null {
+export function pickSquareServiceForMenu(menu: string, items: MenuSquareRow[], amount?: number | null): string | null {
   const target = menu.trim();
   const withId = items.filter((m) => m.square_service_variation_id && m.name.trim());
-  const exact = withId.find((m) => m.name.trim() === target);
-  if (exact) return exact.square_service_variation_id;
-  const prefixMatches = withId
-    .filter((m) => target.startsWith(`${m.name.trim()}＋`))
-    .sort((a, b) => b.name.trim().length - a.name.trim().length);
-  return prefixMatches[0]?.square_service_variation_id ?? null;
+  const choose = (cands: MenuSquareRow[]): string | null => {
+    if (!cands.length) return null;
+    const samePrice = amount != null ? cands.find((m) => m.price != null && m.price === amount) : undefined;
+    return (samePrice ?? cands[0]).square_service_variation_id;
+  };
+  const exact = withId.filter((m) => m.name.trim() === target);
+  if (exact.length) return choose(exact);
+  const prefixMatches = withId.filter((m) => target.startsWith(`${m.name.trim()}＋`));
+  if (!prefixMatches.length) return null;
+  const longest = Math.max(...prefixMatches.map((m) => m.name.trim().length));
+  return choose(prefixMatches.filter((m) => m.name.trim().length === longest));
 }
 
 /**
@@ -54,17 +61,21 @@ export async function syncBookingToSquare(
 
   const { data: booking } = await sb
     .from('bookings')
-    .select('id,customer_name,staff_id,booking_date,start_time,end_time,menu,square_booking_id')
+    .select('id,customer_name,staff_id,booking_date,start_time,end_time,menu,amount,square_booking_id')
     .eq('id', bookingId)
     .maybeSingle();
   if (!booking) return 'failed';
   if (booking.square_booking_id) return 'already';
 
   const [{ data: menuRows }, { data: staffRow }] = await Promise.all([
-    sb.from('menu_items').select('name,square_service_variation_id').not('square_service_variation_id', 'is', null),
+    sb.from('menu_items').select('name,square_service_variation_id,price').not('square_service_variation_id', 'is', null),
     sb.from('staff').select('square_team_member_id').eq('id', booking.staff_id).maybeSingle(),
   ]);
-  const serviceVariationId = pickSquareServiceForMenu(booking.menu ?? '', (menuRows ?? []) as MenuSquareRow[]);
+  const serviceVariationId = pickSquareServiceForMenu(
+    booking.menu ?? '',
+    (menuRows ?? []) as MenuSquareRow[],
+    booking.amount as number | null | undefined,
+  );
   const teamMemberId = staffRow?.square_team_member_id as string | null | undefined;
   if (!serviceVariationId || !teamMemberId) return 'not_configured';
 
