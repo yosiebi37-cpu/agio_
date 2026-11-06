@@ -106,7 +106,7 @@ export async function syncBookingToSquare(
   const customer = await createSquareCustomerDetailed(
     accessToken,
     booking.customer_name,
-    `agio-customer-${booking.id}`,
+    `agio-customer-v2-${booking.id}`,
   );
   if (!customer.id) return fail(customer.error ?? 'お客様の登録に失敗しました');
   const customerId = customer.id;
