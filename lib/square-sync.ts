@@ -1,35 +1,77 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getSquareLocationId, createSquareCustomer, createSquareBooking, jstToUtcIso } from '@/lib/square';
+import {
+  getSquareLocationId,
+  createSquareCustomer,
+  createSquareBooking,
+  cancelSquareBookingById,
+  jstToUtcIso,
+} from '@/lib/square';
 import { hhmm, toMinutes } from '@/lib/format';
+
+/**
+ * Squareとの同期結果。
+ * - synced: Squareに登録した
+ * - already: すでにSquareに登録済み（何もしていない）
+ * - not_configured: SquareのアクセストークンやメニューID・スタッフIDが未設定で、対象外
+ * - failed: Squareとの通信に失敗した
+ */
+export type SquareSyncResult = 'synced' | 'already' | 'not_configured' | 'failed';
+
+interface MenuSquareRow {
+  name: string;
+  square_service_variation_id: string | null;
+}
+
+/**
+ * 予約のメニュー文字列から、Squareのサービスを選ぶ。
+ * 複数メニューの予約は「メニューA＋メニューB」のように＋でつながっているが、
+ * メニュー名そのものにも＋が含まれる（例：カット＋カラー）ため、単純に＋で分割はできない。
+ * そこで、①完全一致 → ②先頭から一致する一番長いメニュー名（＝1つ目のメニュー）の順に探す。
+ */
+export function pickSquareServiceForMenu(menu: string, items: MenuSquareRow[]): string | null {
+  const target = menu.trim();
+  const withId = items.filter((m) => m.square_service_variation_id && m.name.trim());
+  const exact = withId.find((m) => m.name.trim() === target);
+  if (exact) return exact.square_service_variation_id;
+  const prefixMatches = withId
+    .filter((m) => target.startsWith(`${m.name.trim()}＋`))
+    .sort((a, b) => b.name.trim().length - a.name.trim().length);
+  return prefixMatches[0]?.square_service_variation_id ?? null;
+}
 
 /**
  * agioで登録された予約（手入力・/book・/book/line経由）を、Square側にも登録する。
  * メニュー名・担当スタッフがSquare側と紐付いている場合のみ登録できる。
  * すでにsquare_booking_idが付いている予約（Square発の予約や登録済みの予約）は対象外。
  */
-export async function syncBookingToSquare(sb: SupabaseClient, bookingId: string, idempotencySuffix = ''): Promise<void> {
+export async function syncBookingToSquare(
+  sb: SupabaseClient,
+  bookingId: string,
+  idempotencySuffix = '',
+): Promise<SquareSyncResult> {
   const accessToken = process.env.SQUARE_ACCESS_TOKEN;
-  if (!accessToken) return;
+  if (!accessToken) return 'not_configured';
 
   const { data: booking } = await sb
     .from('bookings')
     .select('id,customer_name,staff_id,booking_date,start_time,end_time,menu,square_booking_id')
     .eq('id', bookingId)
     .maybeSingle();
-  if (!booking || booking.square_booking_id) return;
+  if (!booking) return 'failed';
+  if (booking.square_booking_id) return 'already';
 
-  const [{ data: menuRow }, { data: staffRow }] = await Promise.all([
-    sb.from('menu_items').select('square_service_variation_id').eq('name', booking.menu).maybeSingle(),
+  const [{ data: menuRows }, { data: staffRow }] = await Promise.all([
+    sb.from('menu_items').select('name,square_service_variation_id').not('square_service_variation_id', 'is', null),
     sb.from('staff').select('square_team_member_id').eq('id', booking.staff_id).maybeSingle(),
   ]);
-  const serviceVariationId = menuRow?.square_service_variation_id as string | null | undefined;
+  const serviceVariationId = pickSquareServiceForMenu(booking.menu ?? '', (menuRows ?? []) as MenuSquareRow[]);
   const teamMemberId = staffRow?.square_team_member_id as string | null | undefined;
-  if (!serviceVariationId || !teamMemberId) return;
+  if (!serviceVariationId || !teamMemberId) return 'not_configured';
 
   const locationId = await getSquareLocationId(accessToken);
-  if (!locationId) return;
+  if (!locationId) return 'failed';
   const customerId = await createSquareCustomer(accessToken, booking.customer_name, `agio-customer-${booking.id}`);
-  if (!customerId) return;
+  if (!customerId) return 'failed';
 
   const durationMinutes = toMinutes(booking.end_time) - toMinutes(booking.start_time);
   const squareBookingId = await createSquareBooking(accessToken, {
@@ -42,7 +84,40 @@ export async function syncBookingToSquare(sb: SupabaseClient, bookingId: string,
     // 日時変更でSquareの予約を作り直す時は、前回と同じキーだと取り消し済みの予約が返ってくるため、別のキーを渡す
     idempotencyKey: `agio-square-${booking.id}${idempotencySuffix}`,
   });
-  if (squareBookingId) {
-    await sb.from('bookings').update({ square_booking_id: squareBookingId }).eq('id', booking.id);
+  if (!squareBookingId) return 'failed';
+  await sb.from('bookings').update({ square_booking_id: squareBookingId }).eq('id', booking.id);
+  return 'synced';
+}
+
+/**
+ * 予約ボードで日時・メニュー・担当を変更したあとに呼ぶ。
+ * Square側の古い予約を取り消してから、変更後の内容でSquareに登録し直す。
+ * 古い予約の取り消しに失敗した場合は、Squareに予約が二重にできないよう、作り直しはしない。
+ */
+export async function resyncBookingToSquare(sb: SupabaseClient, bookingId: string): Promise<SquareSyncResult> {
+  const accessToken = process.env.SQUARE_ACCESS_TOKEN;
+  if (!accessToken) return 'not_configured';
+
+  const { data: booking } = await sb
+    .from('bookings')
+    .select('id,square_booking_id')
+    .eq('id', bookingId)
+    .maybeSingle();
+  if (!booking) return 'failed';
+
+  const oldSquareBookingId = booking.square_booking_id as string | null;
+  if (oldSquareBookingId) {
+    // 先に紐付けを外してから取り消す。取り消しのWebhook（square-webhook）が先に届いても、
+    // この予約（Square発の予約の場合も）を「取り消された予約」と誤って削除しないようにするため
+    await sb.from('bookings').update({ square_booking_id: null }).eq('id', bookingId);
+    const cancelled = await cancelSquareBookingById(accessToken, oldSquareBookingId).catch(() => false);
+    if (!cancelled) {
+      // 取り消せなかった時は紐付けを元に戻し、Squareに予約が二重にできないよう作り直しはしない
+      await sb.from('bookings').update({ square_booking_id: oldSquareBookingId }).eq('id', bookingId);
+      return 'failed';
+    }
   }
+
+  // 同じキーだと取り消し済みの予約が返ってくるため、作り直すたびに別のキーにする
+  return syncBookingToSquare(sb, bookingId, `-edit-${Date.now()}`);
 }

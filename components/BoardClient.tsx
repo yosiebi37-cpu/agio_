@@ -303,7 +303,8 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
   const cancelBooking = async (b: BookingWithStaff) => {
     if (!window.confirm(`${b.customer_name} 様の予約をキャンセル（削除）しますか？`)) return;
     setBusy(true);
-    if (b.source === 'square' && b.square_booking_id) {
+    // Squareに登録済みの予約（Square発・agio発どちらも）は、Square側の予約も一緒に取り消す
+    if (b.square_booking_id) {
       const res = await fetch('/api/square-cancel-booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -114,6 +114,24 @@ export default function EditBookingModal({ open, onClose, booking, staff }: Prop
         setSaving(false);
         return;
       }
+      // 日時・メニュー・担当が変わった時は、Square側の予約も作り直す（予約ボードだけ触ればSquareも揃うように）
+      const squareRelevantChanged =
+        date !== booking.booking_date ||
+        start !== booking.start_time.slice(0, 5) ||
+        end !== booking.end_time.slice(0, 5) ||
+        staffId !== booking.staff_id ||
+        combinedMenu !== booking.menu;
+      if (squareRelevantChanged) {
+        const res = await fetch('/api/square-resync-booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: booking.id }),
+        }).catch(() => null);
+        const data = res ? await res.json().catch(() => null) : null;
+        if (!data || data.result === 'failed') {
+          alert('予約の変更は保存しました。ただしSquareへの反映に失敗したため、Square側の予約を確認してください。');
+        }
+      }
       if (booking.customer_id) {
         await sb
           .from('customers')

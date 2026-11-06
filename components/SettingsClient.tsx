@@ -348,7 +348,7 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
           <div style={{ fontSize: 11, color: 'var(--ink-l)', marginBottom: 12 }}>
             メニュー名・時間・金額は、それぞれの欄を直接書き換えて、欄の外をタップすれば保存されます。<br />
             「カテゴリ」は、予約ページでメニューをタブ分けして表示するために使います。未設定のメニューは「その他」タブに表示されます。<br />
-            「Square ID」は、HotPepperの予約を自動でSquareにも登録するために使います。Square側の対応するサービスのIDを入力してください（空欄でもOK、その場合はSquareへの自動登録はされません）。<br />
+            「Square ID」は、予約ボードの予約（手入力・LINE・ホームページ・HotPepper）を自動でSquareにも登録するために使います。予約ボードで日時・メニュー・担当を変更・キャンセルすると、Square側も自動で直ります。Square側の対応するサービスのIDを入力してください（空欄でもOK、その場合はSquareへの自動登録はされません）。<br />
             「LINE限定」にチェックを入れると、LINE用の予約ページにだけ表示され、Googleマップなど一般のお客様には表示されなくなります（チェックしない場合は逆に一般のお客様にだけ表示されます）。
           </div>
 
