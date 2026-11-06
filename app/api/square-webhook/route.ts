@@ -8,6 +8,7 @@ import {
   type SquareWebhookEvent,
 } from '@/lib/square';
 import { toMinutes, minutesToHHMM } from '@/lib/format';
+import { extractPayment, handleSquarePayment } from '@/lib/square-payments';
 
 const SQUARE_API_BASE = 'https://connect.squareup.com/v2';
 const SQUARE_API_VERSION = '2024-01-18';
@@ -69,6 +70,32 @@ export async function POST(request: Request) {
     payload = JSON.parse(rawBody);
   } catch {
     await sb.from('square_sync_log').insert({ event_type: 'unknown', raw_body: rawBody, result: 'error', message: 'JSONの解析に失敗しました' });
+    return NextResponse.json({ ok: true });
+  }
+
+  // Squareで会計が完了したら、予約ボードの予約を「来店済み」にする（キーパッド会計にも対応）
+  if (payload.type === 'payment.created' || payload.type === 'payment.updated') {
+    const payment = extractPayment(payload as Parameters<typeof extractPayment>[0]);
+    if (!payment) {
+      await sb.from('square_sync_log').insert({ event_type: payload.type, raw_body: rawBody, result: 'error', message: '会計情報が見つかりません' });
+      return NextResponse.json({ ok: true });
+    }
+    try {
+      const outcome = await handleSquarePayment(sb, payment, accessToken);
+      await sb.from('square_sync_log').insert({
+        event_type: payload.type,
+        raw_body: rawBody,
+        result: outcome.result === 'matched' ? 'created' : 'skipped',
+        message: outcome.message,
+      });
+    } catch (e) {
+      await sb.from('square_sync_log').insert({
+        event_type: payload.type,
+        raw_body: rawBody,
+        result: 'error',
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
     return NextResponse.json({ ok: true });
   }
 

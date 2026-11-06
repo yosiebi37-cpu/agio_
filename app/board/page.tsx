@@ -1,6 +1,7 @@
 import { isSupabaseConfigured, getServerSupabase } from '@/lib/supabase/server';
 import SetupNotice from '@/components/SetupNotice';
 import BoardClient from '@/components/BoardClient';
+import type { PaymentReview } from '@/components/SquarePaymentReview';
 import BoardWeekView from '@/components/BoardWeekView';
 import BoardMonthView from '@/components/BoardMonthView';
 import { toISODate, addDays, startOfWeek } from '@/lib/format';
@@ -77,6 +78,13 @@ export default async function BoardPage({
     sb.from('shifts').select('staff_id,start_time,end_time').eq('shift_date', date),
     sb.from('retail_sales').select('*').eq('sale_date', date),
   ]);
+  // Squareの会計で、どの予約か自動で決められなかったもの（表がまだ無い場合は何も出さない）
+  const { data: reviewData } = await sb
+    .from('square_payments')
+    .select('id,amount,paid_time,note')
+    .eq('paid_on', date)
+    .eq('match_status', 'needs_review')
+    .order('paid_time');
 
   const staff = (staffData ?? []) as Staff[];
   const bookings = (bookingData ?? []) as unknown as BookingWithStaff[];
@@ -88,5 +96,7 @@ export default async function BoardPage({
   const shifts = (shiftData ?? []) as { staff_id: string; start_time: string; end_time: string }[];
   const retailSales = (retailData ?? []) as RetailSale[];
 
-  return <BoardClient staff={staff} bookings={bookings} date={date} closedLabel={closedLabel} capacityOverrides={capacityOverrides} shifts={shifts} retailSales={retailSales} />;
+  const paymentReviews = (reviewData ?? []) as PaymentReview[];
+
+  return <BoardClient staff={staff} bookings={bookings} date={date} closedLabel={closedLabel} capacityOverrides={capacityOverrides} shifts={shifts} retailSales={retailSales} paymentReviews={paymentReviews} />;
 }

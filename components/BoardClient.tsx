@@ -23,6 +23,7 @@ import EditBookingModal from './EditBookingModal';
 import AddRetailToBookingModal from './AddRetailToBookingModal';
 import type { Staff, BookingWithStaff, RetailSale } from '@/lib/types';
 import { findMatchingCustomer, type MatchCandidate } from '@/lib/customer-match';
+import SquarePaymentReview, { type PaymentReview } from './SquarePaymentReview';
 
 function textOn(bg: string): string {
   const c = bg.replace('#', '');
@@ -41,6 +42,7 @@ interface Props {
   capacityOverrides: { hour: number; minute: number; capacity: number }[];
   shifts: { staff_id: string; start_time: string; end_time: string }[];
   retailSales: RetailSale[];
+  paymentReviews?: PaymentReview[];
 }
 
 // 30分単位で「残り受付可能数」を確認・調整できるよう、営業時間を30分刻みのコマに分割する
@@ -49,7 +51,7 @@ const HALF_SLOTS: { hour: number; minute: number }[] = HOURS.flatMap((h) => [
   { hour: h, minute: 30 },
 ]);
 
-export default function BoardClient({ staff, bookings, date, closedLabel, capacityOverrides, shifts, retailSales }: Props) {
+export default function BoardClient({ staff, bookings, date, closedLabel, capacityOverrides, shifts, retailSales, paymentReviews = [] }: Props) {
   const router = useRouter();
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<BookingWithStaff | null>(null);
@@ -373,6 +375,8 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
           <div className="bc-sum-item">売上<span className="bc-sum-val">{yenK(summary.sales)}</span></div>
         </div>
       </div>
+
+      <SquarePaymentReview reviews={paymentReviews} bookings={bookings} />
 
       {/* board */}
       <div className="board-scroll">
