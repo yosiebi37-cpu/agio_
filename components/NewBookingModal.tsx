@@ -234,13 +234,21 @@ export default function NewBookingModal({ open, onClose }: Props) {
         return;
       }
       if (newBooking) {
+        // Squareにも登録する。失敗した時だけお知らせする（予約自体は成立している）
         fetch('/api/square-sync-booking', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ bookingId: newBooking.id }),
-        }).catch(() => {
-          // Square連携の失敗は無視する（予約自体は成立している）
-        });
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.result === 'failed') {
+              alert(`予約は登録しました。ただしSquareへの登録に失敗しました。\n\n理由：${data.message ?? '不明'}`);
+            }
+          })
+          .catch(() => {
+            // 通信エラーは無視する（予約自体は成立している）
+          });
       }
       setSaving(false);
       setName('');

@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   getSquareLocationId,
-  createSquareCustomer,
-  createSquareBooking,
+  createSquareCustomerDetailed,
+  createSquareBookingDetailed,
   cancelSquareBookingById,
   jstToUtcIso,
 } from '@/lib/square';
@@ -16,6 +16,22 @@ import { hhmm, toMinutes } from '@/lib/format';
  * - failed: Squareとの通信に失敗した
  */
 export type SquareSyncResult = 'synced' | 'already' | 'not_configured' | 'failed';
+
+export interface SquareSyncOutcome {
+  result: SquareSyncResult;
+  /** 失敗・対象外の理由（画面のお知らせ用） */
+  message?: string;
+}
+
+async function logSyncError(sb: SupabaseClient, bookingId: string, message: string): Promise<void> {
+  await sb
+    .from('square_sync_log')
+    .insert({ event_type: 'agio.sync', raw_body: bookingId, result: 'error', message })
+    .then(
+      () => undefined,
+      () => undefined,
+    );
+}
 
 interface MenuSquareRow {
   name: string;
@@ -55,17 +71,17 @@ export async function syncBookingToSquare(
   sb: SupabaseClient,
   bookingId: string,
   idempotencySuffix = '',
-): Promise<SquareSyncResult> {
+): Promise<SquareSyncOutcome> {
   const accessToken = process.env.SQUARE_ACCESS_TOKEN;
-  if (!accessToken) return 'not_configured';
+  if (!accessToken) return { result: 'not_configured', message: 'SquareのアクセストークンがVercelに設定されていません' };
 
   const { data: booking } = await sb
     .from('bookings')
     .select('id,customer_name,staff_id,booking_date,start_time,end_time,menu,amount,square_booking_id')
     .eq('id', bookingId)
     .maybeSingle();
-  if (!booking) return 'failed';
-  if (booking.square_booking_id) return 'already';
+  if (!booking) return { result: 'failed', message: '予約が見つかりません' };
+  if (booking.square_booking_id) return { result: 'already' };
 
   const [{ data: menuRows }, { data: staffRow }] = await Promise.all([
     sb.from('menu_items').select('name,square_service_variation_id,price').not('square_service_variation_id', 'is', null),
@@ -77,15 +93,26 @@ export async function syncBookingToSquare(
     booking.amount as number | null | undefined,
   );
   const teamMemberId = staffRow?.square_team_member_id as string | null | undefined;
-  if (!serviceVariationId || !teamMemberId) return 'not_configured';
+  if (!serviceVariationId) return { result: 'not_configured', message: 'メニューにSquare IDが設定されていません' };
+  if (!teamMemberId) return { result: 'not_configured', message: '担当スタッフにSquare担当者IDが設定されていません' };
+
+  const fail = async (message: string): Promise<SquareSyncOutcome> => {
+    await logSyncError(sb, booking.id, message);
+    return { result: 'failed', message };
+  };
 
   const locationId = await getSquareLocationId(accessToken);
-  if (!locationId) return 'failed';
-  const customerId = await createSquareCustomer(accessToken, booking.customer_name, `agio-customer-${booking.id}`);
-  if (!customerId) return 'failed';
+  if (!locationId) return fail('Squareの店舗情報を取得できませんでした');
+  const customer = await createSquareCustomerDetailed(
+    accessToken,
+    booking.customer_name,
+    `agio-customer-${booking.id}`,
+  );
+  if (!customer.id) return fail(customer.error ?? 'お客様の登録に失敗しました');
+  const customerId = customer.id;
 
   const durationMinutes = toMinutes(booking.end_time) - toMinutes(booking.start_time);
-  const squareBookingId = await createSquareBooking(accessToken, {
+  const created = await createSquareBookingDetailed(accessToken, {
     locationId,
     customerId,
     teamMemberId,
@@ -95,9 +122,9 @@ export async function syncBookingToSquare(
     // 日時変更でSquareの予約を作り直す時は、前回と同じキーだと取り消し済みの予約が返ってくるため、別のキーを渡す
     idempotencyKey: `agio-square-${booking.id}${idempotencySuffix}`,
   });
-  if (!squareBookingId) return 'failed';
-  await sb.from('bookings').update({ square_booking_id: squareBookingId }).eq('id', booking.id);
-  return 'synced';
+  if (!created.id) return fail(created.error ?? '予約の登録に失敗しました');
+  await sb.from('bookings').update({ square_booking_id: created.id }).eq('id', booking.id);
+  return { result: 'synced' };
 }
 
 /**
@@ -105,16 +132,16 @@ export async function syncBookingToSquare(
  * Square側の古い予約を取り消してから、変更後の内容でSquareに登録し直す。
  * 古い予約の取り消しに失敗した場合は、Squareに予約が二重にできないよう、作り直しはしない。
  */
-export async function resyncBookingToSquare(sb: SupabaseClient, bookingId: string): Promise<SquareSyncResult> {
+export async function resyncBookingToSquare(sb: SupabaseClient, bookingId: string): Promise<SquareSyncOutcome> {
   const accessToken = process.env.SQUARE_ACCESS_TOKEN;
-  if (!accessToken) return 'not_configured';
+  if (!accessToken) return { result: 'not_configured', message: 'SquareのアクセストークンがVercelに設定されていません' };
 
   const { data: booking } = await sb
     .from('bookings')
     .select('id,square_booking_id')
     .eq('id', bookingId)
     .maybeSingle();
-  if (!booking) return 'failed';
+  if (!booking) return { result: 'failed', message: '予約が見つかりません' };
 
   const oldSquareBookingId = booking.square_booking_id as string | null;
   if (oldSquareBookingId) {
@@ -125,7 +152,9 @@ export async function resyncBookingToSquare(sb: SupabaseClient, bookingId: strin
     if (!cancelled) {
       // 取り消せなかった時は紐付けを元に戻し、Squareに予約が二重にできないよう作り直しはしない
       await sb.from('bookings').update({ square_booking_id: oldSquareBookingId }).eq('id', bookingId);
-      return 'failed';
+      const message = 'Square側の古い予約を取り消せませんでした';
+      await logSyncError(sb, bookingId, message);
+      return { result: 'failed', message };
     }
   }
 

@@ -129,7 +129,10 @@ export default function EditBookingModal({ open, onClose, booking, staff }: Prop
         }).catch(() => null);
         const data = res ? await res.json().catch(() => null) : null;
         if (!data || data.result === 'failed') {
-          alert('予約の変更は保存しました。ただしSquareへの反映に失敗したため、Square側の予約を確認してください。');
+          alert(
+            '予約の変更は保存しました。ただしSquareへの反映に失敗したため、Square側の予約を確認してください。' +
+              (data?.message ? `\n\n理由：${data.message}` : ''),
+          );
         }
       }
       if (booking.customer_id) {

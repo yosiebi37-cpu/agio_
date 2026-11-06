@@ -77,14 +77,22 @@ export async function getSquareLocationId(accessToken: string): Promise<string |
   return locations?.find((l) => l.status === 'ACTIVE')?.id ?? locations?.[0]?.id ?? null;
 }
 
-export async function createSquareCustomer(
+async function squareErrorText(res: Response): Promise<string> {
+  const data = await res.json().catch(() => null);
+  const errors = (data?.errors ?? []) as { code?: string; detail?: string; field?: string }[];
+  const text = errors.map((e) => [e.code, e.field, e.detail].filter(Boolean).join(' ')).join(' / ');
+  return `HTTP ${res.status}${text ? `: ${text}` : ''}`;
+}
+
+export async function createSquareCustomerDetailed(
   accessToken: string,
   name: string,
   idempotencyKey: string,
-): Promise<string | null> {
+): Promise<{ id: string | null; error: string | null }> {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  const givenName = parts[0] ?? name;
-  const familyName = parts.length > 1 ? parts.slice(1).join(' ') : undefined;
+  // 日本の名前は「姓 名」の順なので、1つ目を姓（family_name）、残りを名（given_name）にする
+  const familyName = parts[0] ?? name;
+  const givenName = parts.length > 1 ? parts.slice(1).join(' ') : undefined;
   const res = await fetch(`${SQUARE_API_BASE}/customers`, {
     method: 'POST',
     headers: {
@@ -92,11 +100,30 @@ export async function createSquareCustomer(
       'Content-Type': 'application/json',
       'Square-Version': SQUARE_API_VERSION,
     },
-    body: JSON.stringify({ idempotency_key: idempotencyKey, given_name: givenName, family_name: familyName }),
+    body: JSON.stringify({ idempotency_key: idempotencyKey, family_name: familyName, given_name: givenName }),
+  });
+  if (!res.ok) return { id: null, error: `お客様の登録に失敗（${await squareErrorText(res)}）` };
+  const data = await res.json();
+  return { id: data.customer?.id ?? null, error: data.customer?.id ? null : 'お客様の登録結果が空でした' };
+}
+
+export async function createSquareCustomer(
+  accessToken: string,
+  name: string,
+  idempotencyKey: string,
+): Promise<string | null> {
+  return (await createSquareCustomerDetailed(accessToken, name, idempotencyKey)).id;
+}
+
+/** Squareのメニュー（サービス）の現在のバージョン番号を取得する。予約作成時に必要 */
+async function getServiceVariationVersion(accessToken: string, serviceVariationId: string): Promise<number | null> {
+  const res = await fetch(`${SQUARE_API_BASE}/catalog/object/${serviceVariationId}`, {
+    headers: { Authorization: `Bearer ${accessToken}`, 'Square-Version': SQUARE_API_VERSION },
   });
   if (!res.ok) return null;
   const data = await res.json();
-  return data.customer?.id ?? null;
+  const version = data.object?.version;
+  return typeof version === 'number' ? version : null;
 }
 
 export interface CreateSquareBookingParams {
@@ -109,10 +136,16 @@ export interface CreateSquareBookingParams {
   idempotencyKey: string;
 }
 
-export async function createSquareBooking(
+export async function createSquareBookingDetailed(
   accessToken: string,
   params: CreateSquareBookingParams,
-): Promise<string | null> {
+): Promise<{ id: string | null; error: string | null }> {
+  // Squareは予約作成時にメニューの「現在のバージョン番号」を求めるため、毎回取得する
+  // （以前は 1 を固定で送っていたため、Square側で断られていた）
+  const version = await getServiceVariationVersion(accessToken, params.serviceVariationId);
+  if (version == null) {
+    return { id: null, error: 'Squareのメニューが見つかりません（設定画面のSquare IDを確認してください）' };
+  }
   const res = await fetch(`${SQUARE_API_BASE}/bookings`, {
     method: 'POST',
     headers: {
@@ -130,16 +163,23 @@ export async function createSquareBooking(
           {
             team_member_id: params.teamMemberId,
             service_variation_id: params.serviceVariationId,
-            service_variation_version: 1,
+            service_variation_version: version,
             duration_minutes: params.durationMinutes,
           },
         ],
       },
     }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) return { id: null, error: `予約の登録に失敗（${await squareErrorText(res)}）` };
   const data = await res.json();
-  return data.booking?.id ?? null;
+  return { id: data.booking?.id ?? null, error: data.booking?.id ? null : '予約の登録結果が空でした' };
+}
+
+export async function createSquareBooking(
+  accessToken: string,
+  params: CreateSquareBookingParams,
+): Promise<string | null> {
+  return (await createSquareBookingDetailed(accessToken, params)).id;
 }
 
 export async function cancelSquareBookingById(accessToken: string, squareBookingId: string): Promise<boolean> {

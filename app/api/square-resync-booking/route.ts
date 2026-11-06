@@ -22,8 +22,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await resyncBookingToSquare(getServiceSupabase(), body.bookingId);
-    return NextResponse.json({ ok: true, result });
+    const outcome = await resyncBookingToSquare(getServiceSupabase(), body.bookingId);
+    return NextResponse.json({ ok: true, result: outcome.result, message: outcome.message ?? null });
   } catch {
     // 予約ボード側の変更はすでに保存済みなので、ここではSquare側の失敗だけを返す
     return NextResponse.json({ ok: true, result: 'failed' });

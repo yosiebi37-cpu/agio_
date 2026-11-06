@@ -22,10 +22,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    await syncBookingToSquare(getServiceSupabase(), body.bookingId);
+    const outcome = await syncBookingToSquare(getServiceSupabase(), body.bookingId);
+    return NextResponse.json({ ok: true, result: outcome.result, message: outcome.message ?? null });
   } catch {
     // Square連携の失敗はここで飲み込む（呼び出し元は予約作成自体は成功している）
+    return NextResponse.json({ ok: true, result: 'failed', message: 'Squareとの通信中にエラーが起きました' });
   }
-
-  return NextResponse.json({ ok: true });
 }
