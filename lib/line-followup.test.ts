@@ -29,3 +29,11 @@ describe('buildFollowupMessage', () => {
     expect(buildFollowupMessage('thanks', '山田 花子', 'https://liff.line.me/x')).not.toContain('liff');
   });
 });
+
+describe('buildFollowupMessage 90日後', () => {
+  it('does not assume the season', () => {
+    const text = buildFollowupMessage('followup90', '山田 花子', null);
+    expect(text).not.toContain('季節');
+    expect(text).toContain('3ヶ月ほど');
+  });
+});

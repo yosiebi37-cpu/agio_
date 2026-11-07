@@ -45,6 +45,6 @@ export function buildFollowupMessage(kind: FollowupKind, customerName: string, b
     case 'followup45':
       return `【agio hair&spa】\n${name}、その後、ヘアスタイルはいかがでしょうか？\n\n前回のご来店から1ヶ月半ほどたちました。根元の伸びや毛先のまとまりは気になっていませんか？\n髪が一番きれいに見えるのは、このくらいの時期のメンテナンスです。${link}`;
     case 'followup90':
-      return `【agio hair&spa】\n${name}、その後、髪の調子はいかがですか？\n\n季節の変わり目は、乾燥やうねりが出やすい時期です。気になることがあれば、いつでもご相談ください。${link}`;
+      return `【agio hair&spa】\n${name}、その後、髪の調子はいかがですか？\n\n前回のご来店から3ヶ月ほどたちました。髪のことで気になることや、試してみたいスタイルがあれば、いつでもご相談ください。\nまたお会いできるのを楽しみにしています。${link}`;
   }
 }
