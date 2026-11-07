@@ -54,6 +54,12 @@ export function manageBookingUrl(): string | null {
   return liffId ? `https://liff.line.me/${liffId}/manage` : null;
 }
 
+/** お客様がLINEの中で予約ページ（LINE限定価格）を開くためのURL（LIFFのエンドポイント＝/book/line を開く） */
+export function lineBookingUrl(): string | null {
+  const liffId = process.env.NEXT_PUBLIC_LIFF_ID?.trim();
+  return liffId ? `https://liff.line.me/${liffId}` : null;
+}
+
 /** Webhookで受け取ったメッセージへの返信（トーク画面にそのまま表示される） */
 export async function sendLineReplyMessage(replyToken: string, text: string, accessToken: string): Promise<void> {
   await fetch('https://api.line.me/v2/bot/message/reply', {
