@@ -23,6 +23,7 @@ import EditBookingModal from './EditBookingModal';
 import AddRetailToBookingModal from './AddRetailToBookingModal';
 import type { Staff, BookingWithStaff, RetailSale } from '@/lib/types';
 import { findMatchingCustomer, type MatchCandidate } from '@/lib/customer-match';
+import { assignLanes } from '@/lib/board-layout';
 import SquarePaymentReview, { type PaymentReview } from './SquarePaymentReview';
 
 function textOn(bg: string): string {
@@ -428,6 +429,10 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
           <div className="board-body">
             {visibleStaff.map((s) => {
               const list = byStaff.get(s.id) ?? [];
+              // 時間が重なる予約はカードが重ならないよう段に分けて表示する
+              const placements = assignLanes(
+                list.map((b) => ({ id: b.id, start: toMinutes(b.start_time), end: toMinutes(b.end_time) })),
+              );
               return (
                 <div className="staff-row" key={s.id}>
                   <div className="staff-row-head">
@@ -452,11 +457,20 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
                       const left = ((toMinutes(b.start_time) - OPEN_HOUR * 60) / 60) * hourW;
                       const width = ((toMinutes(b.end_time) - toMinutes(b.start_time)) / 60) * hourW;
                       const hasRetail = (retailByBooking.get(b.id) ?? []).length > 0;
+                      const { lane, lanes } = placements.get(b.id) ?? { lane: 0, lanes: 1 };
+                      const laneStyle =
+                        lanes > 1
+                          ? {
+                              top: `calc(6px + (100% - 12px) * ${lane} / ${lanes})`,
+                              height: `calc((100% - 12px) / ${lanes} - 2px)`,
+                              bottom: 'auto',
+                            }
+                          : undefined;
                       return (
                         <div
                           key={b.id}
                           className="booking-block"
-                          style={{ left, width, background: bg, color: fg }}
+                          style={{ left, width, background: bg, color: fg, ...laneStyle }}
                           onClick={() => setSelected(b)}
                         >
                           <div className="bb-time">{hhmm(b.start_time)} — {hhmm(b.end_time)}</div>
