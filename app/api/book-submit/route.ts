@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/server';
+import { isClosedDate } from '@/lib/closures';
 import { toMinutes, minutesToHHMM, initialsFromName } from '@/lib/format';
 import { sendLinePushMessage, manageBookingUrl } from '@/lib/line';
 import { syncBookingToSquare } from '@/lib/square-sync';
@@ -55,12 +56,13 @@ export async function POST(request: Request) {
   }
 
   // 定休日・休業日チェック
-  const [{ data: salonSettings }, { data: holiday }] = await Promise.all([
+  const [{ data: salonSettings }, { data: holiday }, { data: openDay }] = await Promise.all([
     sb.from('salon_settings').select('closed_weekdays').eq('id', 1).maybeSingle(),
     sb.from('holidays').select('holiday_date').eq('holiday_date', date).maybeSingle(),
+    sb.from('open_days').select('open_date').eq('open_date', date).maybeSingle(),
   ]);
   const closedWeekdays: number[] = salonSettings?.closed_weekdays ?? [];
-  if (holiday || closedWeekdays.includes(new Date(date + 'T00:00:00').getDay())) {
+  if (isClosedDate(date, closedWeekdays, holiday ? [date] : [], openDay ? [date] : [])) {
     return NextResponse.json({ error: 'この日は定休日のため予約できません。別の日をお選びください。' }, { status: 409 });
   }
 

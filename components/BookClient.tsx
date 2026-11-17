@@ -8,6 +8,7 @@ import { useFuriganaAutofill } from '@/lib/useFuriganaAutofill';
 import { MENU_CATEGORIES, OTHER_MENU_CATEGORY } from '@/lib/constants';
 import type { MenuItem, PublicStaff } from '@/lib/types';
 import LineReminderOffer from './LineReminderOffer';
+import { isClosedDate } from '@/lib/closures';
 
 /** 全角数字・記号を半角に正規化する（電話番号欄向け） */
 const toHalfWidth = (s: string): string =>
@@ -34,6 +35,7 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
   const [step, setStep] = useState<Step>('menu');
   const [closedWeekdays, setClosedWeekdays] = useState<Set<number>>(new Set());
   const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
+  const [openDates, setOpenDates] = useState<Set<string>>(new Set());
 
   const [menu, setMenu] = useState<MenuItem | null>(null);
   const menuCategories = useMemo(() => {
@@ -92,6 +94,9 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
     });
     sb.from('holidays').select('holiday_date').then(({ data }) => {
       setHolidayDates(new Set((data ?? []).map((h: { holiday_date: string }) => h.holiday_date)));
+    });
+    sb.from('open_days').select('open_date').then(({ data }) => {
+      setOpenDates(new Set((data ?? []).map((o: { open_date: string }) => o.open_date)));
     });
   }, []);
 
@@ -196,7 +201,7 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
     });
   }, [date, refreshTick]);
 
-  const isClosed = (d: string) => closedWeekdays.has(new Date(d + 'T00:00:00').getDay()) || holidayDates.has(d);
+  const isClosed = (d: string) => isClosedDate(d, Array.from(closedWeekdays), holidayDates, openDates);
 
   // [t, end) の間にかかる30分枠すべてで、お店全体の受付可能数に空きがあるかを確認する
   const hourCapacityAvailable = (
@@ -240,7 +245,7 @@ export default function BookClient({ menuItems, staff, useLiff }: Props) {
 
   const slots = useMemo(
     () => (date && !isClosed(date) ? computeSlots(busy, shift, allBookings, capacityMap, allShifts) : []),
-    [menu, date, busy, shift, allBookings, capacityMap, allShifts, closedWeekdays, holidayDates],
+    [menu, date, busy, shift, allBookings, capacityMap, allShifts, closedWeekdays, holidayDates, openDates],
   );
   const availableSlots = slots.filter((s) => s.available);
   const slotGroups = [

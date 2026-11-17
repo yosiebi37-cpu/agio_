@@ -49,10 +49,11 @@ export default async function BoardPage({
     const [y, m] = date.split('-').map(Number);
     const start = toISODate(new Date(y, m - 1, 1));
     const end = toISODate(new Date(y, m, 0));
-    const [{ data: bookingData }, { data: salonSettingsData }, { data: holidayData }] = await Promise.all([
+    const [{ data: bookingData }, { data: salonSettingsData }, { data: holidayData }, { data: openDayData }] = await Promise.all([
       sb.from('bookings').select('booking_date,amount,status').gte('booking_date', start).lte('booking_date', end),
       sb.from('salon_settings').select('*').eq('id', 1).maybeSingle(),
       sb.from('holidays').select('holiday_date').gte('holiday_date', start).lte('holiday_date', end),
+      sb.from('open_days').select('open_date').gte('open_date', start).lte('open_date', end),
     ]);
     const salonSettings = (salonSettingsData as SalonSettings | null) ?? { id: 1, closed_weekdays: [], updated_at: '' };
     return (
@@ -61,11 +62,12 @@ export default async function BoardPage({
         date={date}
         closedWeekdays={salonSettings.closed_weekdays}
         holidayDates={(holidayData ?? []).map((h) => h.holiday_date as string)}
+        openDates={(openDayData ?? []).map((o) => o.open_date as string)}
       />
     );
   }
 
-  const [{ data: staffData }, { data: bookingData }, { data: salonSettingsData }, { data: holidayRow }, { data: capacityData }, { data: shiftData }, { data: retailData }] = await Promise.all([
+  const [{ data: staffData }, { data: bookingData }, { data: salonSettingsData }, { data: holidayRow }, { data: openDayRow }, { data: capacityData }, { data: shiftData }, { data: retailData }] = await Promise.all([
     sb.from('staff').select('*').eq('is_active', true).order('sort_order'),
     sb
       .from('bookings')
@@ -74,6 +76,7 @@ export default async function BoardPage({
       .order('start_time'),
     sb.from('salon_settings').select('*').eq('id', 1).maybeSingle(),
     sb.from('holidays').select('holiday_date,note').eq('holiday_date', date).maybeSingle(),
+    sb.from('open_days').select('open_date').eq('open_date', date).maybeSingle(),
     sb.from('hourly_capacity').select('hour,minute,capacity').eq('capacity_date', date),
     sb.from('shifts').select('staff_id,start_time,end_time').eq('shift_date', date),
     sb.from('retail_sales').select('*').eq('sale_date', date),
@@ -89,7 +92,8 @@ export default async function BoardPage({
   const staff = (staffData ?? []) as Staff[];
   const bookings = (bookingData ?? []) as unknown as BookingWithStaff[];
   const salonSettings = (salonSettingsData as SalonSettings | null) ?? { id: 1, closed_weekdays: [], updated_at: '' };
-  const isWeeklyClosed = salonSettings.closed_weekdays.includes(new Date(date + 'T00:00:00').getDay());
+  // 臨時営業日に登録した日は、毎週の定休日の曜日でも営業日として扱う
+  const isWeeklyClosed = !openDayRow && salonSettings.closed_weekdays.includes(new Date(date + 'T00:00:00').getDay());
   const holidayNote = holidayRow ? ((holidayRow as { note: string | null }).note ?? '休業日') : null;
   const closedLabel = holidayNote ?? (isWeeklyClosed ? '定休日' : null);
   const capacityOverrides = (capacityData ?? []) as { hour: number; minute: number; capacity: number }[];

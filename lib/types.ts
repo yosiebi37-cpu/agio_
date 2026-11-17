@@ -155,6 +155,14 @@ export interface Holiday {
   created_at: string;
 }
 
+/** 臨時営業日（毎週の定休日の曜日だけど、この日だけ営業する日） */
+export interface OpenDay {
+  id: string;
+  open_date: string;
+  note: string | null;
+  created_at: string;
+}
+
 export interface MenuItem {
   id: string;
   name: string;

@@ -8,19 +8,20 @@ import NewStaffModal from './NewStaffModal';
 import EditStaffModal from './EditStaffModal';
 import { yen } from '@/lib/format';
 import { MENU_CATEGORIES } from '@/lib/constants';
-import type { Staff, SalonSettings, Holiday, MenuItem, RetailProduct } from '@/lib/types';
+import type { Staff, SalonSettings, Holiday, OpenDay, MenuItem, RetailProduct } from '@/lib/types';
 
 interface Props {
   staff: Staff[];
   salonSettings: SalonSettings;
   holidays: Holiday[];
+  openDays: OpenDay[];
   menuItems: MenuItem[];
   retailProducts: RetailProduct[];
 }
 
 const WEEKDAY = ['日', '月', '火', '水', '木', '金', '土'];
 
-export default function SettingsClient({ staff, salonSettings, holidays, menuItems, retailProducts }: Props) {
+export default function SettingsClient({ staff, salonSettings, holidays, openDays, menuItems, retailProducts }: Props) {
   const router = useRouter();
   const [newOpen, setNewOpen] = useState(false);
   const [editing, setEditing] = useState<Staff | null>(null);
@@ -32,6 +33,11 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
   const [holidayNote, setHolidayNote] = useState('');
   const [savingHoliday, setSavingHoliday] = useState(false);
   const [holidayError, setHolidayError] = useState<string | null>(null);
+
+  const [openDate, setOpenDate] = useState('');
+  const [openNote, setOpenNote] = useState('');
+  const [savingOpenDay, setSavingOpenDay] = useState(false);
+  const [openDayError, setOpenDayError] = useState<string | null>(null);
 
   const [menuName, setMenuName] = useState('');
   const [menuPrice, setMenuPrice] = useState('');
@@ -99,6 +105,45 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
   const removeHoliday = async (id: string) => {
     const sb = getBrowserSupabase();
     await sb.from('holidays').delete().eq('id', id);
+    router.refresh();
+  };
+
+  const addOpenDay = async () => {
+    if (!openDate) {
+      setOpenDayError('日付を選択してください。');
+      return;
+    }
+    if (holidays.some((h) => h.holiday_date === openDate)) {
+      setOpenDayError('この日は「個別の休業日」に登録されています。先に休業日のほうを削除してください。');
+      return;
+    }
+    if (openDays.some((o) => o.open_date === openDate)) {
+      setOpenDayError('この日はすでに臨時営業日に登録されています。');
+      return;
+    }
+    setSavingOpenDay(true);
+    setOpenDayError(null);
+    try {
+      const sb = getBrowserSupabase();
+      const { error } = await sb.from('open_days').insert({ open_date: openDate, note: openNote.trim() || null });
+      if (error) {
+        setOpenDayError(error.message);
+        setSavingOpenDay(false);
+        return;
+      }
+      setOpenDate('');
+      setOpenNote('');
+      setSavingOpenDay(false);
+      router.refresh();
+    } catch (e) {
+      setOpenDayError(e instanceof Error ? e.message : String(e));
+      setSavingOpenDay(false);
+    }
+  };
+
+  const removeOpenDay = async (id: string) => {
+    const sb = getBrowserSupabase();
+    await sb.from('open_days').delete().eq('id', id);
     router.refresh();
   };
 
@@ -313,6 +358,41 @@ export default function SettingsClient({ staff, salonSettings, holidays, menuIte
                   <div style={{ fontSize: 13, minWidth: 160 }}>{formatDateLong(h.holiday_date)}</div>
                   <div style={{ fontSize: 12, color: 'var(--ink-l)', flex: 1 }}>{h.note ?? ''}</div>
                   <button className="btn-sm" onClick={() => removeHoliday(h.id)}><i className="ti ti-x"></i>削除</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="tbl-wrap" style={{ padding: 18, marginTop: 16 }}>
+          <label className="f-label">臨時営業日（定休日の曜日だけど、この日だけ営業する日）</label>
+          <div style={{ fontSize: 12, color: 'var(--ink-l)', marginTop: 4 }}>
+            ここに登録した日は「休」にならず、シフトを入れれば予約ボード・お客様の予約ページで予約を受けられます。
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div>
+              <label className="f-label" style={{ fontSize: 11 }}>日付</label>
+              <input className="f-input" type="date" value={openDate} onChange={(e) => setOpenDate(e.target.value)} />
+            </div>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <label className="f-label" style={{ fontSize: 11 }}>メモ（任意）</label>
+              <input className="f-input" type="text" placeholder="年末の臨時営業" value={openNote} onChange={(e) => setOpenNote(e.target.value)} />
+            </div>
+            <button className="btn-save" onClick={addOpenDay} disabled={savingOpenDay}>
+              {savingOpenDay ? '追加中…' : '追加する'}
+            </button>
+          </div>
+          {openDayError && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{openDayError}</div>}
+
+          {openDays.length === 0 ? (
+            <div className="empty-row">臨時営業日はまだ登録されていません。</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {openDays.map((o) => (
+                <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--sand)' }}>
+                  <div style={{ fontSize: 13, minWidth: 160 }}>{formatDateLong(o.open_date)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--ink-l)', flex: 1 }}>{o.note ?? ''}</div>
+                  <button className="btn-sm" onClick={() => removeOpenDay(o.id)}><i className="ti ti-x"></i>削除</button>
                 </div>
               ))}
             </div>

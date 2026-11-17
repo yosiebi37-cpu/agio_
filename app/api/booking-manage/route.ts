@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/server';
+import { isClosedDate } from '@/lib/closures';
 import { verifyLiffAccessToken, sendLinePushMessage } from '@/lib/line';
 import { cancelSquareBookingById } from '@/lib/square';
 import { syncBookingToSquare } from '@/lib/square-sync';
@@ -53,10 +54,11 @@ async function loadStaffNames(sb: Sb, ids: string[]): Promise<Map<string, string
 
 /** 指定した日に、この予約（の担当・所要時間）で開始できる時刻の一覧 */
 async function loadAvailableStarts(sb: Sb, booking: OwnBooking, date: string, nowMs: number): Promise<string[]> {
-  const [{ data: settings }, { data: holiday }, { data: shift }, { data: shiftRows }, { data: dayBookings }, { data: capacityRows }, { data: staffList }] =
+  const [{ data: settings }, { data: holiday }, { data: openDay }, { data: shift }, { data: shiftRows }, { data: dayBookings }, { data: capacityRows }, { data: staffList }] =
     await Promise.all([
       sb.from('salon_settings').select('closed_weekdays').eq('id', 1).maybeSingle(),
       sb.from('holidays').select('holiday_date').eq('holiday_date', date).maybeSingle(),
+      sb.from('open_days').select('open_date').eq('open_date', date).maybeSingle(),
       sb.from('shifts').select('start_time,end_time').eq('staff_id', booking.staff_id).eq('shift_date', date).maybeSingle(),
       sb.from('shifts').select('staff_id,start_time,end_time').eq('shift_date', date),
       sb.from('bookings').select('id,staff_id,start_time,end_time').eq('booking_date', date),
@@ -65,7 +67,7 @@ async function loadAvailableStarts(sb: Sb, booking: OwnBooking, date: string, no
     ]);
 
   const closedWeekdays: number[] = settings?.closed_weekdays ?? [];
-  const closed = Boolean(holiday) || closedWeekdays.includes(new Date(date + 'T00:00:00').getDay());
+  const closed = isClosedDate(date, closedWeekdays, holiday ? [date] : [], openDay ? [date] : []);
 
   // 日時を変更しようとしている予約自身は、埋まっているものとして数えない
   const others = ((dayBookings ?? []) as { id: string; staff_id: string; start_time: string; end_time: string }[]).filter(

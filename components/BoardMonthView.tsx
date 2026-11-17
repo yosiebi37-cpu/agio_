@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toISODate, formatMonthLong, yenK } from '@/lib/format';
+import { isClosedDate } from '@/lib/closures';
 
 interface BookingRow {
   booking_date: string;
@@ -16,11 +17,12 @@ interface Props {
   date: string;
   closedWeekdays: number[];
   holidayDates: string[];
+  openDates: string[];
 }
 
 const WEEKDAY = ['日', '月', '火', '水', '木', '金', '土'];
 
-export default function BoardMonthView({ bookings, date, closedWeekdays, holidayDates }: Props) {
+export default function BoardMonthView({ bookings, date, closedWeekdays, holidayDates, openDates }: Props) {
   const router = useRouter();
   const [y, m] = date.split('-').map(Number);
   const month = `${y}-${String(m).padStart(2, '0')}`;
@@ -56,7 +58,8 @@ export default function BoardMonthView({ bookings, date, closedWeekdays, holiday
   };
 
   const holidaySet = useMemo(() => new Set(holidayDates), [holidayDates]);
-  const isClosed = (d: string) => closedWeekdays.includes(new Date(d + 'T00:00:00').getDay()) || holidaySet.has(d);
+  const openSet = useMemo(() => new Set(openDates), [openDates]);
+  const isClosed = (d: string) => isClosedDate(d, closedWeekdays, holidaySet, openSet);
 
   return (
     <div className="page-wrap">
