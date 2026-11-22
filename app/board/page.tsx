@@ -89,7 +89,13 @@ export default async function BoardPage({
     .eq('match_status', 'needs_review')
     .order('paid_time');
 
-  const staff = (staffData ?? []) as Staff[];
+  // スタッフ一覧の読み込みが一時的に失敗すると、予約はあるのにボードが空白になってしまうため、
+  // 0件だった場合（「フリー」枠があるので本来0件にはならない）はもう一度だけ読み直す
+  let staff = (staffData ?? []) as Staff[];
+  if (staff.length === 0) {
+    const { data: retryStaff } = await sb.from('staff').select('*').eq('is_active', true).order('sort_order');
+    staff = (retryStaff ?? []) as Staff[];
+  }
   const bookings = (bookingData ?? []) as unknown as BookingWithStaff[];
   const salonSettings = (salonSettingsData as SalonSettings | null) ?? { id: 1, closed_weekdays: [], updated_at: '' };
   // 臨時営業日に登録した日は、毎週の定休日の曜日でも営業日として扱う

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
@@ -52,8 +52,21 @@ const HALF_SLOTS: { hour: number; minute: number }[] = HOURS.flatMap((h) => [
   { hour: h, minute: 30 },
 ]);
 
-export default function BoardClient({ staff, bookings, date, closedLabel, capacityOverrides, shifts, retailSales, paymentReviews = [] }: Props) {
+export default function BoardClient({ staff: staffProp, bookings, date, closedLabel, capacityOverrides, shifts, retailSales, paymentReviews = [] }: Props) {
   const router = useRouter();
+
+  // 1分ごとの自動更新などでスタッフ一覧の読み込みが一時的に失敗（0件）しても、
+  // ボードが空白にならないよう、前回うまく読み込めたスタッフ一覧を使い続ける
+  const lastStaffRef = useRef<Staff[]>(staffProp);
+  if (staffProp.length > 0) lastStaffRef.current = staffProp;
+  const staff = staffProp.length > 0 ? staffProp : lastStaffRef.current;
+  const staffMissing = staff.length === 0;
+  // それでもスタッフが読み込めていない時は、数秒後に自動で読み直す
+  useEffect(() => {
+    if (!staffMissing) return;
+    const t = setTimeout(() => router.refresh(), 3000);
+    return () => clearTimeout(t);
+  }, [staffMissing, router, staffProp]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<BookingWithStaff | null>(null);
   const [editing, setEditing] = useState<BookingWithStaff | null>(null);
@@ -427,6 +440,13 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
           </div>
 
           <div className="board-body">
+            {staffMissing && (
+              <div className="empty-row" style={{ padding: '40px 16px' }}>
+                スタッフ情報を読み込み中です…（表示されない場合は
+                <button className="btn-sm" style={{ margin: '0 4px' }} onClick={() => router.refresh()}>再読み込み</button>
+                を押してください）
+              </div>
+            )}
             {visibleStaff.map((s) => {
               const list = byStaff.get(s.id) ?? [];
               // 時間が重なる予約はカードが重ならないよう段に分けて表示する
