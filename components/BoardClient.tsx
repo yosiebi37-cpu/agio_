@@ -303,6 +303,39 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
     router.refresh();
   };
 
+  /**
+   * 間違えて「来店済み」になった予約を「確定」に戻す。
+   * 来店済みにした時に作られたカルテ（施術履歴）も消し、
+   * Squareの会計がひもづいていた場合は「要確認」に戻して選び直せるようにする。
+   */
+  const undoVisited = async (b: BookingWithStaff) => {
+    if (
+      !window.confirm(
+        `${b.customer_name} 様の予約を「来店済み」から「確定」に戻しますか？\n\nこの予約から作られたカルテの施術履歴も一緒に消えます（店販の記録は残ります）。`,
+      )
+    )
+      return;
+    setBusy(true);
+    const sb = getBrowserSupabase();
+    const { error: statusError } = await sb.from('bookings').update({ status: 'confirmed' }).eq('id', b.id);
+    if (statusError) {
+      alert('「確定」に戻せませんでした。\n\n' + statusError.message);
+      setBusy(false);
+      return;
+    }
+    const { error: treatmentError } = await sb.from('treatment_records').delete().eq('booking_id', b.id);
+    await sb
+      .from('square_payments')
+      .update({ booking_id: null, match_status: 'needs_review', note: '来店済みを取り消したため、選び直してください' })
+      .eq('booking_id', b.id);
+    if (treatmentError) {
+      alert('予約は「確定」に戻しましたが、カルテの施術履歴を消せませんでした。カルテから手で削除してください。\n\n' + treatmentError.message);
+    }
+    setBusy(false);
+    setSelected(null);
+    router.refresh();
+  };
+
   const cancelBooking = async (b: BookingWithStaff) => {
     if (!window.confirm(`${b.customer_name} 様の予約をキャンセル（削除）しますか？`)) return;
     setBusy(true);
@@ -576,7 +609,11 @@ export default function BoardClient({ staff, bookings, date, closedLabel, capaci
                 <i className="ti ti-id-badge"></i>カルテを開く
               </button>
               <button className="daction" style={{ background: 'var(--sand)', color: 'var(--ink)' }} disabled={busy} onClick={() => setEditing(selected)}><i className="ti ti-edit"></i>編集</button>
-              <button className="daction daction-done" disabled={busy} onClick={() => markVisited(selected)}><i className="ti ti-check"></i>来店済みに</button>
+              {selected.status === 'visited' ? (
+                <button className="daction" style={{ background: 'var(--sand)', color: 'var(--ink)' }} disabled={busy} onClick={() => undoVisited(selected)}><i className="ti ti-arrow-back-up"></i>来店済みを取り消す</button>
+              ) : (
+                <button className="daction daction-done" disabled={busy} onClick={() => markVisited(selected)}><i className="ti ti-check"></i>来店済みに</button>
+              )}
               <button className="daction daction-cancel" disabled={busy} onClick={() => cancelBooking(selected)}><i className="ti ti-x"></i>キャンセル</button>
             </div>
           </div>

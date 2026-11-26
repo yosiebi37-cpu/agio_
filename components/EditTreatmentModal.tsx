@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { FALLBACK_MENUS } from '@/lib/constants';
+import { toISODate } from '@/lib/format';
 import type { Staff, MenuItem, TreatmentRecord } from '@/lib/types';
 
 interface Props {
@@ -57,6 +58,10 @@ export default function EditTreatmentModal({ open, onClose, treatment, staff }: 
   const submit = async () => {
     if (!menu.trim()) {
       setError('メニューを入力してください。');
+      return;
+    }
+    if (performedOn > toISODate(new Date())) {
+      setError('今日より先の日付はカルテに記録できません。次回のご予約は、予約ボードの「新規予約」から入れてください。');
       return;
     }
     setSaving(true);

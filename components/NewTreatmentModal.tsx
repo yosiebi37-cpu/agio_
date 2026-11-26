@@ -181,6 +181,12 @@ export default function NewTreatmentModal({ open, onClose, customerId, customerN
       setError('店販の金額を入力してください。');
       return;
     }
+    // 今日より先の日付は、まだ来店していないので記録しない
+    // （記録すると予約ボードに「来店済み」の予約ができ、売上に入ってしまうため）
+    if (performedOn > toISODate(new Date())) {
+      setError('今日より先の日付はカルテに記録できません。次回のご予約は、予約ボードの「新規予約」から入れてください。');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
